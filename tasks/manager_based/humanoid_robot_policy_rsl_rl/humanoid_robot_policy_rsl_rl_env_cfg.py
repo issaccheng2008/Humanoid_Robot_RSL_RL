@@ -370,6 +370,41 @@ class EventCfg:
         },
     )
 
+    # Randomize actuator response independently across simulated robots.
+    randomize_actuator_gains = EventTerm(
+        func=mdp.randomize_actuator_gains,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=LEG_JOINT_NAMES,
+                preserve_order=True,
+            ),
+
+            # Multipliers applied to the nominal values in humanoid_robot.py.
+            "stiffness_distribution_params": (0.90, 1.10),
+            "damping_distribution_params": (0.80, 1.20),
+
+            "operation": "scale",
+            "distribution": "uniform",
+        },
+    )
+
+    randomize_joint_friction = EventTerm(
+        func=mdp.randomize_joint_parameters,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=LEG_JOINT_NAMES,
+                preserve_order=True,
+            ),
+            "friction_distribution_params": (0.0, 0.05),
+            "operation": "add",
+            "distribution": "uniform",
+        },
+    )
+
 
 @configclass
 class RewardsCfg:
@@ -542,7 +577,7 @@ class RewardsCfg:
     #both feet airborn penalty
     both_feet_airborne = RewTerm(
         func=mdp.both_feet_airborne,
-        weight=-5.0,
+        weight=-10.0,
         params={
             "sensor_cfg": SceneEntityCfg(
                 "contact_forces",
