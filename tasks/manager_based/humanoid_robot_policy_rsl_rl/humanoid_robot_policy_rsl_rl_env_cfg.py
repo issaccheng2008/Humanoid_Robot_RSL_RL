@@ -86,6 +86,26 @@ SMALL_RANDOM_ROUGH_TERRAIN_CFG = TerrainGeneratorCfg(
 # Robot-specific names
 ##
 
+LEG_JOINT_NAMES = [
+    # Right leg
+    "r_leg_pitch_joint",
+    "r_leg_roll_joint",
+    "r_leg_yaw_joint",
+    "r_knee_pitch_joint",
+    "r_ankle_pitch_joint",
+    "r_ankle_roll_joint",
+
+    # Left leg
+    "l_leg_pitch_joint",
+    "l_leg_roll_joint",
+    "l_leg_yaw_joint",
+    "l_knee_pitch_joint",
+    "l_ankle_pitch_joint",
+    "l_ankle_roll_joint",
+]
+
+
+
 BASE_BODY_NAME = "base_link"
 
 FOOT_BODY_NAMES = [
@@ -96,15 +116,6 @@ FOOT_BODY_NAMES = [
 TARGET_BASE_HEIGHT = 0.32
 MIN_BASE_HEIGHT = 0.20
 MAX_BASE_TILT = math.radians(65.0)
-
-LEG_JOINT_NAMES = [
-    ".*_leg_pitch_joint",
-    ".*_leg_roll_joint",
-    ".*_leg_yaw_joint",
-    ".*_knee_pitch_joint",
-    ".*_ankle_pitch_joint",
-    ".*_ankle_roll_joint",
-]
 
 ANKLE_JOINT_NAMES = [
     ".*_ankle_pitch_joint",
@@ -211,14 +222,10 @@ class CommandsCfg:
 
 @configclass
 class ActionsCfg:
-    """Action specifications for the MDP.
-
-    The policy outputs joint-position targets for the robot's actuated leg joints.
-    """
-
     joint_pos = mdp.JointPositionActionCfg(
         asset_name="robot",
         joint_names=LEG_JOINT_NAMES,
+        preserve_order=True,
         scale=0.25,
         use_default_offset=True,
     )
@@ -262,11 +269,25 @@ class ObservationsCfg:
         # Joint state.
         joint_pos = ObsTerm(
             func=mdp.joint_pos_rel,
+            params={
+                "asset_cfg": SceneEntityCfg(
+                    "robot",
+                    joint_names=LEG_JOINT_NAMES,
+                    preserve_order=True,
+                )
+            },
             noise=Unoise(n_min=-0.01, n_max=0.01),
         )
 
         joint_vel = ObsTerm(
             func=mdp.joint_vel_rel,
+            params={
+                "asset_cfg": SceneEntityCfg(
+                    "robot",
+                    joint_names=LEG_JOINT_NAMES,
+                    preserve_order=True,
+                )
+            },
             noise=Unoise(n_min=-1.5, n_max=1.5),
         )
 
@@ -586,7 +607,7 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
 
     # Scene settings.
     scene: HumanoidRobotPolicySceneCfg = HumanoidRobotPolicySceneCfg(
-        num_envs=2048,
+        num_envs=1024,
         env_spacing=2.5,
     )
 

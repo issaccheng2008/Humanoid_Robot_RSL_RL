@@ -9,7 +9,10 @@ from isaaclab_rl.rsl_rl import (
     RslRlOnPolicyRunnerCfg,
     RslRlPpoActorCriticCfg,
     RslRlPpoAlgorithmCfg,
+    RslRlSymmetryCfg,
 )
+
+from ..mdp.symmetry import compute_symmetric_states
 
 
 @configclass
@@ -23,7 +26,7 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     #     trainer.timesteps = 72000
     #
     # 72000 / 24 rollout steps = 3000 PPO iterations.
-    max_iterations = 3000
+    max_iterations = 10000
 
     save_interval = 50
     experiment_name = "humanoid_robot_rsl_rl_rough"
@@ -45,10 +48,7 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
         clip_param=0.2,
-
-        # Same exploration coefficient as the old SKRL configuration.
         entropy_coef=0.008,
-
         num_learning_epochs=5,
         num_mini_batches=4,
         learning_rate=1.0e-3,
@@ -57,4 +57,11 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         lam=0.95,
         desired_kl=0.01,
         max_grad_norm=1.0,
+
+        symmetry_cfg=RslRlSymmetryCfg(
+            use_data_augmentation=True,
+            use_mirror_loss=True,
+            mirror_loss_coeff=0.5,
+            data_augmentation_func=compute_symmetric_states,
+        ),
     )
