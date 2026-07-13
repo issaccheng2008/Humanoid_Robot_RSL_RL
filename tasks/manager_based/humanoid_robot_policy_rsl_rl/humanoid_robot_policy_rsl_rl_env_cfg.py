@@ -31,7 +31,7 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import ContactSensorCfg
+from isaaclab.sensors import ContactSensorCfg, ImuCfg
 import isaaclab.terrains as terrain_gen
 from isaaclab.terrains import TerrainGeneratorCfg, TerrainImporterCfg
 from isaaclab.utils import configclass
@@ -163,6 +163,23 @@ class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/Robot"
     )
 
+    # Simulated IMU attached to base_link.
+    imu = ImuCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/base_link",
+        update_period=0.0,
+        debug_vis=False,
+
+        # A stationary physical accelerometer normally reads approximately
+        # +9.81 m/s^2 upward. Keep this consistent with the real IMU pipeline.
+        gravity_bias=(0.0, 0.0, 9.81),
+
+        # Replace these with the real IMU mounting pose relative to base_link.
+        offset=ImuCfg.OffsetCfg(
+            pos=(0.0, 0.0, 0.0),
+            rot=(1.0, 0.0, 0.0, 0.0),  # quaternion: w, x, y, z
+        ),
+    )
+
     # Contact sensor used for foot stepping rewards only.
     # Do not use this for fall detection when self-collision is enabled,
     # because self-collision also produces contact forces.
@@ -243,20 +260,30 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations used by the policy network."""
 
-        # Base motion.
-        base_lin_vel = ObsTerm(
-            func=mdp.base_lin_vel,
-            noise=Unoise(n_min=-0.1, n_max=0.1),
+        # Three-axis acceleration measured in the simulated IMU frame.
+        base_lin_acc = ObsTerm(
+            func=mdp.imu_lin_acc,
+            params={"asset_cfg": SceneEntityCfg("imu")},
+
+            # Initial estimate; later tune this using recordings from the real IMU.
+            noise=Unoise(n_min=-0.3, n_max=0.3),
+
+            # Convert typical acceleration magnitudes to roughly network-sized values.
+            # For example, 9.81 m/s^2 becomes approximately 0.981.
+            scale=0.1,
         )
 
+        # Recommended: obtain all IMU-related observations from the same
+        # simulated sensor frame.
         base_ang_vel = ObsTerm(
-            func=mdp.base_ang_vel,
+            func=mdp.imu_ang_vel,
+            params={"asset_cfg": SceneEntityCfg("imu")},
             noise=Unoise(n_min=-0.2, n_max=0.2),
         )
 
-        # Orientation relative to gravity.
         projected_gravity = ObsTerm(
-            func=mdp.projected_gravity,
+            func=mdp.imu_projected_gravity,
+            params={"asset_cfg": SceneEntityCfg("imu")},
             noise=Unoise(n_min=-0.05, n_max=0.05),
         )
 
@@ -504,11 +531,30 @@ class RewardsCfg:
         weight=-1.0,
     )
 
-    # Penalize unnecessary vertical base motion on the mildly rough terrain.
-    # The terrain variation is small enough that proper foot lift is still possible.
-    lin_vel_z_l2 = RewTerm(
-        func=mdp.lin_vel_z_l2,
-        weight=-4.0,
+    # Penalize sudden sideways base acceleration.
+    base_acc_y_l2 = RewTerm(
+        func=mdp.base_acceleration_l2,
+        weight=-0.005,
+        params={
+            "axis": "y",
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                body_names=[BASE_BODY_NAME],
+            ),
+        },
+    )
+
+    # Penalize bouncing and sudden vertical base acceleration.
+    base_acc_z_l2 = RewTerm(
+        func=mdp.base_acceleration_l2,
+        weight=-0.005,
+        params={
+            "axis": "z",
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                body_names=[BASE_BODY_NAME],
+            ),
+        },
     )
 
     ang_vel_xy_l2 = RewTerm(
@@ -577,7 +623,7 @@ class RewardsCfg:
     #both feet airborn penalty
     both_feet_airborne = RewTerm(
         func=mdp.both_feet_airborne,
-        weight=-10.0,
+        weight=-5.0,
         params={
             "sensor_cfg": SceneEntityCfg(
                 "contact_forces",
@@ -674,6 +720,9 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
         # Viewer.
         self.viewer.eye = (4.0, 4.0, 3.0)
         self.viewer.lookat = (0.0, 0.0, 0.6)
+
+        # Update the simulated IMU at every physics step: 0.005 s = 200 Hz.
+        self.scene.imu.update_period = self.sim.dt
 
 
 ##

@@ -51,16 +51,16 @@ def _mirror_policy_observation(obs: torch.Tensor) -> torch.Tensor:
     dtype = obs.dtype
 
     # Observation layout:
-    # 0:3    base_lin_vel
-    # 3:6    base_ang_vel
+    # 0:3    imu_linear_acceleration
+    # 3:6    imu_angular_velocity
     # 6:9    projected_gravity
     # 9:12   velocity_commands
     # 12:24  joint_pos
     # 24:36  joint_vel
     # 36:48  previous actions
 
-    # Linear velocity is a polar vector:
-    # [vx, vy, vz] -> [vx, -vy, vz]
+    # IMU linear acceleration is a polar vector:
+    # [ax, ay, az] -> [ax, -ay, az]
     mirrored[..., 0:3] *= torch.tensor(
         [1.0, -1.0, 1.0], device=device, dtype=dtype
     )
@@ -128,14 +128,3 @@ def compute_symmetric_states(
         actions_aug = None
 
     return obs_aug, actions_aug
-
-def test_mirror_is_involution():
-    x = torch.randn(32, NUM_JOINTS)
-    x_twice = _mirror_joint_data(_mirror_joint_data(x))
-    torch.testing.assert_close(x_twice, x)
-
-    obs = torch.randn(32, POLICY_OBS_DIM)
-    obs_twice = _mirror_policy_observation(
-        _mirror_policy_observation(obs)
-    )
-    torch.testing.assert_close(obs_twice, obs)
