@@ -480,14 +480,14 @@ class EventCfg:
         params={
             "bar_names": WOODEN_BAR_NAMES,
             "hidden_depth": 2.0,
-            # After the obstacle curriculum begins, keep 80% of episodes
-            # focused on walking/turning and use 20% for bar crossing.
-            "spawn_probability": 0.20,
+            "stride_training_spawn_probability": 0.50,
+            # Keep the current 20% obstacle-training share in stage three.
+            "obstacle_training_spawn_probability": 0.20,
         },
     )
 
-    # The obstacle never appears at episode start. Once the curriculum enables
-    # it, this event places it after 5-10 seconds of locomotion.
+    # The bar never appears at episode start. Once its curriculum phase begins,
+    # this event places it after 5-10 seconds of locomotion.
     spawn_wooden_bar = EventTerm(
         func=mdp.spawn_wooden_bar,
         mode="interval",
@@ -497,7 +497,8 @@ class EventCfg:
             "bar_names": WOODEN_BAR_NAMES,
             "bar_heights": WOODEN_BAR_HEIGHTS,
             "robot_name": "robot",
-            "distance_range": (0.30, 0.40),
+            "stride_training_distance_range": (0.0, 0.20),
+            "obstacle_training_distance_range": (0.35, 0.40),
             "drop_clearance": 0.01,
             "command_name": "base_velocity",
         },
@@ -660,6 +661,15 @@ class RewardsCfg:
         },
     )
 
+    # Give a matching extra penalty when the obstacle-crossing deadline expires.
+    wooden_bar_deadline_penalty = RewTerm(
+        func=mdp.is_terminated_term,
+        weight=-800.0,
+        params={
+            "term_keys": "wooden_bar_deadline",
+        },
+    )
+
     # Disabled: fall is detected by root orientation and root height, not contact forces.
     illegal_non_foot_contact = None
 
@@ -787,13 +797,35 @@ class RewardsCfg:
     # )
     wooden_bar_crossing = None
 
-    # Encourage the swing foot to reach 3 cm above the supporting foot.
-    # The reward stops increasing after 3 cm.
+    # Stage two only: encourage the swing foot to reach 3 cm above the support
+    # foot while a nearby wooden bar is visible.
     feet_clearance = RewTerm(
         func=mdp.feet_clearance_reward,
         weight=2.5,
         params={
             "target_height": 0.03,
+            "command_name": "base_velocity",
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+        },
+    )
+
+    # Stage two only: strongly reward touchdown strides longer than one 14 cm
+    # foot, with full reward at 20 cm. The MDP term supplies the phase/bar mask.
+    feet_stride_length = RewTerm(
+        func=mdp.feet_stride_length_reward,
+        weight=10.0,
+        params={
+            "foot_length": 0.14,
+            "target_stride_length": 0.20,
             "command_name": "base_velocity",
             "asset_cfg": SceneEntityCfg(
                 "robot",
@@ -872,7 +904,7 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
-    """First learn walking/turning, then introduce the wooden bar."""
+    """Learn normal walking, long strides near a bar, then obstacle crossing."""
 
     fixed_forward_speed = CurrTerm(
         func=mdp.fixed_forward_speed_curriculum,
@@ -891,11 +923,11 @@ class CurriculumCfg:
         func=mdp.wooden_bar_curriculum,
         params={
             "bar_heights": WOODEN_BAR_HEIGHTS,
-            # 5,000 control steps / 24 rollout steps is approximately
-            # PPO iteration 208 with the current runner configuration.
-            "start_step": 12_000,
-            # Reach the competition height at about PPO iteration 3,333,
-            # leaving the final third of a 5,000-iteration run at 20 mm.
+            # Stage one: normal walking before step 6,000.
+            # Stage two: 50% nearby-bar stride training from 6,000 to 12,000.
+            "stride_training_start_step": 6_000,
+            # Stage three: current nine-height obstacle curriculum.
+            "obstacle_training_start_step": 12_000,
             "end_step": 180_000,
         },
     )
@@ -987,10 +1019,11 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         self.commands.base_velocity.rel_heading_envs = 0.0
         self.commands.base_velocity.rel_standing_envs = 0.0
 
-        # Make the obstacle curriculum visible immediately during playback.
-        self.curriculum.wooden_bar.params["start_step"] = 0
+        # Make the final obstacle curriculum visible immediately during playback.
+        self.curriculum.wooden_bar.params["stride_training_start_step"] = 0
+        self.curriculum.wooden_bar.params["obstacle_training_start_step"] = 0
         self.curriculum.wooden_bar.params["end_step"] = 0
-        self.events.reset_wooden_bar.params["spawn_probability"] = 1.0
+        self.events.reset_wooden_bar.params["obstacle_training_spawn_probability"] = 1.0
 
         self.observations.policy.enable_corruption = False
         self.observations.policy.wooden_bar_distance.params["noise_range"] = (0.0, 0.0)
