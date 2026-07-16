@@ -26,7 +26,7 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     #     trainer.timesteps = 72000
     #
     # 72000 / 24 rollout steps = 3000 PPO iterations.
-    max_iterations = 5000
+    max_iterations = 10000
 
     save_interval = 50
     experiment_name = "humanoid_robot_rsl_rl_rough"

@@ -121,13 +121,13 @@ WOODEN_BAR_LENGTH = 0.35
 WOODEN_BAR_WIDTH = 0.01
 # Nine evenly spaced heights from 2 mm to 20 mm.
 WOODEN_BAR_HEIGHTS = (
-    0.00200,  # 2.00 mm
-    0.00425,  # 4.25 mm
-    0.00650,  # 6.50 mm
-    0.00875,  # 8.75 mm
-    0.01100,  # 11.00 mm
-    0.01325,  # 13.25 mm
-    0.01550,  # 15.50 mm
+    0.00100,  # 2.00 mm
+    0.00225,  # 4.25 mm
+    0.00350,  # 6.50 mm
+    0.00475,  # 8.75 mm
+    0.00600,  # 11.00 mm
+    0.00925,  # 13.25 mm
+    0.01250,  # 15.50 mm
     0.01775,  # 17.75 mm
     0.02000,  # 20.00 mm
 )
@@ -651,6 +651,15 @@ class RewardsCfg:
         weight=-200.0,
     )
 
+    # Extra penalty applied only when the wooden bar moves.
+    wooden_bar_moved_penalty = RewTerm(
+        func=mdp.is_terminated_term,
+        weight=-800.0,
+        params={
+            "term_keys": "wooden_bar_moved",
+        },
+    )
+
     # Disabled: fall is detected by root orientation and root height, not contact forces.
     illegal_non_foot_contact = None
 
@@ -884,10 +893,10 @@ class CurriculumCfg:
             "bar_heights": WOODEN_BAR_HEIGHTS,
             # 5,000 control steps / 24 rollout steps is approximately
             # PPO iteration 208 with the current runner configuration.
-            "start_step": 6_000,
+            "start_step": 12_000,
             # Reach the competition height at about PPO iteration 3,333,
             # leaving the final third of a 5,000-iteration run at 20 mm.
-            "end_step": 80_000,
+            "end_step": 180_000,
         },
     )
 
@@ -912,7 +921,7 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
 
     # Scene settings.
     scene: HumanoidRobotPolicySceneCfg = HumanoidRobotPolicySceneCfg(
-        num_envs=1024,
+        num_envs=512,
         env_spacing=2.5,
     )
 
