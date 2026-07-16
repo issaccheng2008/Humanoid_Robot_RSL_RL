@@ -230,6 +230,7 @@ def wooden_bar_distance(
     bar_name: str,
     robot_name: str,
     default_distance: float = DEFAULT_BAR_DISTANCE,
+    noise_range: tuple[float, float] = (0.0, 0.0),
     crossing_margin: float = 0.10,
     maximum_lateral_offset: float = 0.225,
 ) -> torch.Tensor:
@@ -239,8 +240,9 @@ def wooden_bar_distance(
     robot = env.scene[robot_name]
 
     distance = torch.linalg.vector_norm(bar.data.root_pos_w[:, :2] - robot.data.root_pos_w[:, :2], dim=1)
-    distance = torch.clamp(distance, min=0.0, max=default_distance)
     visible = state.spawned & ~state.crossed
+    measurement_noise = torch.empty_like(distance).uniform_(*noise_range)
+    distance = torch.clamp(distance + measurement_noise, min=0.0)
     distance = torch.where(visible, distance, torch.full_like(distance, default_distance))
     return distance.unsqueeze(1)
 

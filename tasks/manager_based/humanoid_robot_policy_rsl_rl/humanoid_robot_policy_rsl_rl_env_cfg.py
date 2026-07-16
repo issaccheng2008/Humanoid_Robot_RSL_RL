@@ -333,8 +333,8 @@ class ObservationsCfg:
             params={
                 "bar_name": "wooden_bar",
                 "robot_name": "robot",
+                "noise_range": (-0.005, 0.005),
             },
-            noise=Unoise(n_min=-0.005, n_max=0.005),
         )
 
         # Joint state.
@@ -857,6 +857,7 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         self.curriculum.wooden_bar.params["start_step"] = 0
 
         self.observations.policy.enable_corruption = False
+        self.observations.policy.wooden_bar_distance.params["noise_range"] = (0.0, 0.0)
 
 
         # Camera follows the robot in environment 0.
