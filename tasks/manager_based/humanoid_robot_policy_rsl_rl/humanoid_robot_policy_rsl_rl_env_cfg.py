@@ -48,7 +48,7 @@ SMALL_RANDOM_ROUGH_TERRAIN_CFG = TerrainGeneratorCfg(
     # Flat border around the complete terrain grid.
     border_width=10.0,
 
-    # Creates 10 × 20 = 200 terrain patches.
+    # Creates 10 Ã— 20 = 200 terrain patches.
     num_rows=10,
     num_cols=20,
 
@@ -119,7 +119,30 @@ MAX_BASE_TILT = math.radians(65.0)
 
 WOODEN_BAR_LENGTH = 0.35
 WOODEN_BAR_WIDTH = 0.01
-WOODEN_BAR_HEIGHT = 0.02
+# Nine evenly spaced heights from 2 mm to 20 mm.
+WOODEN_BAR_HEIGHTS = (
+    0.00200,  # 2.00 mm
+    0.00425,  # 4.25 mm
+    0.00650,  # 6.50 mm
+    0.00875,  # 8.75 mm
+    0.01100,  # 11.00 mm
+    0.01325,  # 13.25 mm
+    0.01550,  # 15.50 mm
+    0.01775,  # 17.75 mm
+    0.02000,  # 20.00 mm
+)
+
+WOODEN_BAR_NAMES = (
+    "wooden_bar_level_1",
+    "wooden_bar_level_2",
+    "wooden_bar_level_3",
+    "wooden_bar_level_4",
+    "wooden_bar_level_5",
+    "wooden_bar_level_6",
+    "wooden_bar_level_7",
+    "wooden_bar_level_8",
+    "wooden_bar_level_9",
+)
 
 ANKLE_JOINT_NAMES = [
     ".*_ankle_pitch_joint",
@@ -130,6 +153,35 @@ YAW_ROLL_JOINT_NAMES = [
     ".*_leg_yaw_joint",
     ".*_leg_roll_joint",
 ]
+
+
+def _make_wooden_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
+    """Create one fixed-height bar variant for the obstacle curriculum."""
+    return RigidObjectCfg(
+        prim_path=f"{{ENV_REGEX_NS}}/{prim_name}",
+        spawn=sim_utils.CuboidCfg(
+            size=(WOODEN_BAR_WIDTH, WOODEN_BAR_LENGTH, height),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                disable_gravity=False,
+                linear_damping=0.05,
+                angular_damping=0.05,
+            ),
+            collision_props=sim_utils.CollisionPropertiesCfg(),
+            mass_props=sim_utils.MassPropertiesCfg(density=500.0),
+            physics_material=sim_utils.RigidBodyMaterialCfg(
+                friction_combine_mode="average",
+                restitution_combine_mode="average",
+                static_friction=0.6,
+                dynamic_friction=0.5,
+                restitution=0.0,
+            ),
+            visual_material=sim_utils.PreviewSurfaceCfg(
+                diffuse_color=(0.8, 0.02, 0.02),
+                roughness=0.7,
+            ),
+        ),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, -2.0)),
+    )
 
 
 ##
@@ -194,32 +246,34 @@ class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
         force_threshold=1.0,
     )
 
-    # Competition obstacle: a light red 10 mm x 20 mm wooden strip spanning
-    # the 350 mm track. It starts below the terrain and is placed by an event.
-    wooden_bar = RigidObjectCfg(
-        prim_path="{ENV_REGEX_NS}/WoodenBar",
-        spawn=sim_utils.CuboidCfg(
-            size=(WOODEN_BAR_WIDTH, WOODEN_BAR_LENGTH, WOODEN_BAR_HEIGHT),
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                disable_gravity=False,
-                linear_damping=0.05,
-                angular_damping=0.05,
-            ),
-            collision_props=sim_utils.CollisionPropertiesCfg(),
-            mass_props=sim_utils.MassPropertiesCfg(density=500.0),
-            physics_material=sim_utils.RigidBodyMaterialCfg(
-                friction_combine_mode="average",
-                restitution_combine_mode="average",
-                static_friction=0.6,
-                dynamic_friction=0.5,
-                restitution=0.0,
-            ),
-            visual_material=sim_utils.PreviewSurfaceCfg(
-                diffuse_color=(0.8, 0.02, 0.02),
-                roughness=0.7,
-            ),
-        ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, -2.0)),
+    # Pre-create fixed collider heights. Runtime scale changes are unsupported
+    # during tensorized training, so the curriculum activates one variant.
+    wooden_bar_level_1 = _make_wooden_bar_cfg(
+        "WoodenBarLevel1", WOODEN_BAR_HEIGHTS[0]
+    )
+    wooden_bar_level_2 = _make_wooden_bar_cfg(
+        "WoodenBarLevel2", WOODEN_BAR_HEIGHTS[1]
+    )
+    wooden_bar_level_3 = _make_wooden_bar_cfg(
+        "WoodenBarLevel3", WOODEN_BAR_HEIGHTS[2]
+    )
+    wooden_bar_level_4 = _make_wooden_bar_cfg(
+        "WoodenBarLevel4", WOODEN_BAR_HEIGHTS[3]
+    )
+    wooden_bar_level_5 = _make_wooden_bar_cfg(
+        "WoodenBarLevel5", WOODEN_BAR_HEIGHTS[4]
+    )
+    wooden_bar_level_6 = _make_wooden_bar_cfg(
+        "WoodenBarLevel6", WOODEN_BAR_HEIGHTS[5]
+    )
+    wooden_bar_level_7 = _make_wooden_bar_cfg(
+        "WoodenBarLevel7", WOODEN_BAR_HEIGHTS[6]
+    )
+    wooden_bar_level_8 = _make_wooden_bar_cfg(
+        "WoodenBarLevel8", WOODEN_BAR_HEIGHTS[7]
+    )
+    wooden_bar_level_9 = _make_wooden_bar_cfg(
+        "WoodenBarLevel9", WOODEN_BAR_HEIGHTS[8]
     )
 
     # Light.
@@ -331,7 +385,7 @@ class ObservationsCfg:
         wooden_bar_distance = ObsTerm(
             func=mdp.wooden_bar_distance,
             params={
-                "bar_name": "wooden_bar",
+                "bar_names": WOODEN_BAR_NAMES,
                 "robot_name": "robot",
                 "noise_range": (-0.005, 0.005),
             },
@@ -419,11 +473,11 @@ class EventCfg:
         func=mdp.reset_wooden_bar,
         mode="reset",
         params={
-            "bar_name": "wooden_bar",
+            "bar_names": WOODEN_BAR_NAMES,
             "hidden_depth": 2.0,
             # After the obstacle curriculum begins, keep 80% of episodes
             # focused on walking/turning and use 20% for bar crossing.
-            "spawn_probability": 0.20,
+            "spawn_probability": 1.00,
         },
     )
 
@@ -435,10 +489,10 @@ class EventCfg:
         interval_range_s=(5.0, 10.0),
         is_global_time=False,
         params={
-            "bar_name": "wooden_bar",
+            "bar_names": WOODEN_BAR_NAMES,
+            "bar_heights": WOODEN_BAR_HEIGHTS,
             "robot_name": "robot",
             "distance_range": (0.30, 0.40),
-            "bar_height": WOODEN_BAR_HEIGHT,
             "drop_clearance": 0.01,
             "command_name": "base_velocity",
         },
@@ -705,11 +759,33 @@ class RewardsCfg:
         },
     )
 
-    # Sparse task reward for fully clearing the bar within its lateral span.
-    wooden_bar_crossing = RewTerm(
-        func=mdp.wooden_bar_crossing_reward,
-        weight=100.0,
-        params={"robot_name": "robot"},
+    # # Sparse task reward for fully clearing the bar within its lateral span.
+    # wooden_bar_crossing = RewTerm(
+    #     func=mdp.wooden_bar_crossing_reward,
+    #     weight=100.0,
+    #     params={"robot_name": "robot"},
+    # )
+    wooden_bar_crossing = None
+
+    # Encourage the swing foot to reach 3 cm above the supporting foot.
+    # The reward stops increasing after 3 cm.
+    feet_clearance = RewTerm(
+        func=mdp.feet_clearance_reward,
+        weight=0.5,
+        params={
+            "target_height": 0.03,
+            "command_name": "base_velocity",
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+        },
     )
 
 
@@ -745,7 +821,7 @@ class TerminationsCfg:
     wooden_bar_moved = DoneTerm(
         func=mdp.wooden_bar_moved,
         params={
-            "bar_name": "wooden_bar",
+            "bar_names": WOODEN_BAR_NAMES,
             "robot_name": "robot",
             "translation_tolerance": 0.005,
             "rotation_tolerance": math.radians(5.0),
@@ -775,20 +851,34 @@ class CurriculumCfg:
         params={
             "command_name": "base_velocity",
             "initial_speed": 0.2,
-            "final_speed": 0.70,
+            "final_speed": 0.50,
             "start_step": 1000,
             # 24,000 control steps / 24 rollout steps
             # is approximately 1,000 PPO iterations.
-            "end_step": 5_000,
+            "end_step": 3_000,
         },
     )
 
     wooden_bar = CurrTerm(
         func=mdp.wooden_bar_curriculum,
         params={
-            # 36,000 environment steps / 24 rollout steps is approximately
-            # 1,500 PPO iterations with the current runner configuration.
-            "start_step": 5_000,
+            "bar_heights": WOODEN_BAR_HEIGHTS,
+            # 5,000 control steps / 24 rollout steps is approximately
+            # PPO iteration 208 with the current runner configuration.
+            "start_step": 3_000,
+            # Reach the competition height at about PPO iteration 3,333,
+            # leaving the final third of a 5,000-iteration run at 20 mm.
+            "end_step": 80_000,
+        },
+    )
+
+    termination_penalty_after_bar = CurrTerm(
+        func=mdp.modify_reward_weight,
+        params={
+            "term_name": "termination_penalty",
+            "weight": -500.0,
+            # Use the same step at which wooden-bar training begins.
+            "num_steps": 5_000,
         },
     )
 
@@ -861,7 +951,7 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
             mdp.KeyboardVelocityCommand
         )
 
-        self.commands.base_velocity.ranges.lin_vel_x = (0.7, 0.7)
+        self.commands.base_velocity.ranges.lin_vel_x = (0.5, 0.5)
         self.commands.base_velocity.ranges.ang_vel_z = (-0.8, 0.8)
         self.commands.base_velocity.ranges.heading = None
 
@@ -871,6 +961,7 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
 
         # Make the obstacle curriculum visible immediately during playback.
         self.curriculum.wooden_bar.params["start_step"] = 0
+        self.curriculum.wooden_bar.params["end_step"] = 0
         self.events.reset_wooden_bar.params["spawn_probability"] = 1.0
 
         self.observations.policy.enable_corruption = False

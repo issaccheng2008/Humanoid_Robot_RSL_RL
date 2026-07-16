@@ -40,6 +40,10 @@ class _WoodenBarState:
         self.forward_w = torch.zeros(env.num_envs, 2, device=env.device)
         self.forward_w[:, 0] = 1.0
         self.curriculum_enabled = False
+        self.current_height_index = 0
+        self.active_bar_index = torch.full(
+            (env.num_envs,), -1, dtype=torch.long, device=env.device
+        )
 
 
 def _get_state(env: ManagerBasedRLEnv) -> _WoodenBarState:
@@ -58,6 +62,22 @@ def _as_env_ids(env: ManagerBasedRLEnv, env_ids: Sequence[int] | None) -> torch.
 
 def _episode_time_s(env: ManagerBasedRLEnv) -> torch.Tensor:
     return env.episode_length_buf * env.step_dt
+
+
+def _active_bar_pose_w(
+    env: ManagerBasedRLEnv,
+    bar_names: Sequence[str],
+    state: _WoodenBarState,
+) -> torch.Tensor:
+    """Return the root pose of the selected height variant in every environment."""
+    all_bar_poses_w = torch.stack(
+        [env.scene[name].data.root_state_w[:, :7] for name in bar_names],
+        dim=1,
+    )
+    safe_indices = torch.clamp(state.active_bar_index, min=0)
+    env_indices = torch.arange(env.num_envs, device=env.device)
+    active_pose_w = all_bar_poses_w[env_indices, safe_indices]
+    return torch.where(state.spawned.unsqueeze(1), active_pose_w, state.spawn_pose_w)
 
 
 def _update_crossed(
@@ -139,28 +159,29 @@ def forward_yaw_velocity_commands(env: ManagerBasedRLEnv, command_name: str) -> 
 def reset_wooden_bar(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int] | None,
-    bar_name: str,
+    bar_names: tuple[str, ...],
     hidden_depth: float,
     spawn_probability: float,
 ):
-    """Hide the bar, clear state, and sample which episodes receive one."""
+    """Hide every height variant, clear state, and sample bar episodes."""
     env_ids = _as_env_ids(env, env_ids)
     if len(env_ids) == 0:
         return
 
     state = _get_state(env)
-    bar = env.scene[bar_name]
-
     pose = torch.zeros(len(env_ids), 7, device=env.device)
     pose[:, :3] = env.scene.env_origins[env_ids]
     pose[:, 2] -= hidden_depth
     pose[:, 3] = 1.0
     velocity = torch.zeros(len(env_ids), 6, device=env.device)
 
-    bar.write_root_pose_to_sim(pose, env_ids=env_ids)
-    bar.write_root_velocity_to_sim(velocity, env_ids=env_ids)
+    for bar_name in bar_names:
+        bar = env.scene[bar_name]
+        bar.write_root_pose_to_sim(pose, env_ids=env_ids)
+        bar.write_root_velocity_to_sim(velocity, env_ids=env_ids)
 
     state.spawned[env_ids] = False
+    state.active_bar_index[env_ids] = -1
     if state.curriculum_enabled:
         state.episode_has_bar[env_ids] = (
             torch.rand(len(env_ids), device=env.device) < spawn_probability
@@ -180,10 +201,10 @@ def reset_wooden_bar(
 def spawn_wooden_bar(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int] | None,
-    bar_name: str,
+    bar_names: tuple[str, ...],
+    bar_heights: tuple[float, ...],
     robot_name: str,
     distance_range: tuple[float, float],
-    bar_height: float,
     drop_clearance: float,
     command_name: str,
 ):
@@ -197,8 +218,13 @@ def spawn_wooden_bar(
     if len(env_ids) == 0:
         return
 
+    if len(bar_names) != len(bar_heights):
+        raise ValueError("bar_names and bar_heights must have the same length.")
+
+    active_bar_index = state.current_height_index
+    bar = env.scene[bar_names[active_bar_index]]
+    bar_height = bar_heights[active_bar_index]
     robot = env.scene[robot_name]
-    bar = env.scene[bar_name]
     robot_quat_w = robot.data.root_quat_w[env_ids]
     robot_yaw_quat_w = yaw_quat(robot_quat_w)
     local_forward = torch.zeros(len(env_ids), 3, device=env.device)
@@ -216,6 +242,7 @@ def spawn_wooden_bar(
     bar.write_root_velocity_to_sim(velocity, env_ids=env_ids)
 
     state.spawned[env_ids] = True
+    state.active_bar_index[env_ids] = active_bar_index
     state.crossed[env_ids] = False
     state.crossing_rewarded[env_ids] = False
     state.spawn_time_s[env_ids] = _episode_time_s(env)[env_ids]
@@ -235,7 +262,7 @@ def spawn_wooden_bar(
 
 def wooden_bar_distance(
     env: ManagerBasedRLEnv,
-    bar_name: str,
+    bar_names: tuple[str, ...],
     robot_name: str,
     default_distance: float = DEFAULT_BAR_DISTANCE,
     noise_range: tuple[float, float] = (0.0, 0.0),
@@ -244,10 +271,10 @@ def wooden_bar_distance(
 ) -> torch.Tensor:
     """Return planar robot-to-bar distance, or 40 cm when absent/already crossed."""
     state = _update_crossed(env, robot_name, crossing_margin, maximum_lateral_offset)
-    bar = env.scene[bar_name]
+    bar_pose_w = _active_bar_pose_w(env, bar_names, state)
     robot = env.scene[robot_name]
 
-    distance = torch.linalg.vector_norm(bar.data.root_pos_w[:, :2] - robot.data.root_pos_w[:, :2], dim=1)
+    distance = torch.linalg.vector_norm(bar_pose_w[:, :2] - robot.data.root_pos_w[:, :2], dim=1)
     visible = state.spawned & ~state.crossed
     measurement_noise = torch.empty_like(distance).uniform_(*noise_range)
     distance = torch.clamp(distance + measurement_noise, min=0.0)
@@ -257,7 +284,7 @@ def wooden_bar_distance(
 
 def wooden_bar_moved(
     env: ManagerBasedRLEnv,
-    bar_name: str,
+    bar_names: tuple[str, ...],
     robot_name: str,
     translation_tolerance: float,
     rotation_tolerance: float,
@@ -267,7 +294,7 @@ def wooden_bar_moved(
 ) -> torch.Tensor:
     """Terminate when an active bar is translated or rotated beyond tolerance."""
     state = _update_crossed(env, robot_name, crossing_margin, maximum_lateral_offset)
-    bar_pose_w = env.scene[bar_name].data.root_state_w[:, :7]
+    bar_pose_w = _active_bar_pose_w(env, bar_names, state)
 
     settled = state.spawned & ((_episode_time_s(env) - state.spawn_time_s) >= settling_time_s)
     new_references = settled & ~state.movement_reference_set
@@ -313,13 +340,34 @@ def wooden_bar_crossing_reward(
 def wooden_bar_curriculum(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int],
+    bar_heights: tuple[float, ...],
     start_step: int,
+    end_step: int,
 ) -> dict[str, float]:
-    """Enable delayed obstacle appearances after the walking/turning phase."""
+    """Enable bars, then increase their height from the first to last variant."""
     del env_ids
     state = _get_state(env)
-    state.curriculum_enabled = env.common_step_counter >= start_step
-    return {"bar_enabled": float(state.curriculum_enabled)}
+    step = env.common_step_counter
+    state.curriculum_enabled = step >= start_step
+
+    if not bar_heights:
+        raise ValueError("bar_heights must contain at least one height.")
+
+    if end_step <= start_step:
+        progress = 1.0
+    else:
+        progress = (step - start_step) / (end_step - start_step)
+        progress = min(max(progress, 0.0), 1.0)
+
+    state.current_height_index = min(
+        int(progress * (len(bar_heights) - 1)),
+        len(bar_heights) - 1,
+    )
+    current_height = bar_heights[state.current_height_index]
+    return {
+        "bar_enabled": float(state.curriculum_enabled),
+        "bar_height_m": current_height,
+    }
 
 
 #this curriculm is trying to fix the issue of the robot not really moving 
