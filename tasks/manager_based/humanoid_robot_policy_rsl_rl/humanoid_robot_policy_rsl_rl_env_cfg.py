@@ -477,7 +477,7 @@ class EventCfg:
             "hidden_depth": 2.0,
             # After the obstacle curriculum begins, keep 80% of episodes
             # focused on walking/turning and use 20% for bar crossing.
-            "spawn_probability": 1.00,
+            "spawn_probability": 0.20,
         },
     )
 
