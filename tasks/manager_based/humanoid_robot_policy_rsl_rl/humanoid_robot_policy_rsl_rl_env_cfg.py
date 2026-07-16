@@ -314,7 +314,7 @@ class CommandsCfg:
         ranges=mdp.ObstacleAwareVelocityCommandCfg.Ranges(
             # Fixed forward speed with sampled yaw-rate commands.
             lin_vel_x=(0.2, 0.2),
-            ang_vel_z=(-0.8, 0.8),
+            ang_vel_z=(0.0, 0.0),
             heading=(-math.pi, math.pi),
         ),
     )
@@ -588,7 +588,7 @@ class RewardsCfg:
     # with forward locomotion.
     track_ang_vel_z_exp = RewTerm(
         func=mdp.track_ang_vel_z_world_exp,
-        weight=2.5,
+        weight=5,
         params={
             "command_name": "base_velocity",
             "std": 0.3,
@@ -771,7 +771,7 @@ class RewardsCfg:
     # The reward stops increasing after 3 cm.
     feet_clearance = RewTerm(
         func=mdp.feet_clearance_reward,
-        weight=0.5,
+        weight=2.5,
         params={
             "target_height": 0.03,
             "command_name": "base_velocity",
@@ -833,7 +833,7 @@ class TerminationsCfg:
         func=mdp.wooden_bar_deadline,
         params={
             "robot_name": "robot",
-            "time_limit_s": 20.0,
+            "time_limit_s": 10.0,
         },
     )
 
@@ -865,7 +865,7 @@ class CurriculumCfg:
             "bar_heights": WOODEN_BAR_HEIGHTS,
             # 5,000 control steps / 24 rollout steps is approximately
             # PPO iteration 208 with the current runner configuration.
-            "start_step": 3_000,
+            "start_step": 6_000,
             # Reach the competition height at about PPO iteration 3,333,
             # leaving the final third of a 5,000-iteration run at 20 mm.
             "end_step": 80_000,
@@ -876,7 +876,7 @@ class CurriculumCfg:
         func=mdp.modify_reward_weight,
         params={
             "term_name": "termination_penalty",
-            "weight": -500.0,
+            "weight": -200.0,
             # Use the same step at which wooden-bar training begins.
             "num_steps": 5_000,
         },

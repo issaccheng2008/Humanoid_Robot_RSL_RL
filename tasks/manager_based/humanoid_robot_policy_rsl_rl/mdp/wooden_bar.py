@@ -127,13 +127,19 @@ class ObstacleAwareVelocityCommand(UniformVelocityCommand):
         state = _get_state(self._env)
         bar_active = state.spawned & ~state.crossed
 
-        # A bar may appear while an environment is executing a standing command.
-        # Restore the fixed walking speed before the parent applies standing masks.
+        # Do not let the parent command generator treat an active bar
+        # environment as a standing environment.
         self.is_standing_env[bar_active] = False
-        self.vel_command_b[bar_active, 0] = self.cfg.ranges.lin_vel_x[0]
-        self.vel_command_b[:, 1] = 0.0
+
+        # Let Isaac Lab perform its normal command update first.
         super()._update_command()
 
+        # Enforce the obstacle-crossing command after the parent update.
+        # This runs every control step, so command resampling cannot introduce
+        # a nonzero yaw command while the bar is active.
+        self.vel_command_b[bar_active, 0] = self.cfg.ranges.lin_vel_x[0]
+        self.vel_command_b[bar_active, 1] = 0.0
+        self.vel_command_b[bar_active, 2] = 0.0
 
 @configclass
 class ObstacleAwareVelocityCommandCfg(UniformVelocityCommandCfg):
@@ -256,8 +262,13 @@ def spawn_wooden_bar(
     command_term = env.command_manager.get_term(command_name)
     if isinstance(command_term, ObstacleAwareVelocityCommand):
         command_term.is_standing_env[env_ids] = False
-        command_term.vel_command_b[env_ids, 0] = command_term.cfg.ranges.lin_vel_x[0]
+
+        # Immediately switch to a straight-forward crossing command.
+        command_term.vel_command_b[env_ids, 0] = (
+            command_term.cfg.ranges.lin_vel_x[0]
+        )
         command_term.vel_command_b[env_ids, 1] = 0.0
+        command_term.vel_command_b[env_ids, 2] = 0.0
 
 
 def wooden_bar_distance(
