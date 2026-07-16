@@ -19,6 +19,7 @@ from isaaclab.utils.math import quat_apply, yaw_quat
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
+    from isaaclab.managers import SceneEntityCfg
 
 
 DEFAULT_BAR_DISTANCE = 0.40
@@ -82,19 +83,24 @@ def _active_bar_pose_w(
 
 def _update_crossed(
     env: ManagerBasedRLEnv,
-    robot_name: str,
-    crossing_margin: float,
-    maximum_lateral_offset: float,
+    feet_cfg: SceneEntityCfg,
 ) -> _WoodenBarState:
+    """Mark the bar crossed once the centers of both feet are past it."""
     state = _get_state(env)
     pending = state.spawned & ~state.crossed
-    robot = env.scene[robot_name]
-    relative_xy = robot.data.root_pos_w[:, :2] - state.spawn_pose_w[:, :2]
-    longitudinal = torch.sum(relative_xy * state.forward_w, dim=1)
-    side_w = torch.stack((-state.forward_w[:, 1], state.forward_w[:, 0]), dim=1)
-    lateral = torch.abs(torch.sum(relative_xy * side_w, dim=1))
+    robot = env.scene[feet_cfg.name]
+    foot_centers_w = robot.data.body_com_pos_w[:, feet_cfg.body_ids, :2]
+    if foot_centers_w.shape[1] != 2:
+        raise ValueError(
+            "Wooden-bar crossing requires exactly two foot bodies, "
+            f"but received {foot_centers_w.shape[1]}."
+        )
 
-    crossed_now = pending & (longitudinal > crossing_margin) & (lateral <= maximum_lateral_offset)
+    relative_xy = foot_centers_w - state.spawn_pose_w[:, None, :2]
+    longitudinal = torch.sum(relative_xy * state.forward_w[:, None, :], dim=2)
+    both_feet_past_bar = torch.all(longitudinal > 0.0, dim=1)
+
+    crossed_now = pending & both_feet_past_bar
     state.crossed |= crossed_now
     return state
 
@@ -274,21 +280,25 @@ def spawn_wooden_bar(
 def wooden_bar_distance(
     env: ManagerBasedRLEnv,
     bar_names: tuple[str, ...],
-    robot_name: str,
+    feet_cfg: SceneEntityCfg,
     default_distance: float = DEFAULT_BAR_DISTANCE,
     noise_range: tuple[float, float] = (0.0, 0.0),
-    crossing_margin: float = 0.10,
-    maximum_lateral_offset: float = 0.225,
 ) -> torch.Tensor:
-    """Return planar robot-to-bar distance, or 40 cm when absent/already crossed."""
-    state = _update_crossed(env, robot_name, crossing_margin, maximum_lateral_offset)
+    """Return signed forward bar distance, or 40 cm when absent/already crossed."""
+    state = _update_crossed(env, feet_cfg)
     bar_pose_w = _active_bar_pose_w(env, bar_names, state)
-    robot = env.scene[robot_name]
+    robot = env.scene[feet_cfg.name]
 
-    distance = torch.linalg.vector_norm(bar_pose_w[:, :2] - robot.data.root_pos_w[:, :2], dim=1)
+    relative_bar_xy = bar_pose_w[:, :2] - robot.data.root_pos_w[:, :2]
+    local_forward = torch.zeros(env.num_envs, 3, device=env.device)
+    local_forward[:, 0] = 1.0
+    robot_forward_w = quat_apply(
+        yaw_quat(robot.data.root_quat_w), local_forward
+    )[:, :2]
+    distance = torch.sum(relative_bar_xy * robot_forward_w, dim=1)
     visible = state.spawned & ~state.crossed
     measurement_noise = torch.empty_like(distance).uniform_(*noise_range)
-    distance = torch.clamp(distance + measurement_noise, min=0.0)
+    distance = distance + measurement_noise
     distance = torch.where(visible, distance, torch.full_like(distance, default_distance))
     return distance.unsqueeze(1)
 
@@ -296,15 +306,13 @@ def wooden_bar_distance(
 def wooden_bar_moved(
     env: ManagerBasedRLEnv,
     bar_names: tuple[str, ...],
-    robot_name: str,
+    feet_cfg: SceneEntityCfg,
     translation_tolerance: float,
     rotation_tolerance: float,
     settling_time_s: float,
-    crossing_margin: float = 0.10,
-    maximum_lateral_offset: float = 0.225,
 ) -> torch.Tensor:
     """Terminate when an active bar is translated or rotated beyond tolerance."""
-    state = _update_crossed(env, robot_name, crossing_margin, maximum_lateral_offset)
+    state = _update_crossed(env, feet_cfg)
     bar_pose_w = _active_bar_pose_w(env, bar_names, state)
 
     settled = state.spawned & ((_episode_time_s(env) - state.spawn_time_s) >= settling_time_s)
@@ -324,25 +332,21 @@ def wooden_bar_moved(
 
 def wooden_bar_deadline(
     env: ManagerBasedRLEnv,
-    robot_name: str,
+    feet_cfg: SceneEntityCfg,
     time_limit_s: float,
-    crossing_margin: float = 0.10,
-    maximum_lateral_offset: float = 0.225,
 ) -> torch.Tensor:
     """Terminate if the robot has not crossed within 20 seconds of appearance."""
-    state = _update_crossed(env, robot_name, crossing_margin, maximum_lateral_offset)
+    state = _update_crossed(env, feet_cfg)
     elapsed = _episode_time_s(env) - state.spawn_time_s
     return state.spawned & ~state.crossed & (elapsed > time_limit_s)
 
 
 def wooden_bar_crossing_reward(
     env: ManagerBasedRLEnv,
-    robot_name: str,
-    crossing_margin: float = 0.10,
-    maximum_lateral_offset: float = 0.225,
+    feet_cfg: SceneEntityCfg,
 ) -> torch.Tensor:
     """Give a one-step reward when the robot first clears the bar."""
-    state = _update_crossed(env, robot_name, crossing_margin, maximum_lateral_offset)
+    state = _update_crossed(env, feet_cfg)
     newly_crossed = state.crossed & ~state.crossing_rewarded
     state.crossing_rewarded |= newly_crossed
     return newly_crossed.float()
