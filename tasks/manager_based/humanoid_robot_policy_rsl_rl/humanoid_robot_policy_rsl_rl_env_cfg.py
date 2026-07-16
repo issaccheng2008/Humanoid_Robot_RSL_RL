@@ -227,7 +227,7 @@ class CommandsCfg:
             # Sample forward walking and turning commands; lateral velocity remains disabled.
             lin_vel_x=(0.0, 1.0),
             lin_vel_y=(0.0, 0.0),
-            ang_vel_z=(-0.5, 0.5),
+            ang_vel_z=(-0.8, 0.8),
             heading=(-math.pi, math.pi),
         ),
     )
@@ -623,7 +623,7 @@ class RewardsCfg:
     #both feet airborn penalty
     both_feet_airborne = RewTerm(
         func=mdp.both_feet_airborne,
-        weight=-5.0,
+        weight=-10.0,
         params={
             "sensor_cfg": SceneEntityCfg(
                 "contact_forces",
@@ -747,7 +747,7 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
 
         self.commands.base_velocity.ranges.lin_vel_x = (0.0, 1.0)
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
-        self.commands.base_velocity.ranges.ang_vel_z = (-0.5, 0.5)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.8, 0.8)
         self.commands.base_velocity.ranges.heading = None
 
         self.commands.base_velocity.heading_command = False

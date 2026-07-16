@@ -19,7 +19,7 @@ class KeyboardVelocityCommand(UniformVelocityCommand):
 
     FORWARD_SPEED = 0.9
     TURN_FORWARD_SPEED = 0.20
-    TURN_SPEED = 0.45
+    TURN_SPEED = 0.7
 
     FORWARD_KEYS = {"W", "UP"}
     LEFT_KEYS = {"A", "LEFT"}
