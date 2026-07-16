@@ -380,13 +380,18 @@ class ObservationsCfg:
             params={"command_name": "base_velocity"},
         )
 
-        # Planar distance to the active bar in metres. The underlying value is
-        # 0.40 m when no bar is present or after it has been crossed.
+        # Signed distance to the active bar along the crossing direction. The
+        # underlying value is 0.40 m when no bar is present or after both foot
+        # centers have crossed it.
         wooden_bar_distance = ObsTerm(
             func=mdp.wooden_bar_distance,
             params={
                 "bar_names": WOODEN_BAR_NAMES,
-                "robot_name": "robot",
+                "feet_cfg": SceneEntityCfg(
+                    "robot",
+                    body_names=FOOT_BODY_NAMES,
+                    preserve_order=True,
+                ),
                 "noise_range": (-0.005, 0.005),
             },
         )
@@ -763,7 +768,13 @@ class RewardsCfg:
     # wooden_bar_crossing = RewTerm(
     #     func=mdp.wooden_bar_crossing_reward,
     #     weight=100.0,
-    #     params={"robot_name": "robot"},
+    #     params={
+    #         "feet_cfg": SceneEntityCfg(
+    #             "robot",
+    #             body_names=FOOT_BODY_NAMES,
+    #             preserve_order=True,
+    #         ),
+    #     },
     # )
     wooden_bar_crossing = None
 
@@ -822,7 +833,11 @@ class TerminationsCfg:
         func=mdp.wooden_bar_moved,
         params={
             "bar_names": WOODEN_BAR_NAMES,
-            "robot_name": "robot",
+            "feet_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
             "translation_tolerance": 0.005,
             "rotation_tolerance": math.radians(5.0),
             "settling_time_s": 0.20,
@@ -832,7 +847,11 @@ class TerminationsCfg:
     wooden_bar_deadline = DoneTerm(
         func=mdp.wooden_bar_deadline,
         params={
-            "robot_name": "robot",
+            "feet_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
             "time_limit_s": 10.0,
         },
     )
