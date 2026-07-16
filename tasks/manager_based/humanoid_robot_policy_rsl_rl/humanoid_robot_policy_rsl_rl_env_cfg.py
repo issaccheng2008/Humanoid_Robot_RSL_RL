@@ -259,7 +259,7 @@ class CommandsCfg:
         debug_vis=True,
         ranges=mdp.ObstacleAwareVelocityCommandCfg.Ranges(
             # Fixed forward speed with sampled yaw-rate commands.
-            lin_vel_x=(0.7, 0.7),
+            lin_vel_x=(0.2, 0.2),
             ang_vel_z=(-0.8, 0.8),
             heading=(-math.pi, math.pi),
         ),
@@ -770,12 +770,25 @@ class TerminationsCfg:
 class CurriculumCfg:
     """First learn walking/turning, then introduce the wooden bar."""
 
+    fixed_forward_speed = CurrTerm(
+        func=mdp.fixed_forward_speed_curriculum,
+        params={
+            "command_name": "base_velocity",
+            "initial_speed": 0.2,
+            "final_speed": 0.70,
+            "start_step": 1000,
+            # 24,000 control steps / 24 rollout steps
+            # is approximately 1,000 PPO iterations.
+            "end_step": 5_000,
+        },
+    )
+
     wooden_bar = CurrTerm(
         func=mdp.wooden_bar_curriculum,
         params={
             # 36,000 environment steps / 24 rollout steps is approximately
             # 1,500 PPO iterations with the current runner configuration.
-            "start_step": 36_000,
+            "start_step": 5_000,
         },
     )
 
@@ -872,3 +885,7 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         # Camera position and target relative to the robot root.
         self.viewer.eye = (2.0, 2.0, 1.2)
         self.viewer.lookat = (0.0, 0.0, 0.0)
+
+         # Playback should immediately use the final competition speed.
+        self.curriculum.fixed_forward_speed.params["start_step"] = 0
+        self.curriculum.fixed_forward_speed.params["end_step"] = 0

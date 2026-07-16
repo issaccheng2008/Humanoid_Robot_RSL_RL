@@ -320,3 +320,45 @@ def wooden_bar_curriculum(
     state = _get_state(env)
     state.curriculum_enabled = env.common_step_counter >= start_step
     return {"bar_enabled": float(state.curriculum_enabled)}
+
+
+#this curriculm is trying to fix the issue of the robot not really moving 
+def fixed_forward_speed_curriculum(
+    env: ManagerBasedRLEnv,
+    env_ids: Sequence[int],
+    command_name: str,
+    initial_speed: float,
+    final_speed: float,
+    start_step: int,
+    end_step: int,
+) -> dict[str, float]:
+    """Linearly increase one fixed forward-speed target.
+
+    All non-standing environments receive exactly the same forward speed.
+    This is not uniform command sampling.
+    """
+
+    del env_ids
+
+    if end_step <= start_step:
+        progress = 1.0
+    else:
+        progress = (
+            env.common_step_counter - start_step
+        ) / (end_step - start_step)
+        progress = min(max(progress, 0.0), 1.0)
+
+    speed = initial_speed + progress * (final_speed - initial_speed)
+
+    command_term = env.command_manager.get_term(command_name)
+
+    # Update future command resampling.
+    command_term.cfg.ranges.lin_vel_x = (speed, speed)
+
+    # Also update current commands immediately instead of waiting for the
+    # 10-second command-resampling interval.
+    moving_envs = ~command_term.is_standing_env
+    command_term.vel_command_b[moving_envs, 0] = speed
+    command_term.vel_command_b[:, 1] = 0.0
+
+    return {"fixed_forward_speed": speed}
