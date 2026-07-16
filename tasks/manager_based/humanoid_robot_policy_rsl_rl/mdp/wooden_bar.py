@@ -23,6 +23,9 @@ if TYPE_CHECKING:
 
 
 DEFAULT_BAR_DISTANCE = 0.40
+NORMAL_WALKING_PHASE = 0
+STRIDE_TRAINING_PHASE = 1
+OBSTACLE_TRAINING_PHASE = 2
 
 
 class _WoodenBarState:
@@ -40,7 +43,13 @@ class _WoodenBarState:
         self.movement_reference_set = torch.zeros_like(self.spawned)
         self.forward_w = torch.zeros(env.num_envs, 2, device=env.device)
         self.forward_w[:, 0] = 1.0
-        self.curriculum_enabled = False
+        self.curriculum_phase = NORMAL_WALKING_PHASE
+        self.episode_phase = torch.full(
+            (env.num_envs,),
+            NORMAL_WALKING_PHASE,
+            dtype=torch.long,
+            device=env.device,
+        )
         self.current_height_index = 0
         self.active_bar_index = torch.full(
             (env.num_envs,), -1, dtype=torch.long, device=env.device
@@ -51,6 +60,16 @@ def _get_state(env: ManagerBasedRLEnv) -> _WoodenBarState:
     if not hasattr(env, "_wooden_bar_state"):
         env._wooden_bar_state = _WoodenBarState(env)
     return env._wooden_bar_state
+
+
+def stride_training_bar_active(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Return a mask for stage-two episodes with a visible wooden bar."""
+    state = _get_state(env)
+    return (
+        (state.episode_phase == STRIDE_TRAINING_PHASE)
+        & state.spawned
+        & ~state.crossed
+    )
 
 
 def _as_env_ids(env: ManagerBasedRLEnv, env_ids: Sequence[int] | None) -> torch.Tensor:
@@ -173,9 +192,10 @@ def reset_wooden_bar(
     env_ids: Sequence[int] | None,
     bar_names: tuple[str, ...],
     hidden_depth: float,
-    spawn_probability: float,
+    stride_training_spawn_probability: float,
+    obstacle_training_spawn_probability: float,
 ):
-    """Hide every height variant, clear state, and sample bar episodes."""
+    """Hide every height variant and sample bars for the active curriculum phase."""
     env_ids = _as_env_ids(env, env_ids)
     if len(env_ids) == 0:
         return
@@ -194,12 +214,15 @@ def reset_wooden_bar(
 
     state.spawned[env_ids] = False
     state.active_bar_index[env_ids] = -1
-    if state.curriculum_enabled:
-        state.episode_has_bar[env_ids] = (
-            torch.rand(len(env_ids), device=env.device) < spawn_probability
-        )
-    else:
-        state.episode_has_bar[env_ids] = False
+    state.episode_phase[env_ids] = state.curriculum_phase
+    spawn_probability = torch.zeros(len(env_ids), device=env.device)
+    stride_training = state.episode_phase[env_ids] == STRIDE_TRAINING_PHASE
+    obstacle_training = state.episode_phase[env_ids] == OBSTACLE_TRAINING_PHASE
+    spawn_probability[stride_training] = stride_training_spawn_probability
+    spawn_probability[obstacle_training] = obstacle_training_spawn_probability
+    state.episode_has_bar[env_ids] = (
+        torch.rand(len(env_ids), device=env.device) < spawn_probability
+    )
     state.crossed[env_ids] = False
     state.crossing_rewarded[env_ids] = False
     state.spawn_time_s[env_ids] = 0.0
@@ -216,13 +239,14 @@ def spawn_wooden_bar(
     bar_names: tuple[str, ...],
     bar_heights: tuple[float, ...],
     robot_name: str,
-    distance_range: tuple[float, float],
+    stride_training_distance_range: tuple[float, float],
+    obstacle_training_distance_range: tuple[float, float],
     drop_clearance: float,
     command_name: str,
 ):
-    """Place one bar 30-40 cm ahead after the walking-only curriculum phase."""
+    """Place one bar at the distance selected by the episode's curriculum phase."""
     state = _get_state(env)
-    if not state.curriculum_enabled:
+    if state.curriculum_phase == NORMAL_WALKING_PHASE:
         return
 
     env_ids = _as_env_ids(env, env_ids)
@@ -243,7 +267,17 @@ def spawn_wooden_bar(
     local_forward[:, 0] = 1.0
     forward_w = quat_apply(robot_yaw_quat_w, local_forward)
 
-    distance = torch.empty(len(env_ids), device=env.device).uniform_(*distance_range)
+    distance = torch.empty(len(env_ids), device=env.device)
+    stride_training = state.episode_phase[env_ids] == STRIDE_TRAINING_PHASE
+    obstacle_training = state.episode_phase[env_ids] == OBSTACLE_TRAINING_PHASE
+    if torch.any(stride_training):
+        distance[stride_training] = torch.empty_like(
+            distance[stride_training]
+        ).uniform_(*stride_training_distance_range)
+    if torch.any(obstacle_training):
+        distance[obstacle_training] = torch.empty_like(
+            distance[obstacle_training]
+        ).uniform_(*obstacle_training_distance_range)
     pose = torch.zeros(len(env_ids), 7, device=env.device)
     pose[:, :2] = robot.data.root_pos_w[env_ids, :2] + distance.unsqueeze(1) * forward_w[:, :2]
     pose[:, 2] = env.scene.env_origins[env_ids, 2] + 0.5 * bar_height + drop_clearance
@@ -325,7 +359,8 @@ def wooden_bar_moved(
         torch.sum(bar_pose_w[:, 3:7] * state.movement_reference_pose_w[:, 3:7], dim=1)
     )
     rotation = 2.0 * torch.acos(torch.clamp(quat_dot, min=0.0, max=1.0))
-    return state.movement_reference_set & (
+    obstacle_training = state.episode_phase == OBSTACLE_TRAINING_PHASE
+    return obstacle_training & state.movement_reference_set & (
         (translation > translation_tolerance) | (rotation > rotation_tolerance)
     )
 
@@ -338,7 +373,8 @@ def wooden_bar_deadline(
     """Terminate if the robot has not crossed within 20 seconds of appearance."""
     state = _update_crossed(env, feet_cfg)
     elapsed = _episode_time_s(env) - state.spawn_time_s
-    return state.spawned & ~state.crossed & (elapsed > time_limit_s)
+    obstacle_training = state.episode_phase == OBSTACLE_TRAINING_PHASE
+    return obstacle_training & state.spawned & ~state.crossed & (elapsed > time_limit_s)
 
 
 def wooden_bar_crossing_reward(
@@ -356,22 +392,30 @@ def wooden_bar_curriculum(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int],
     bar_heights: tuple[float, ...],
-    start_step: int,
+    stride_training_start_step: int,
+    obstacle_training_start_step: int,
     end_step: int,
 ) -> dict[str, float]:
-    """Enable bars, then increase their height from the first to last variant."""
+    """Run normal walking, stride preparation, then the obstacle curriculum."""
     del env_ids
     state = _get_state(env)
     step = env.common_step_counter
-    state.curriculum_enabled = step >= start_step
+    if step < stride_training_start_step:
+        state.curriculum_phase = NORMAL_WALKING_PHASE
+    elif step < obstacle_training_start_step:
+        state.curriculum_phase = STRIDE_TRAINING_PHASE
+    else:
+        state.curriculum_phase = OBSTACLE_TRAINING_PHASE
 
     if not bar_heights:
         raise ValueError("bar_heights must contain at least one height.")
 
-    if end_step <= start_step:
+    if end_step <= obstacle_training_start_step:
         progress = 1.0
     else:
-        progress = (step - start_step) / (end_step - start_step)
+        progress = (step - obstacle_training_start_step) / (
+            end_step - obstacle_training_start_step
+        )
         progress = min(max(progress, 0.0), 1.0)
 
     state.current_height_index = min(
@@ -380,7 +424,8 @@ def wooden_bar_curriculum(
     )
     current_height = bar_heights[state.current_height_index]
     return {
-        "bar_enabled": float(state.curriculum_enabled),
+        "bar_enabled": float(state.curriculum_phase != NORMAL_WALKING_PHASE),
+        "bar_curriculum_phase": float(state.curriculum_phase),
         "bar_height_m": current_height,
     }
 
