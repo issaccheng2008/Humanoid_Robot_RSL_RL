@@ -421,6 +421,9 @@ class EventCfg:
         params={
             "bar_name": "wooden_bar",
             "hidden_depth": 2.0,
+            # After the obstacle curriculum begins, keep 80% of episodes
+            # focused on walking/turning and use 20% for bar crossing.
+            "spawn_probability": 0.20,
         },
     )
 
@@ -855,6 +858,7 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
 
         # Make the obstacle curriculum visible immediately during playback.
         self.curriculum.wooden_bar.params["start_step"] = 0
+        self.events.reset_wooden_bar.params["spawn_probability"] = 1.0
 
         self.observations.policy.enable_corruption = False
         self.observations.policy.wooden_bar_distance.params["noise_range"] = (0.0, 0.0)
