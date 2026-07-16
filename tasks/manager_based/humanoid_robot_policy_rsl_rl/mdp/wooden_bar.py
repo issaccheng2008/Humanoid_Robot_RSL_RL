@@ -29,6 +29,7 @@ class _WoodenBarState:
 
     def __init__(self, env: ManagerBasedRLEnv):
         self.spawned = torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
+        self.episode_has_bar = torch.zeros_like(self.spawned)
         self.crossed = torch.zeros_like(self.spawned)
         self.crossing_rewarded = torch.zeros_like(self.spawned)
         self.spawn_time_s = torch.zeros(env.num_envs, device=env.device)
@@ -140,8 +141,9 @@ def reset_wooden_bar(
     env_ids: Sequence[int] | None,
     bar_name: str,
     hidden_depth: float,
+    spawn_probability: float,
 ):
-    """Hide the bar below the terrain and clear its episode state."""
+    """Hide the bar, clear state, and sample which episodes receive one."""
     env_ids = _as_env_ids(env, env_ids)
     if len(env_ids) == 0:
         return
@@ -159,6 +161,12 @@ def reset_wooden_bar(
     bar.write_root_velocity_to_sim(velocity, env_ids=env_ids)
 
     state.spawned[env_ids] = False
+    if state.curriculum_enabled:
+        state.episode_has_bar[env_ids] = (
+            torch.rand(len(env_ids), device=env.device) < spawn_probability
+        )
+    else:
+        state.episode_has_bar[env_ids] = False
     state.crossed[env_ids] = False
     state.crossing_rewarded[env_ids] = False
     state.spawn_time_s[env_ids] = 0.0
@@ -185,7 +193,7 @@ def spawn_wooden_bar(
         return
 
     env_ids = _as_env_ids(env, env_ids)
-    env_ids = env_ids[~state.spawned[env_ids]]
+    env_ids = env_ids[state.episode_has_bar[env_ids] & ~state.spawned[env_ids]]
     if len(env_ids) == 0:
         return
 
