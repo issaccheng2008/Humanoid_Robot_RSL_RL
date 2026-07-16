@@ -54,7 +54,8 @@ def _mirror_policy_observation(obs: torch.Tensor) -> torch.Tensor:
     # 0:3    imu_linear_acceleration
     # 3:6    imu_angular_velocity
     # 6:9    projected_gravity
-    # 9:12   velocity_commands
+    # 9:11   velocity_commands [forward, yaw]
+    # 11:12  wooden_bar_distance
     # 12:24  joint_pos
     # 24:36  joint_vel
     # 36:48  previous actions
@@ -77,10 +78,10 @@ def _mirror_policy_observation(obs: torch.Tensor) -> torch.Tensor:
         [1.0, -1.0, 1.0], device=device, dtype=dtype
     )
 
-    # Velocity commands:
-    # [vx, vy, wz] -> [vx, -vy, -wz]
+    # Velocity commands and obstacle distance:
+    # [vx, wz, distance] -> [vx, -wz, distance]
     mirrored[..., 9:12] *= torch.tensor(
-        [1.0, -1.0, -1.0], device=device, dtype=dtype
+        [1.0, -1.0, 1.0], device=device, dtype=dtype
     )
 
     mirrored[..., 12:24] = _mirror_joint_data(obs[..., 12:24])

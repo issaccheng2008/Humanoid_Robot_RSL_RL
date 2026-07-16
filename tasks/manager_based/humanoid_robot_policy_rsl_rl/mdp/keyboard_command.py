@@ -17,7 +17,7 @@ from isaaclab.envs.mdp import UniformVelocityCommand
 class KeyboardVelocityCommand(UniformVelocityCommand):
     """Generate velocity commands from all currently held keys."""
 
-    FORWARD_SPEED = 0.9
+    FORWARD_SPEED = 0.7
     TURN_FORWARD_SPEED = 0.20
     TURN_SPEED = 0.7
 
@@ -96,7 +96,7 @@ class KeyboardVelocityCommand(UniformVelocityCommand):
         turning = turn_left or turn_right
 
         # Forward speed:
-        # - Up/W held: 0.75 m/s, including while turning.
+        # - Up/W held: 0.7 m/s, including while turning.
         # - Turning alone: 0.20 m/s, to help the robot turn properly.
         # - Otherwise: zero.
         if forward_pressed:

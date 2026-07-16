@@ -18,3 +18,6 @@ from .rewards import *  # noqa: F401, F403
 
 # Keyboard command used during policy playback.
 from .keyboard_command import *  # noqa: F401, F403
+
+# Wooden-bar commands, observations, events, rewards, terminations, and curriculum.
+from .wooden_bar import *  # noqa: F401, F403
