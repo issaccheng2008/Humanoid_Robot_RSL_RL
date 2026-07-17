@@ -72,6 +72,12 @@ def stride_training_bar_active(env: ManagerBasedRLEnv) -> torch.Tensor:
     )
 
 
+def obstacle_training_active(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Return a mask for episodes assigned to the obstacle-training phase."""
+    state = _get_state(env)
+    return state.episode_phase == OBSTACLE_TRAINING_PHASE
+
+
 def _as_env_ids(env: ManagerBasedRLEnv, env_ids: Sequence[int] | None) -> torch.Tensor:
     if env_ids is None:
         return torch.arange(env.num_envs, device=env.device, dtype=torch.long)
