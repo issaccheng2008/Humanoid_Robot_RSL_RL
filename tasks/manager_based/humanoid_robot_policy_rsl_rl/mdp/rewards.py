@@ -151,7 +151,7 @@ def feet_clearance_reward(
         torch.sum(clearance_reward, dim=1)
         * has_support_foot.float()
         * moving_command.float()
-        * stride_training_bar_active(env).float()
+#        * stride_training_bar_active(env).float()
     )
 
 
@@ -228,5 +228,5 @@ def feet_stride_length_reward(
         normalized_stride
         * touchdown.float()
         * moving_command.float()
-        * stride_training_bar_active(env).float()
+#        * stride_training_bar_active(env).float()
     )
