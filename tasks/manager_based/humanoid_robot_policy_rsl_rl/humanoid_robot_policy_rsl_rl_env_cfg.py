@@ -316,7 +316,7 @@ class CommandsCfg:
             #start fresh
 #            lin_vel_x=(0.2, 0.2),
 
-            lin_vel_x=(0,5, 0,5),
+            lin_vel_x=(0.5, 0.5),
             ang_vel_z=(0.0, 0.0),
             heading=(-math.pi, math.pi),
         ),
@@ -483,7 +483,7 @@ class EventCfg:
         params={
             "bar_names": WOODEN_BAR_NAMES,
             "hidden_depth": 2.0,
-            "stride_training_spawn_probability": 0.80,
+            "stride_training_spawn_probability": 1.00,
             # Keep the current 20% obstacle-training share in stage three.
             "obstacle_training_spawn_probability": 0.50,
         },
@@ -804,7 +804,7 @@ class RewardsCfg:
     # foot while a nearby wooden bar is visible.
     feet_clearance = RewTerm(
         func=mdp.feet_clearance_reward,
-        weight=5,
+        weight=20,
         params={
             "target_height": 0.03,
             "command_name": "base_velocity",
@@ -825,7 +825,7 @@ class RewardsCfg:
     # foot, with full reward at 20 cm. The MDP term supplies the phase/bar mask.
     feet_stride_length = RewTerm(
         func=mdp.feet_stride_length_reward,
-        weight=10.0,
+        weight=50.0,
         params={
             "foot_length": 0.14,
             "target_stride_length": 0.20,
