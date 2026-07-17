@@ -90,6 +90,7 @@ def feet_clearance_reward(
         >= 0.03 m clearance -> 1.0
 
     The reward is disabled when:
+    - the episode is not a stage-two stride-training bar episode;
     - neither foot is supporting the robot; or
     - the commanded forward/yaw velocity is approximately zero.
     """
@@ -144,8 +145,72 @@ def feet_clearance_reward(
         dim=1,
     ) > 0.05
 
+    from .wooden_bar import stride_training_bar_active
+
     return (
         torch.sum(clearance_reward, dim=1)
         * has_support_foot.float()
         * moving_command.float()
+        * stride_training_bar_active(env).float()
+    )
+
+
+def feet_stride_length_reward(
+    env: ManagerBasedRLEnv,
+    foot_length: float,
+    target_stride_length: float,
+    asset_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    command_name: str,
+) -> torch.Tensor:
+    """Reward long forward strides when the swing foot touches down.
+
+    A stride receives no reward at or below one 14 cm foot length. The reward
+    then rises linearly and reaches one at ``target_stride_length``. Measuring
+    only touchdown events avoids rewarding a robot for holding a split stance.
+    """
+    if foot_length <= 0.0:
+        raise ValueError("foot_length must be greater than zero.")
+    if target_stride_length <= foot_length:
+        raise ValueError("target_stride_length must be greater than foot_length.")
+
+    robot: Articulation = env.scene[asset_cfg.name]
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+
+    foot_pos_w = robot.data.body_pos_w[:, asset_cfg.body_ids, :2]
+    if foot_pos_w.shape[1] != 2:
+        raise ValueError(
+            "Stride-length reward requires exactly two foot bodies, "
+            f"but received {foot_pos_w.shape[1]}."
+        )
+
+    foot_delta_w = foot_pos_w[:, 0] - foot_pos_w[:, 1]
+    foot_delta_b_x = quat_apply_inverse(
+        yaw_quat(robot.data.root_quat_w),
+        torch.cat(
+            (foot_delta_w, torch.zeros(env.num_envs, 1, device=env.device)),
+            dim=1,
+        ),
+    )[:, 0]
+    stride_length = torch.abs(foot_delta_b_x)
+    normalized_stride = torch.clamp(
+        (stride_length - foot_length) / (target_stride_length - foot_length),
+        min=0.0,
+        max=1.0,
+    )
+
+    first_contact = contact_sensor.compute_first_contact(env.step_dt)[
+        :, sensor_cfg.body_ids
+    ]
+    touchdown = torch.any(first_contact, dim=1)
+    command = env.command_manager.get_command(command_name)
+    moving_command = torch.linalg.vector_norm(command[:, [0, 2]], dim=1) > 0.05
+
+    from .wooden_bar import stride_training_bar_active
+
+    return (
+        normalized_stride
+        * touchdown.float()
+        * moving_command.float()
+        * stride_training_bar_active(env).float()
     )
