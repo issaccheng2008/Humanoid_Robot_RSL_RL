@@ -301,7 +301,7 @@ class CommandsCfg:
         # Standing commands are deliberately common enough to train reliable
         # stop-and-stand behavior. The command term suppresses them while a bar
         # is active.
-        rel_standing_envs=0.20,
+        rel_standing_envs=0.05,
 
         # Use direct yaw-rate commands for turning. ``heading_command=False`` means
         # angular velocity is sampled from ``ang_vel_z`` instead of deriving it
@@ -316,7 +316,7 @@ class CommandsCfg:
             #start fresh
 #            lin_vel_x=(0.2, 0.2),
 
-            lin_vel_x=(0, 0.7),
+            lin_vel_x=(0.2, 0.2),
             ang_vel_z=(0.0, 0.0),
             heading=(-math.pi, math.pi),
         ),
@@ -802,46 +802,46 @@ class RewardsCfg:
 
     # Stage two only: encourage the swing foot to reach 3 cm above the support
     # foot while a nearby wooden bar is visible.
-    # feet_clearance = RewTerm(
-    #     func=mdp.feet_clearance_reward,
-    #     weight=2,
-    #     params={
-    #         "target_height": 0.03,
-    #         "command_name": "base_velocity",
-    #         "asset_cfg": SceneEntityCfg(
-    #             "robot",
-    #             body_names=FOOT_BODY_NAMES,
-    #             preserve_order=True,
-    #         ),
-    #         "sensor_cfg": SceneEntityCfg(
-    #             "contact_forces",
-    #             body_names=FOOT_BODY_NAMES,
-    #             preserve_order=True,
-    #         ),
-    #     },
-    # )
+    feet_clearance = RewTerm(
+        func=mdp.feet_clearance_reward,
+        weight=1,
+        params={
+            "target_height": 0.03,
+            "command_name": "base_velocity",
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+        },
+    )
 
     # Stage two only: strongly reward touchdown strides longer than one 14 cm
     # foot, with full reward at 20 cm. The MDP term supplies the phase/bar mask.
-    # feet_stride_length = RewTerm(
-    #     func=mdp.feet_stride_length_reward,
-    #     weight=2.0,
-    #     params={
-    #         "foot_length": 0.14,
-    #         "target_stride_length": 0.20,
-    #         "command_name": "base_velocity",
-    #         "asset_cfg": SceneEntityCfg(
-    #             "robot",
-    #             body_names=FOOT_BODY_NAMES,
-    #             preserve_order=True,
-    #         ),
-    #         "sensor_cfg": SceneEntityCfg(
-    #             "contact_forces",
-    #             body_names=FOOT_BODY_NAMES,
-    #             preserve_order=True,
-    #         ),
-    #     },
-    # )
+    feet_stride_length = RewTerm(
+        func=mdp.feet_stride_length_reward,
+        weight=3.0,
+        params={
+            "foot_length": 0.14,
+            "target_stride_length": 0.20,
+            "command_name": "base_velocity",
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+        },
+    )
 
 
 ##
@@ -909,31 +909,31 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Learn normal walking, long strides near a bar, then obstacle crossing."""
 # start fresh
-    # fixed_forward_speed = CurrTerm(
-    #     func=mdp.fixed_forward_speed_curriculum,
-    #     params={
-    #         "command_name": "base_velocity",
-    #         "initial_speed": 0.2,
-    #         "final_speed": 0.50,
-    #         "start_step": 500,
-    #         # 24,000 control steps / 24 rollout steps
-    #         # is approximately 1,000 PPO iterations.
-    #         "end_step": 5_000,
-    #     },
-    # )
+    fixed_forward_speed = CurrTerm(
+        func=mdp.fixed_forward_speed_curriculum,
+        params={
+            "command_name": "base_velocity",
+            "initial_speed": 0.2,
+            "final_speed": 0.50,
+            "start_step": 500,
+            # 24,000 control steps / 24 rollout steps
+            # is approximately 1,000 PPO iterations.
+            "end_step": 5_000,
+        },
+    )
 
-    # wooden_bar = CurrTerm(
-    #     func=mdp.wooden_bar_curriculum,
-    #     params={
-    #         "bar_heights": WOODEN_BAR_HEIGHTS,
-    #         # Stage one: normal walking before step 6,000.
-    #         # Stage two: 50% nearby-bar stride training from 6,000 to 12,000.
-    #         "stride_training_start_step": 8_000,
-    #         # Stage three: current nine-height obstacle curriculum.
-    #         "obstacle_training_start_step": 40_000,
-    #         "end_step": 180_000,
-    #     },
-    # )
+    wooden_bar = CurrTerm(
+        func=mdp.wooden_bar_curriculum,
+        params={
+            "bar_heights": WOODEN_BAR_HEIGHTS,
+            # Stage one: normal walking before step 6,000.
+            # Stage two: 50% nearby-bar stride training from 6,000 to 12,000.
+            "stride_training_start_step": 20_000,
+            # Stage three: current nine-height obstacle curriculum.
+            "obstacle_training_start_step": 20_001,
+            "end_step": 180_000,
+        },
+    )
 
     # termination_penalty_after_bar = CurrTerm(
     #     func=mdp.modify_reward_weight,
