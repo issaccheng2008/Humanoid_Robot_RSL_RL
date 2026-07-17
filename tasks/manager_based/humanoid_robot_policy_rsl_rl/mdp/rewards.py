@@ -165,9 +165,9 @@ def feet_stride_length_reward(
 ) -> torch.Tensor:
     """Reward long forward strides when the swing foot touches down.
 
-    A stride receives no reward at or below one 14 cm foot length. The reward
-    then rises linearly and reaches one at ``target_stride_length``. Measuring
-    only touchdown events avoids rewarding a robot for holding a split stance.
+    A touchdown stride receives a negative reward below one 14 cm foot length,
+    zero reward at 14 cm, and a positive reward above 14 cm. The reward reaches
+    one at ``target_stride_length`` and is bounded to the range [-1, 1].
     """
     if foot_length <= 0.0:
         raise ValueError("foot_length must be greater than zero.")
@@ -193,11 +193,27 @@ def feet_stride_length_reward(
         ),
     )[:, 0]
     stride_length = torch.abs(foot_delta_b_x)
-    normalized_stride = torch.clamp(
-        (stride_length - foot_length) / (target_stride_length - foot_length),
-        min=0.0,
-        max=1.0,
+    # Below one foot length:
+    #   0 cm  -> -1
+    #   7 cm  -> -0.5
+    #   14 cm -> 0
+    short_stride_reward = stride_length / foot_length - 1.0
+
+    # Above one foot length:
+    #   14 cm -> 0
+    #   17 cm -> 0.5
+    #   20 cm -> 1
+    long_stride_reward = (
+        (stride_length - foot_length)
+        / (target_stride_length - foot_length)
     )
+
+normalized_stride = torch.where(
+    stride_length < foot_length,
+    short_stride_reward,
+    long_stride_reward,
+)
+normalized_stride = torch.clamp(normalized_stride, min=-1.0, max=1.0)
 
     first_contact = contact_sensor.compute_first_contact(env.step_dt)[
         :, sensor_cfg.body_ids

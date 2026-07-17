@@ -482,7 +482,7 @@ class EventCfg:
             "hidden_depth": 2.0,
             "stride_training_spawn_probability": 0.50,
             # Keep the current 20% obstacle-training share in stage three.
-            "obstacle_training_spawn_probability": 0.20,
+            "obstacle_training_spawn_probability": 0.30,
         },
     )
 
@@ -594,7 +594,7 @@ class RewardsCfg:
     # with forward locomotion.
     track_ang_vel_z_exp = RewTerm(
         func=mdp.track_ang_vel_z_world_exp,
-        weight=5,
+        weight=3,
         params={
             "command_name": "base_velocity",
             "std": 0.3,
@@ -801,7 +801,7 @@ class RewardsCfg:
     # foot while a nearby wooden bar is visible.
     feet_clearance = RewTerm(
         func=mdp.feet_clearance_reward,
-        weight=2.5,
+        weight=5,
         params={
             "target_height": 0.03,
             "command_name": "base_velocity",
@@ -912,10 +912,10 @@ class CurriculumCfg:
             "command_name": "base_velocity",
             "initial_speed": 0.2,
             "final_speed": 0.50,
-            "start_step": 1000,
+            "start_step": 500,
             # 24,000 control steps / 24 rollout steps
             # is approximately 1,000 PPO iterations.
-            "end_step": 3_000,
+            "end_step": 5_000,
         },
     )
 
@@ -925,9 +925,9 @@ class CurriculumCfg:
             "bar_heights": WOODEN_BAR_HEIGHTS,
             # Stage one: normal walking before step 6,000.
             # Stage two: 50% nearby-bar stride training from 6,000 to 12,000.
-            "stride_training_start_step": 6_000,
+            "stride_training_start_step": 8_000,
             # Stage three: current nine-height obstacle curriculum.
-            "obstacle_training_start_step": 12_000,
+            "obstacle_training_start_step": 16_000,
             "end_step": 180_000,
         },
     )
