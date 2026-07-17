@@ -313,7 +313,10 @@ class CommandsCfg:
         debug_vis=True,
         ranges=mdp.ObstacleAwareVelocityCommandCfg.Ranges(
             # Fixed forward speed with sampled yaw-rate commands.
-            lin_vel_x=(0.2, 0.2),
+            #start fresh
+#            lin_vel_x=(0.2, 0.2),
+
+            lin_vel_x=(0,5, 0,5),
             ang_vel_z=(0.0, 0.0),
             heading=(-math.pi, math.pi),
         ),
@@ -480,9 +483,9 @@ class EventCfg:
         params={
             "bar_names": WOODEN_BAR_NAMES,
             "hidden_depth": 2.0,
-            "stride_training_spawn_probability": 0.50,
+            "stride_training_spawn_probability": 0.80,
             # Keep the current 20% obstacle-training share in stage three.
-            "obstacle_training_spawn_probability": 0.30,
+            "obstacle_training_spawn_probability": 0.50,
         },
     )
 
@@ -905,19 +908,43 @@ class TerminationsCfg:
 @configclass
 class CurriculumCfg:
     """Learn normal walking, long strides near a bar, then obstacle crossing."""
+# start fresh
+    # fixed_forward_speed = CurrTerm(
+    #     func=mdp.fixed_forward_speed_curriculum,
+    #     params={
+    #         "command_name": "base_velocity",
+    #         "initial_speed": 0.2,
+    #         "final_speed": 0.50,
+    #         "start_step": 500,
+    #         # 24,000 control steps / 24 rollout steps
+    #         # is approximately 1,000 PPO iterations.
+    #         "end_step": 5_000,
+    #     },
+    # )
 
-    fixed_forward_speed = CurrTerm(
-        func=mdp.fixed_forward_speed_curriculum,
-        params={
-            "command_name": "base_velocity",
-            "initial_speed": 0.2,
-            "final_speed": 0.50,
-            "start_step": 500,
-            # 24,000 control steps / 24 rollout steps
-            # is approximately 1,000 PPO iterations.
-            "end_step": 5_000,
-        },
-    )
+    # wooden_bar = CurrTerm(
+    #     func=mdp.wooden_bar_curriculum,
+    #     params={
+    #         "bar_heights": WOODEN_BAR_HEIGHTS,
+    #         # Stage one: normal walking before step 6,000.
+    #         # Stage two: 50% nearby-bar stride training from 6,000 to 12,000.
+    #         "stride_training_start_step": 8_000,
+    #         # Stage three: current nine-height obstacle curriculum.
+    #         "obstacle_training_start_step": 40_000,
+    #         "end_step": 180_000,
+    #     },
+    # )
+
+    # termination_penalty_after_bar = CurrTerm(
+    #     func=mdp.modify_reward_weight,
+    #     params={
+    #         "term_name": "termination_penalty",
+    #         "weight": -200.0,
+    #         # Use the same step at which wooden-bar training begins.
+    #         "num_steps": 5_000,
+    #     },
+    # )
+
 
     wooden_bar = CurrTerm(
         func=mdp.wooden_bar_curriculum,
@@ -925,22 +952,15 @@ class CurriculumCfg:
             "bar_heights": WOODEN_BAR_HEIGHTS,
             # Stage one: normal walking before step 6,000.
             # Stage two: 50% nearby-bar stride training from 6,000 to 12,000.
-            "stride_training_start_step": 8_000,
+            "stride_training_start_step": 0,
             # Stage three: current nine-height obstacle curriculum.
-            "obstacle_training_start_step": 16_000,
+            "obstacle_training_start_step": 40_000,
             "end_step": 180_000,
         },
     )
 
-    termination_penalty_after_bar = CurrTerm(
-        func=mdp.modify_reward_weight,
-        params={
-            "term_name": "termination_penalty",
-            "weight": -200.0,
-            # Use the same step at which wooden-bar training begins.
-            "num_steps": 5_000,
-        },
-    )
+
+
 
 
 ##

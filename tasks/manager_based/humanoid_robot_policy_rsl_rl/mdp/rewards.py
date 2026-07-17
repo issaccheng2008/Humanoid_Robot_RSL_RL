@@ -208,12 +208,12 @@ def feet_stride_length_reward(
         / (target_stride_length - foot_length)
     )
 
-normalized_stride = torch.where(
-    stride_length < foot_length,
-    short_stride_reward,
-    long_stride_reward,
-)
-normalized_stride = torch.clamp(normalized_stride, min=-1.0, max=1.0)
+    normalized_stride = torch.where(
+        stride_length < foot_length,
+        short_stride_reward,
+        long_stride_reward,
+    )
+    normalized_stride = torch.clamp(normalized_stride, min=-1.0, max=1.0)
 
     first_contact = contact_sensor.compute_first_contact(env.step_dt)[
         :, sensor_cfg.body_ids
