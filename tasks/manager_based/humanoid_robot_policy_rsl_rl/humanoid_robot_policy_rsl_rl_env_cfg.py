@@ -1038,6 +1038,13 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
         self.episode_length_s = 200.0
+        self.terminations.time_out.params.update(
+            {
+                "normal_training_length_s": 200.0,
+                "stride_training_length_s": 200.0,
+                "obstacle_training_length_s": 200.0,
+            }
+        )
 
         # Keyboard controls the base_velocity command.
         self.commands.base_velocity.class_type = (
