@@ -939,8 +939,8 @@ class CurriculumCfg:
         params={
             "bar_heights": WOODEN_BAR_HEIGHTS,
             # Stage one: normal walking before step 6,000.
-            # Stage two: stride training from step 6,000 through step 20,000.
-            "stride_training_start_step": 4_001,
+            # Stage two: stride training from step 6,000 through step 40,000.
+            "stride_training_start_step": 6_000,
             # Stage three: current nine-height obstacle curriculum.
             "obstacle_training_start_step": 40_001,
             "end_step": 180_000,
@@ -1003,12 +1003,15 @@ class CurriculumCfg:
 class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for rough-terrain forward-velocity and yaw-rate tracking."""
 
-    # Added to support curriculum resume/fine-tuning.
-    # The effective curriculum step is:
+    # Resume the global curriculum clock alongside model_650.
+    # One PPO iteration collects 24 environment/control steps (see
+    # HumanoidRobotRoughPPORunnerCfg.num_steps_per_env), therefore:
     #
-    #     common_step_counter + curriculum_start_step
+    #     model_650 -> 650 * 24 = 15,600 curriculum steps
     #
-    curriculum_start_step: int = 15600
+    # Set this to 0 when training a new policy from scratch.  For another
+    # model_N checkpoint, set it to N * num_steps_per_env.
+    curriculum_start_step: int = 650 * 24
 
 
     # Scene settings.

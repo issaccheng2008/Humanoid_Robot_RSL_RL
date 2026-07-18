@@ -28,9 +28,8 @@ STRIDE_TRAINING_PHASE = 1
 OBSTACLE_TRAINING_PHASE = 2
 
 def _curriculum_step(env: ManagerBasedRLEnv) -> int:
-    """Return the effective curriculum step, including a resume offset."""
-    step_offset = int(getattr(env.cfg, "curriculum_start_step", 0))
-    return int(env.common_step_counter) + step_offset
+    """Return the global curriculum step shared by all curriculum terms."""
+    return int(env.common_step_counter)
 
 
 
@@ -520,6 +519,7 @@ def wooden_bar_curriculum(
     )
     current_height = bar_heights[state.current_height_index]
     return {
+        "curriculum_step": float(step),
         "bar_enabled": float(state.curriculum_phase != NORMAL_WALKING_PHASE),
         "bar_curriculum_phase": float(state.curriculum_phase),
         "bar_height_m": current_height,
@@ -575,6 +575,7 @@ def stride_reward_weight_curriculum(
 
     # These values should appear in the curriculum statistics/TensorBoard.
     return {
+        "curriculum_step": float(step),
         "feet_clearance_weight": clearance_weight,
         "feet_stride_length_weight": stride_weight,
         "stride_reward_weight_progress": progress,
@@ -624,4 +625,7 @@ def fixed_forward_speed_curriculum(
     command_term.vel_command_b[moving_envs, 0] = speed
     command_term.vel_command_b[:, 1] = 0.0
 
-    return {"fixed_forward_speed": speed}
+    return {
+        "curriculum_step": float(_curriculum_step(env)),
+        "fixed_forward_speed": speed,
+    }

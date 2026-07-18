@@ -12,7 +12,10 @@ from . import agents
 
 gym.register(
     id="Humanoid-Robot-RSLRL-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    entry_point=(
+        f"{__name__}.curriculum_aware_env:"
+        "CurriculumAwareManagerBasedRLEnv"
+    ),
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": (
@@ -29,7 +32,10 @@ gym.register(
 
 gym.register(
     id="Humanoid-Robot-RSLRL-Play-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    entry_point=(
+        f"{__name__}.curriculum_aware_env:"
+        "CurriculumAwareManagerBasedRLEnv"
+    ),
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": (
