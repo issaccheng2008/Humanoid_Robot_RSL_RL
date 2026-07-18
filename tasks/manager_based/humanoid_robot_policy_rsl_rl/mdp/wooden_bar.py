@@ -37,6 +37,9 @@ class _WoodenBarState:
         self.crossed = torch.zeros_like(self.spawned)
         self.crossing_rewarded = torch.zeros_like(self.spawned)
         self.spawn_time_s = torch.zeros(env.num_envs, device=env.device)
+        self.spawn_delay_s = torch.full(
+            (env.num_envs,), float("inf"), device=env.device
+        )
         self.spawn_pose_w = torch.zeros(env.num_envs, 7, device=env.device)
         self.spawn_pose_w[:, 3] = 1.0
         self.movement_reference_pose_w = self.spawn_pose_w.clone()
@@ -72,12 +75,6 @@ def stride_training_bar_active(env: ManagerBasedRLEnv) -> torch.Tensor:
     )
 
 
-def obstacle_training_active(env: ManagerBasedRLEnv) -> torch.Tensor:
-    """Return a mask for episodes assigned to the obstacle-training phase."""
-    state = _get_state(env)
-    return state.episode_phase == OBSTACLE_TRAINING_PHASE
-
-
 def _as_env_ids(env: ManagerBasedRLEnv, env_ids: Sequence[int] | None) -> torch.Tensor:
     if env_ids is None:
         return torch.arange(env.num_envs, device=env.device, dtype=torch.long)
@@ -88,6 +85,32 @@ def _as_env_ids(env: ManagerBasedRLEnv, env_ids: Sequence[int] | None) -> torch.
 
 def _episode_time_s(env: ManagerBasedRLEnv) -> torch.Tensor:
     return env.episode_length_buf * env.step_dt
+
+
+def curriculum_time_out(
+    env: ManagerBasedRLEnv,
+    normal_training_length_s: float,
+    stride_training_length_s: float,
+    obstacle_training_length_s: float,
+) -> torch.Tensor:
+    """Time out episodes using the duration assigned to their curriculum phase."""
+    state = _get_state(env)
+    episode_limit_s = torch.full(
+        (env.num_envs,),
+        normal_training_length_s,
+        device=env.device,
+    )
+    episode_limit_s = torch.where(
+        state.episode_phase == STRIDE_TRAINING_PHASE,
+        stride_training_length_s,
+        episode_limit_s,
+    )
+    episode_limit_s = torch.where(
+        state.episode_phase == OBSTACLE_TRAINING_PHASE,
+        obstacle_training_length_s,
+        episode_limit_s,
+    )
+    return _episode_time_s(env) >= episode_limit_s - env.step_dt
 
 
 def _active_bar_pose_w(
@@ -200,8 +223,21 @@ def reset_wooden_bar(
     hidden_depth: float,
     stride_training_spawn_probability: float,
     obstacle_training_spawn_probability: float,
+    stride_training_spawn_delay_s: float,
+    obstacle_training_spawn_delay_range_s: tuple[float, float],
 ):
-    """Hide every height variant and sample bars for the active curriculum phase."""
+    """Hide every height variant and schedule a bar for the current phase."""
+    if stride_training_spawn_delay_s < 0.0:
+        raise ValueError("stride_training_spawn_delay_s must be non-negative.")
+    if (
+        obstacle_training_spawn_delay_range_s[0] < 0.0
+        or obstacle_training_spawn_delay_range_s[1]
+        < obstacle_training_spawn_delay_range_s[0]
+    ):
+        raise ValueError(
+            "obstacle_training_spawn_delay_range_s must be ordered and non-negative."
+        )
+
     env_ids = _as_env_ids(env, env_ids)
     if len(env_ids) == 0:
         return
@@ -229,6 +265,18 @@ def reset_wooden_bar(
     state.episode_has_bar[env_ids] = (
         torch.rand(len(env_ids), device=env.device) < spawn_probability
     )
+
+    # Schedule appearance relative to the start of this episode, rather than
+    # relative to the EventManager's repeating interval timer.
+    state.spawn_delay_s[env_ids] = float("inf")
+    stride_training_env_ids = env_ids[stride_training]
+    state.spawn_delay_s[stride_training_env_ids] = stride_training_spawn_delay_s
+    obstacle_training_env_ids = env_ids[obstacle_training]
+    if len(obstacle_training_env_ids) > 0:
+        state.spawn_delay_s[obstacle_training_env_ids] = torch.empty(
+            len(obstacle_training_env_ids), device=env.device
+        ).uniform_(*obstacle_training_spawn_delay_range_s)
+
     state.crossed[env_ids] = False
     state.crossing_rewarded[env_ids] = False
     state.spawn_time_s[env_ids] = 0.0
@@ -256,7 +304,14 @@ def spawn_wooden_bar(
         return
 
     env_ids = _as_env_ids(env, env_ids)
-    env_ids = env_ids[state.episode_has_bar[env_ids] & ~state.spawned[env_ids]]
+    ready_to_spawn = (
+        _episode_time_s(env)[env_ids] >= state.spawn_delay_s[env_ids]
+    )
+    env_ids = env_ids[
+        state.episode_has_bar[env_ids]
+        & ~state.spawned[env_ids]
+        & ready_to_spawn
+    ]
     if len(env_ids) == 0:
         return
 
@@ -341,6 +396,34 @@ def wooden_bar_distance(
     distance = distance + measurement_noise
     distance = torch.where(visible, distance, torch.full_like(distance, default_distance))
     return distance.unsqueeze(1)
+
+
+def stride_training_reward_scale(
+    env: ManagerBasedRLEnv,
+    bar_names: tuple[str, ...],
+    feet_cfg: SceneEntityCfg,
+    activation_distance: float,
+    full_weight_distance: float,
+) -> torch.Tensor:
+    """Scale stride-training foot rewards from zero at 20 cm to full at 10 cm."""
+    if activation_distance <= full_weight_distance:
+        raise ValueError(
+            "activation_distance must be greater than full_weight_distance."
+        )
+
+    distance = wooden_bar_distance(
+        env,
+        bar_names=bar_names,
+        feet_cfg=feet_cfg,
+        noise_range=(0.0, 0.0),
+    ).squeeze(1)
+    scale = torch.clamp(
+        (activation_distance - distance)
+        / (activation_distance - full_weight_distance),
+        min=0.0,
+        max=1.0,
+    )
+    return scale * stride_training_bar_active(env).float()
 
 
 def wooden_bar_moved(
