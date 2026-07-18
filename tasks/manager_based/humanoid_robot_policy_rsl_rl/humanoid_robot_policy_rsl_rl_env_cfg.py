@@ -869,8 +869,8 @@ class RewardsCfg:
             "foot_length": 0.14,
             "target_stride_length": 0.20,
             "command_name": "base_velocity",
-            "bar_names": ALL_WOODEN_BAR_NAMES,
-            "activation_distance": 0.30,
+            "bar_names": WOODEN_BAR_NAMES,
+            "activation_distance": 0.20,
             "full_weight_distance": 0.15,
             "asset_cfg": SceneEntityCfg(
                 "robot",
