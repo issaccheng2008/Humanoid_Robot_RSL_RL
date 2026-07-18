@@ -77,6 +77,9 @@ def feet_clearance_reward(
     asset_cfg: SceneEntityCfg,
     sensor_cfg: SceneEntityCfg,
     command_name: str,
+    bar_names: tuple[str, ...],
+    activation_distance: float,
+    full_weight_distance: float,
 ) -> torch.Tensor:
     """Reward swing-foot clearance, capped at ``target_height``.
 
@@ -89,10 +92,10 @@ def feet_clearance_reward(
         0.015 m clearance -> 0.5
         >= 0.03 m clearance -> 1.0
 
-    The reward is disabled when:
-    - the episode is in the obstacle-training curriculum phase;
-    - neither foot is supporting the robot; or
-    - the commanded forward/yaw velocity is approximately zero.
+    The reward is disabled outside stride training, before a bar is within
+    ``activation_distance``, and after both feet have passed the bar. Its
+    effective weight increases linearly to full strength at
+    ``full_weight_distance``.
     """
     if target_height <= 0.0:
         raise ValueError("target_height must be greater than zero.")
@@ -145,13 +148,20 @@ def feet_clearance_reward(
         dim=1,
     ) > 0.05
 
-    from .wooden_bar import obstacle_training_active
+    from .wooden_bar import stride_training_reward_scale
 
+    reward_scale = stride_training_reward_scale(
+        env,
+        bar_names=bar_names,
+        feet_cfg=asset_cfg,
+        activation_distance=activation_distance,
+        full_weight_distance=full_weight_distance,
+    )
     return (
         torch.sum(clearance_reward, dim=1)
         * has_support_foot.float()
         * moving_command.float()
-        * (~obstacle_training_active(env)).float()
+        * reward_scale
     )
 
 
@@ -162,6 +172,9 @@ def feet_stride_length_reward(
     asset_cfg: SceneEntityCfg,
     sensor_cfg: SceneEntityCfg,
     command_name: str,
+    bar_names: tuple[str, ...],
+    activation_distance: float,
+    full_weight_distance: float,
 ) -> torch.Tensor:
     """Reward long forward strides only when touchdown feet alternate.
 
@@ -171,7 +184,10 @@ def feet_stride_length_reward(
     length, zero reward at 14 cm, and a positive reward above 14 cm. The reward
     reaches one at ``target_stride_length`` and is bounded to [-1, 1].
 
-    The reward is disabled during the obstacle-training curriculum phase.
+    The reward is active only during stride training. Its effective weight is
+    zero until the bar is closer than ``activation_distance``, increases
+    linearly, reaches full strength at ``full_weight_distance``, and returns to
+    zero after both feet pass the bar.
     """
     if foot_length <= 0.0:
         raise ValueError("foot_length must be greater than zero.")
@@ -262,10 +278,13 @@ def feet_stride_length_reward(
     )
     last_touchdown_foot[valid_touchdown] = touchdown_foot[valid_touchdown]
 
-    from .wooden_bar import obstacle_training_active
+    from .wooden_bar import stride_training_reward_scale
 
-    return (
-        normalized_stride
-        * alternating_touchdown.float()
-        * (~obstacle_training_active(env)).float()
+    reward_scale = stride_training_reward_scale(
+        env,
+        bar_names=bar_names,
+        feet_cfg=asset_cfg,
+        activation_distance=activation_distance,
+        full_weight_distance=full_weight_distance,
     )
+    return normalized_stride * alternating_touchdown.float() * reward_scale

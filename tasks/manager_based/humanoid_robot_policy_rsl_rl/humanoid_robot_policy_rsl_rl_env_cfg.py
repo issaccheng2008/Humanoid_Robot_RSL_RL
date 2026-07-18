@@ -484,23 +484,24 @@ class EventCfg:
             "bar_names": WOODEN_BAR_NAMES,
             "hidden_depth": 2.0,
             "stride_training_spawn_probability": 1.00,
-            # Keep the current 20% obstacle-training share in stage three.
-            "obstacle_training_spawn_probability": 0.50,
+            "obstacle_training_spawn_probability": 0.70,
+            "stride_training_spawn_delay_s": 5.0,
+            "obstacle_training_spawn_delay_range_s": (3.0, 6.0),
         },
     )
 
-    # The bar never appears at episode start. Once its curriculum phase begins,
-    # this event places it after 5-10 seconds of locomotion.
+    # Poll once per control step. The reset event stores an episode-relative
+    # appearance time: 5 s for stride training and 3-6 s for obstacle training.
     spawn_wooden_bar = EventTerm(
         func=mdp.spawn_wooden_bar,
         mode="interval",
-        interval_range_s=(5.0, 10.0),
+        interval_range_s=(0.02, 0.02),
         is_global_time=False,
         params={
             "bar_names": WOODEN_BAR_NAMES,
             "bar_heights": WOODEN_BAR_HEIGHTS,
             "robot_name": "robot",
-            "stride_training_distance_range": (0.0, 0.20),
+            "stride_training_distance_range": (0.35, 0.40),
             "obstacle_training_distance_range": (0.35, 0.40),
             "drop_clearance": 0.01,
             "command_name": "base_velocity",
@@ -808,6 +809,9 @@ class RewardsCfg:
         params={
             "target_height": 0.03,
             "command_name": "base_velocity",
+            "bar_names": WOODEN_BAR_NAMES,
+            "activation_distance": 0.20,
+            "full_weight_distance": 0.10,
             "asset_cfg": SceneEntityCfg(
                 "robot",
                 body_names=FOOT_BODY_NAMES,
@@ -830,6 +834,9 @@ class RewardsCfg:
             "foot_length": 0.14,
             "target_stride_length": 0.20,
             "command_name": "base_velocity",
+            "bar_names": WOODEN_BAR_NAMES,
+            "activation_distance": 0.20,
+            "full_weight_distance": 0.10,
             "asset_cfg": SceneEntityCfg(
                 "robot",
                 body_names=FOOT_BODY_NAMES,
@@ -853,8 +860,13 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(
-        func=mdp.time_out,
+        func=mdp.curriculum_time_out,
         time_out=True,
+        params={
+            "normal_training_length_s": 8.0,
+            "stride_training_length_s": 10.0,
+            "obstacle_training_length_s": 20.0,
+        },
     )
 
     bad_orientation = DoneTerm(
@@ -927,8 +939,8 @@ class CurriculumCfg:
         params={
             "bar_heights": WOODEN_BAR_HEIGHTS,
             # Stage one: normal walking before step 6,000.
-            # Stage two: 50% nearby-bar stride training from 6,000 to 12,000.
-            "stride_training_start_step": 20_000,
+            # Stage two: stride training from step 6,000 through step 20,000.
+            "stride_training_start_step": 6_000,
             # Stage three: current nine-height obstacle curriculum.
             "obstacle_training_start_step": 20_001,
             "end_step": 180_000,
@@ -993,8 +1005,9 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
 
         # General settings.
         self.decimation = 4
-        # Allows a 5-10 s delayed spawn plus the full 20 s crossing window.
-        self.episode_length_s = 35.0
+        # Maximum buffer length; curriculum_time_out ends earlier phases at
+        # 8 s (normal) or 10 s (stride), and obstacle episodes at 20 s.
+        self.episode_length_s = 20.0
 
         # Simulation settings.
         self.sim.dt = 0.005
@@ -1025,6 +1038,13 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
         self.episode_length_s = 200.0
+        self.terminations.time_out.params.update(
+            {
+                "normal_training_length_s": 200.0,
+                "stride_training_length_s": 200.0,
+                "obstacle_training_length_s": 200.0,
+            }
+        )
 
         # Keyboard controls the base_velocity command.
         self.commands.base_velocity.class_type = (
