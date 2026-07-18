@@ -20,6 +20,10 @@ from isaaclab.assets.articulation import ArticulationCfg
 # Example: "/home/tt/Humanoid_Robot_Policy/assets/humanoid.usd"
 HUMANOID_USD_PATH = f"/home/tt/Desktop/Humanoid_Robot/Humanoid_Robot/Humanoid_Robot.usd"
 
+# EL05 peak torque is 6 N.m. Keep the simulation ceiling high enough for
+# dynamic walking while retaining margin below the motor peak.
+SIM_TORQUE_LIMIT_NM = 5.0
+
 
 HUMANOID_ROBOT_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
@@ -80,7 +84,7 @@ HUMANOID_ROBOT_CFG = ArticulationCfg(
             # Your URDF currently lists effort=5 and velocity=10 for every joint.
             # These are conservative placeholders; replace them with calibrated
             # motor limits when you have them.
-            effort_limit_sim=5.0,
+            effort_limit_sim=SIM_TORQUE_LIMIT_NM,
             velocity_limit_sim=10.0,
             stiffness={
                 ".*_leg_pitch_joint": 35.0,
@@ -101,7 +105,7 @@ HUMANOID_ROBOT_CFG = ArticulationCfg(
                 ".*_ankle_pitch_joint",
                 ".*_ankle_roll_joint",
             ],
-            effort_limit_sim=5.0,
+            effort_limit_sim=SIM_TORQUE_LIMIT_NM,
             velocity_limit_sim=10.0,
             stiffness={
                 ".*_ankle_pitch_joint": 15.0,
