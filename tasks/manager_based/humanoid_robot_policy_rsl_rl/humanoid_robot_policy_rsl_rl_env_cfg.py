@@ -144,6 +144,11 @@ WOODEN_BAR_NAMES = (
     "wooden_bar_level_9",
 )
 
+# A separate collisionless bar is used during stride training.  Keeping it
+# separate preserves the physical colliders required by obstacle training.
+STRIDE_WOODEN_BAR_NAME = "wooden_bar_stride"
+ALL_WOODEN_BAR_NAMES = WOODEN_BAR_NAMES + (STRIDE_WOODEN_BAR_NAME,)
+
 ANKLE_JOINT_NAMES = [
     ".*_ankle_pitch_joint",
     ".*_ankle_roll_joint",
@@ -175,6 +180,29 @@ def _make_wooden_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
                 dynamic_friction=0.5,
                 restitution=0.0,
             ),
+            visual_material=sim_utils.PreviewSurfaceCfg(
+                diffuse_color=(0.8, 0.02, 0.02),
+                roughness=0.7,
+            ),
+        ),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, -2.0)),
+    )
+
+
+def _make_stride_training_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
+    """Create a collisionless visual reference for stride training."""
+    return RigidObjectCfg(
+        prim_path=f"{{ENV_REGEX_NS}}/{prim_name}",
+        spawn=sim_utils.CuboidCfg(
+            size=(WOODEN_BAR_WIDTH, WOODEN_BAR_LENGTH, height),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                kinematic_enabled=True,
+                disable_gravity=True,
+            ),
+            collision_props=sim_utils.CollisionPropertiesCfg(
+                collision_enabled=False,
+            ),
+            mass_props=sim_utils.MassPropertiesCfg(density=500.0),
             visual_material=sim_utils.PreviewSurfaceCfg(
                 diffuse_color=(0.8, 0.02, 0.02),
                 roughness=0.7,
@@ -274,6 +302,12 @@ class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
     )
     wooden_bar_level_9 = _make_wooden_bar_cfg(
         "WoodenBarLevel9", WOODEN_BAR_HEIGHTS[8]
+    )
+
+    # Kinematic and collisionless: it stays at the requested ground pose while
+    # the robot passes through it during stride training.
+    wooden_bar_stride = _make_stride_training_bar_cfg(
+        "WoodenBarStride", WOODEN_BAR_HEIGHTS[0]
     )
 
     # Light.
@@ -389,7 +423,7 @@ class ObservationsCfg:
         wooden_bar_distance = ObsTerm(
             func=mdp.wooden_bar_distance,
             params={
-                "bar_names": WOODEN_BAR_NAMES,
+                "bar_names": ALL_WOODEN_BAR_NAMES,
                 "feet_cfg": SceneEntityCfg(
                     "robot",
                     body_names=FOOT_BODY_NAMES,
@@ -481,7 +515,7 @@ class EventCfg:
         func=mdp.reset_wooden_bar,
         mode="reset",
         params={
-            "bar_names": WOODEN_BAR_NAMES,
+            "bar_names": ALL_WOODEN_BAR_NAMES,
             "hidden_depth": 2.0,
             "stride_training_spawn_probability": 1.00,
             "obstacle_training_spawn_probability": 0.70,
@@ -499,6 +533,7 @@ class EventCfg:
         is_global_time=False,
         params={
             "bar_names": WOODEN_BAR_NAMES,
+            "stride_bar_name": STRIDE_WOODEN_BAR_NAME,
             "bar_heights": WOODEN_BAR_HEIGHTS,
             "robot_name": "robot",
             "stride_training_distance_range": (0.35, 0.40),
@@ -809,7 +844,7 @@ class RewardsCfg:
         params={
             "target_height": 0.03,
             "command_name": "base_velocity",
-            "bar_names": WOODEN_BAR_NAMES,
+            "bar_names": ALL_WOODEN_BAR_NAMES,
             "activation_distance": 0.20,
             "full_weight_distance": 0.10,
             "asset_cfg": SceneEntityCfg(
@@ -834,7 +869,7 @@ class RewardsCfg:
             "foot_length": 0.14,
             "target_stride_length": 0.20,
             "command_name": "base_velocity",
-            "bar_names": WOODEN_BAR_NAMES,
+            "bar_names": ALL_WOODEN_BAR_NAMES,
             "activation_distance": 0.30,
             "full_weight_distance": 0.15,
             "asset_cfg": SceneEntityCfg(
@@ -888,7 +923,7 @@ class TerminationsCfg:
     wooden_bar_moved = DoneTerm(
         func=mdp.wooden_bar_moved,
         params={
-            "bar_names": WOODEN_BAR_NAMES,
+            "bar_names": ALL_WOODEN_BAR_NAMES,
             "feet_cfg": SceneEntityCfg(
                 "robot",
                 body_names=FOOT_BODY_NAMES,
