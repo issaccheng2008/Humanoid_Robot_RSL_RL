@@ -683,7 +683,7 @@ class RewardsCfg:
 
     flat_orientation_l2 = RewTerm(
         func=mdp.flat_orientation_l2,
-        weight=-3.0,
+        weight=-1.5,
     )
 
     # Penalize sudden sideways base acceleration.
@@ -805,7 +805,7 @@ class RewardsCfg:
     # foot while a nearby wooden bar is visible.
     feet_clearance = RewTerm(
         func=mdp.feet_clearance_reward,
-        weight=1,
+        weight=1.5,
         params={
             "target_height": 0.03,
             "command_name": "base_velocity",
@@ -829,14 +829,14 @@ class RewardsCfg:
     # foot, with full reward at 20 cm. The MDP term supplies the phase/bar mask.
     feet_stride_length = RewTerm(
         func=mdp.feet_stride_length_reward,
-        weight=3.0,
+        weight=50.0,
         params={
             "foot_length": 0.14,
             "target_stride_length": 0.20,
             "command_name": "base_velocity",
             "bar_names": WOODEN_BAR_NAMES,
-            "activation_distance": 0.20,
-            "full_weight_distance": 0.10,
+            "activation_distance": 0.30,
+            "full_weight_distance": 0.15,
             "asset_cfg": SceneEntityCfg(
                 "robot",
                 body_names=FOOT_BODY_NAMES,
@@ -942,7 +942,7 @@ class CurriculumCfg:
             # Stage two: stride training from step 6,000 through step 40,000.
             "stride_training_start_step": 4_000,
             # Stage three: current nine-height obstacle curriculum.
-            "obstacle_training_start_step": 40_001,
+            "obstacle_training_start_step": 60_001,
             "end_step": 180_000,
         },
     )
@@ -952,18 +952,18 @@ class CurriculumCfg:
         func=mdp.stride_reward_weight_curriculum,
         params={
             # Must match wooden_bar.stride_training_start_step.
-            "stride_training_start_step": 6_000,
+            "stride_training_start_step": 4_000,
 
             # Reach the current weights here and remain constant afterward.
-            "decay_end_step": 20_000,
+            "decay_end_step": 40_000,
 
             # Start at 3x the current values.
             "initial_clearance_weight": 5.0,
-            "initial_stride_weight": 50.0,
+            "initial_stride_weight": 200.0,
 
             # Current values from RewardsCfg.
             "final_clearance_weight": 1.5,
-            "final_stride_weight": 9.0,
+            "final_stride_weight": 50.0,
         },
     )
 
@@ -1068,12 +1068,12 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
 
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
-        self.episode_length_s = 20.0
+        self.episode_length_s = 10.0
         self.terminations.time_out.params.update(
             {
-                "normal_training_length_s": 20.0,
-                "stride_training_length_s": 20.0,
-                "obstacle_training_length_s": 20.0,
+                "normal_training_length_s": 10.0,
+                "stride_training_length_s": 10.0,
+                "obstacle_training_length_s": 10.0,
             }
         )
 
@@ -1091,10 +1091,12 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         self.commands.base_velocity.rel_standing_envs = 0.0
 
         # Make the final obstacle curriculum visible immediately during playback.
-        # self.curriculum.wooden_bar.params["stride_training_start_step"] = 0
+        self.curriculum.wooden_bar.params["stride_training_start_step"] = 0
         # self.curriculum.wooden_bar.params["obstacle_training_start_step"] = 0
-        # self.curriculum.wooden_bar.params["end_step"] = 0
+        self.curriculum.wooden_bar.params["end_step"] = 0
         self.events.reset_wooden_bar.params["obstacle_training_spawn_probability"] = 1.0
+
+        self.events.reset_wooden_bar.params["obstacle_training_spawn_delay_range_s"] = (0.0, 0.0)
 
         self.observations.policy.enable_corruption = False
         self.observations.policy.wooden_bar_distance.params["noise_range"] = (0.0, 0.0)
