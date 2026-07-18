@@ -718,7 +718,7 @@ class RewardsCfg:
 
     flat_orientation_l2 = RewTerm(
         func=mdp.flat_orientation_l2,
-        weight=-1.5,
+        weight=-1,
     )
 
     # Penalize sudden sideways base acceleration.
