@@ -27,6 +27,13 @@ NORMAL_WALKING_PHASE = 0
 STRIDE_TRAINING_PHASE = 1
 OBSTACLE_TRAINING_PHASE = 2
 
+def _curriculum_step(env: ManagerBasedRLEnv) -> int:
+    """Return the effective curriculum step, including a resume offset."""
+    step_offset = int(getattr(env.cfg, "curriculum_start_step", 0))
+    return int(env.common_step_counter) + step_offset
+
+
+
 
 class _WoodenBarState:
     """Per-environment state shared by obstacle MDP terms."""
@@ -488,7 +495,7 @@ def wooden_bar_curriculum(
     """Run normal walking, stride preparation, then the obstacle curriculum."""
     del env_ids
     state = _get_state(env)
-    step = env.common_step_counter
+    step = _curriculum_step(env)
     if step < stride_training_start_step:
         state.curriculum_phase = NORMAL_WALKING_PHASE
     elif step < obstacle_training_start_step:
@@ -519,6 +526,63 @@ def wooden_bar_curriculum(
     }
 
 
+def stride_reward_weight_curriculum(
+    env: ManagerBasedRLEnv,
+    env_ids: Sequence[int],
+    stride_training_start_step: int,
+    decay_end_step: int,
+    initial_clearance_weight: float,
+    final_clearance_weight: float,
+    initial_stride_weight: float,
+    final_stride_weight: float,
+    clearance_term_name: str = "feet_clearance",
+    stride_term_name: str = "feet_stride_length",
+) -> dict[str, float]:
+    """Linearly decay stride-training reward weights to their normal values."""
+
+    del env_ids
+
+    if decay_end_step <= stride_training_start_step:
+        raise ValueError(
+            "decay_end_step must be greater than stride_training_start_step."
+        )
+
+    step = _curriculum_step(env)
+
+    # 0 at the beginning of stride training and 1 at decay_end_step.
+    progress = (
+        (step - stride_training_start_step)
+        / (decay_end_step - stride_training_start_step)
+    )
+    progress = min(max(progress, 0.0), 1.0)
+
+    clearance_weight = (
+        initial_clearance_weight
+        + progress * (final_clearance_weight - initial_clearance_weight)
+    )
+    stride_weight = (
+        initial_stride_weight
+        + progress * (final_stride_weight - initial_stride_weight)
+    )
+
+    clearance_cfg = env.reward_manager.get_term_cfg(clearance_term_name)
+    clearance_cfg.weight = clearance_weight
+    env.reward_manager.set_term_cfg(clearance_term_name, clearance_cfg)
+
+    stride_cfg = env.reward_manager.get_term_cfg(stride_term_name)
+    stride_cfg.weight = stride_weight
+    env.reward_manager.set_term_cfg(stride_term_name, stride_cfg)
+
+    # These values should appear in the curriculum statistics/TensorBoard.
+    return {
+        "feet_clearance_weight": clearance_weight,
+        "feet_stride_length_weight": stride_weight,
+        "stride_reward_weight_progress": progress,
+    }
+
+
+
+
 #this curriculm is trying to fix the issue of the robot not really moving 
 def fixed_forward_speed_curriculum(
     env: ManagerBasedRLEnv,
@@ -540,8 +604,10 @@ def fixed_forward_speed_curriculum(
     if end_step <= start_step:
         progress = 1.0
     else:
+        step = _curriculum_step(env)
+
         progress = (
-            env.common_step_counter - start_step
+            step - start_step
         ) / (end_step - start_step)
         progress = min(max(progress, 0.0), 1.0)
 

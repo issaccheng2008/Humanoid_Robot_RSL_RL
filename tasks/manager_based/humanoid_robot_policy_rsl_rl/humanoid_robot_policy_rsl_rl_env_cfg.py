@@ -863,7 +863,7 @@ class TerminationsCfg:
         func=mdp.curriculum_time_out,
         time_out=True,
         params={
-            "normal_training_length_s": 8.0,
+            "normal_training_length_s": 20.0,
             "stride_training_length_s": 10.0,
             "obstacle_training_length_s": 20.0,
         },
@@ -930,7 +930,7 @@ class CurriculumCfg:
             "start_step": 500,
             # 24,000 control steps / 24 rollout steps
             # is approximately 1,000 PPO iterations.
-            "end_step": 5_000,
+            "end_step": 3_000,
         },
     )
 
@@ -940,10 +940,30 @@ class CurriculumCfg:
             "bar_heights": WOODEN_BAR_HEIGHTS,
             # Stage one: normal walking before step 6,000.
             # Stage two: stride training from step 6,000 through step 20,000.
-            "stride_training_start_step": 6_000,
+            "stride_training_start_step": 4_001,
             # Stage three: current nine-height obstacle curriculum.
-            "obstacle_training_start_step": 20_001,
+            "obstacle_training_start_step": 40_001,
             "end_step": 180_000,
+        },
+    )
+
+
+    stride_reward_weights = CurrTerm(
+        func=mdp.stride_reward_weight_curriculum,
+        params={
+            # Must match wooden_bar.stride_training_start_step.
+            "stride_training_start_step": 6_000,
+
+            # Reach the current weights here and remain constant afterward.
+            "decay_end_step": 30_000,
+
+            # Start at 3x the current values.
+            "initial_clearance_weight": 5.0,
+            "initial_stride_weight": 27.0,
+
+            # Current values from RewardsCfg.
+            "final_clearance_weight": 1.5,
+            "final_stride_weight": 9.0,
         },
     )
 
@@ -982,6 +1002,14 @@ class CurriculumCfg:
 @configclass
 class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for rough-terrain forward-velocity and yaw-rate tracking."""
+
+    # Added to support curriculum resume/fine-tuning.
+    # The effective curriculum step is:
+    #
+    #     common_step_counter + curriculum_start_step
+    #
+    curriculum_start_step: int = 15600
+
 
     # Scene settings.
     scene: HumanoidRobotPolicySceneCfg = HumanoidRobotPolicySceneCfg(
