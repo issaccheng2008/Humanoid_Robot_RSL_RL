@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from isaaclab.managers import SceneEntityCfg
 
 
-DEFAULT_BAR_DISTANCE = 0.40
+DEFAULT_BAR_DISTANCE = 0.50
 NORMAL_WALKING_PHASE = 0
 STRIDE_TRAINING_PHASE = 1
 OBSTACLE_TRAINING_PHASE = 2
@@ -297,6 +297,7 @@ def spawn_wooden_bar(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int] | None,
     bar_names: tuple[str, ...],
+    stride_bar_name: str,
     bar_heights: tuple[float, ...],
     robot_name: str,
     stride_training_distance_range: tuple[float, float],
@@ -324,9 +325,7 @@ def spawn_wooden_bar(
     if len(bar_names) != len(bar_heights):
         raise ValueError("bar_names and bar_heights must have the same length.")
 
-    active_bar_index = state.current_height_index
-    bar = env.scene[bar_names[active_bar_index]]
-    bar_height = bar_heights[active_bar_index]
+    obstacle_bar_index = state.current_height_index
     robot = env.scene[robot_name]
     robot_quat_w = robot.data.root_quat_w[env_ids]
     robot_yaw_quat_w = yaw_quat(robot_quat_w)
@@ -345,17 +344,50 @@ def spawn_wooden_bar(
         distance[obstacle_training] = torch.empty_like(
             distance[obstacle_training]
         ).uniform_(*obstacle_training_distance_range)
+
+    bar_height = torch.empty(len(env_ids), device=env.device)
+    bar_height[stride_training] = bar_heights[0]
+    bar_height[obstacle_training] = bar_heights[obstacle_bar_index]
+
     pose = torch.zeros(len(env_ids), 7, device=env.device)
     pose[:, :2] = robot.data.root_pos_w[env_ids, :2] + distance.unsqueeze(1) * forward_w[:, :2]
-    pose[:, 2] = env.scene.env_origins[env_ids, 2] + 0.5 * bar_height + drop_clearance
+    # The collisionless stride bar is kinematic, so place its bottom directly
+    # at the nominal terrain height.  Physical obstacle bars keep their drop
+    # clearance and settle onto the terrain under gravity.
+    pose[:, 2] = env.scene.env_origins[env_ids, 2] + 0.5 * bar_height
+    pose[obstacle_training, 2] += drop_clearance
     pose[:, 3:7] = robot_yaw_quat_w
     velocity = torch.zeros(len(env_ids), 6, device=env.device)
 
-    bar.write_root_pose_to_sim(pose, env_ids=env_ids)
-    bar.write_root_velocity_to_sim(velocity, env_ids=env_ids)
+    active_bar_indices = torch.empty(
+        len(env_ids), dtype=torch.long, device=env.device
+    )
+
+    if torch.any(stride_training):
+        stride_env_ids = env_ids[stride_training]
+        stride_bar = env.scene[stride_bar_name]
+        stride_bar.write_root_pose_to_sim(
+            pose[stride_training], env_ids=stride_env_ids
+        )
+        stride_bar.write_root_velocity_to_sim(
+            velocity[stride_training], env_ids=stride_env_ids
+        )
+        # ALL_WOODEN_BAR_NAMES appends the stride bar after the physical bars.
+        active_bar_indices[stride_training] = len(bar_names)
+
+    if torch.any(obstacle_training):
+        obstacle_env_ids = env_ids[obstacle_training]
+        obstacle_bar = env.scene[bar_names[obstacle_bar_index]]
+        obstacle_bar.write_root_pose_to_sim(
+            pose[obstacle_training], env_ids=obstacle_env_ids
+        )
+        obstacle_bar.write_root_velocity_to_sim(
+            velocity[obstacle_training], env_ids=obstacle_env_ids
+        )
+        active_bar_indices[obstacle_training] = obstacle_bar_index
 
     state.spawned[env_ids] = True
-    state.active_bar_index[env_ids] = active_bar_index
+    state.active_bar_index[env_ids] = active_bar_indices
     state.crossed[env_ids] = False
     state.crossing_rewarded[env_ids] = False
     state.spawn_time_s[env_ids] = _episode_time_s(env)[env_ids]
@@ -385,7 +417,7 @@ def wooden_bar_distance(
     default_distance: float = DEFAULT_BAR_DISTANCE,
     noise_range: tuple[float, float] = (0.0, 0.0),
 ) -> torch.Tensor:
-    """Return signed forward bar distance, or 40 cm when absent/already crossed."""
+    """Return signed forward bar distance, or 50 cm when absent/already crossed."""
     state = _update_crossed(env, feet_cfg)
     bar_pose_w = _active_bar_pose_w(env, bar_names, state)
     robot = env.scene[feet_cfg.name]
