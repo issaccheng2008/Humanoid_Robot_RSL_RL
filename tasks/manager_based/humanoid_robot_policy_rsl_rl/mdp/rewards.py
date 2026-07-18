@@ -90,7 +90,7 @@ def feet_clearance_reward(
         >= 0.03 m clearance -> 1.0
 
     The reward is disabled when:
-    - the episode is not a stage-two stride-training bar episode;
+    - the episode is in the obstacle-training curriculum phase;
     - neither foot is supporting the robot; or
     - the commanded forward/yaw velocity is approximately zero.
     """
@@ -145,13 +145,13 @@ def feet_clearance_reward(
         dim=1,
     ) > 0.05
 
-    from .wooden_bar import stride_training_bar_active
+    from .wooden_bar import obstacle_training_active
 
     return (
         torch.sum(clearance_reward, dim=1)
         * has_support_foot.float()
         * moving_command.float()
-#        * stride_training_bar_active(env).float()
+        * (~obstacle_training_active(env)).float()
     )
 
 
@@ -163,11 +163,15 @@ def feet_stride_length_reward(
     sensor_cfg: SceneEntityCfg,
     command_name: str,
 ) -> torch.Tensor:
-    """Reward long forward strides when the swing foot touches down.
+    """Reward long forward strides only when touchdown feet alternate.
 
-    A touchdown stride receives a negative reward below one 14 cm foot length,
-    zero reward at 14 cm, and a positive reward above 14 cm. The reward reaches
-    one at ``target_stride_length`` and is bounded to the range [-1, 1].
+    A valid touchdown must involve exactly one foot, place that foot ahead in
+    the commanded travel direction, and alternate from the previous valid
+    touchdown. Its stride receives a negative reward below one 14 cm foot
+    length, zero reward at 14 cm, and a positive reward above 14 cm. The reward
+    reaches one at ``target_stride_length`` and is bounded to [-1, 1].
+
+    The reward is disabled during the obstacle-training curriculum phase.
     """
     if foot_length <= 0.0:
         raise ValueError("foot_length must be greater than zero.")
@@ -218,15 +222,50 @@ def feet_stride_length_reward(
     first_contact = contact_sensor.compute_first_contact(env.step_dt)[
         :, sensor_cfg.body_ids
     ]
-    touchdown = torch.any(first_contact, dim=1)
-    command = env.command_manager.get_command(command_name)
-    moving_command = torch.linalg.vector_norm(command[:, [0, 2]], dim=1) > 0.05
+    single_touchdown = torch.sum(first_contact, dim=1) == 1
+    touchdown_foot = torch.argmax(first_contact.to(torch.int64), dim=1)
 
-    from .wooden_bar import stride_training_bar_active
+    command = env.command_manager.get_command(command_name)
+    forward_command = torch.abs(command[:, 0]) > 0.05
+    travel_direction = torch.sign(command[:, 0])
+
+    # A long split stance alone must not earn reward: the landing foot has to
+    # be the foot that is ahead in the commanded direction.
+    touchdown_separation = torch.where(
+        touchdown_foot == 0,
+        foot_delta_b_x,
+        -foot_delta_b_x,
+    )
+    touchdown_ahead = touchdown_separation * travel_direction > 0.0
+
+    # Remember the most recent valid landing foot independently for every
+    # environment. Reset this history at the start of each episode.
+    state_name = "_stride_reward_last_touchdown_foot"
+    if not hasattr(env, state_name):
+        setattr(
+            env,
+            state_name,
+            torch.full(
+                (env.num_envs,),
+                -1,
+                dtype=torch.long,
+                device=env.device,
+            ),
+        )
+    last_touchdown_foot = getattr(env, state_name)
+    last_touchdown_foot[env.episode_length_buf == 0] = -1
+
+    valid_touchdown = single_touchdown & forward_command & touchdown_ahead
+    alternating_touchdown = valid_touchdown & (
+        (last_touchdown_foot == -1)
+        | (touchdown_foot != last_touchdown_foot)
+    )
+    last_touchdown_foot[valid_touchdown] = touchdown_foot[valid_touchdown]
+
+    from .wooden_bar import obstacle_training_active
 
     return (
         normalized_stride
-        * touchdown.float()
-        * moving_command.float()
-#        * stride_training_bar_active(env).float()
+        * alternating_touchdown.float()
+        * (~obstacle_training_active(env)).float()
     )
