@@ -926,11 +926,11 @@ class CurriculumCfg:
         params={
             "command_name": "base_velocity",
             "initial_speed": 0.2,
-            "final_speed": 0.50,
+            "final_speed": 0.40,
             "start_step": 500,
             # 24,000 control steps / 24 rollout steps
             # is approximately 1,000 PPO iterations.
-            "end_step": 3_000,
+            "end_step": 2_500,
         },
     )
 
@@ -940,7 +940,7 @@ class CurriculumCfg:
             "bar_heights": WOODEN_BAR_HEIGHTS,
             # Stage one: normal walking before step 6,000.
             # Stage two: stride training from step 6,000 through step 40,000.
-            "stride_training_start_step": 6_000,
+            "stride_training_start_step": 4_000,
             # Stage three: current nine-height obstacle curriculum.
             "obstacle_training_start_step": 40_001,
             "end_step": 180_000,
@@ -955,11 +955,11 @@ class CurriculumCfg:
             "stride_training_start_step": 6_000,
 
             # Reach the current weights here and remain constant afterward.
-            "decay_end_step": 30_000,
+            "decay_end_step": 20_000,
 
             # Start at 3x the current values.
             "initial_clearance_weight": 5.0,
-            "initial_stride_weight": 27.0,
+            "initial_stride_weight": 50.0,
 
             # Current values from RewardsCfg.
             "final_clearance_weight": 1.5,
@@ -1082,7 +1082,7 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
             mdp.KeyboardVelocityCommand
         )
 
-        self.commands.base_velocity.ranges.lin_vel_x = (0.5, 0.5)
+        self.commands.base_velocity.ranges.lin_vel_x = (0.4, 0.4)
         self.commands.base_velocity.ranges.ang_vel_z = (-0.8, 0.8)
         self.commands.base_velocity.ranges.heading = None
 

@@ -17,9 +17,9 @@ from isaaclab.envs.mdp import UniformVelocityCommand
 class KeyboardVelocityCommand(UniformVelocityCommand):
     """Generate velocity commands from all currently held keys."""
 
-    FORWARD_SPEED = 0.7
+    FORWARD_SPEED = 0.4
     TURN_FORWARD_SPEED = 0.20
-    TURN_SPEED = 0.7
+    TURN_SPEED = 0.4
 
     FORWARD_KEYS = {"W", "UP"}
     LEFT_KEYS = {"A", "LEFT"}
