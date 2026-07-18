@@ -418,7 +418,7 @@ class ObservationsCfg:
         )
 
         # Signed distance to the active bar along the crossing direction. The
-        # underlying value is 0.40 m when no bar is present or after both foot
+        # underlying value is 0.50 m when no bar is present or after both foot
         # centers have crossed it.
         wooden_bar_distance = ObsTerm(
             func=mdp.wooden_bar_distance,
@@ -536,8 +536,8 @@ class EventCfg:
             "stride_bar_name": STRIDE_WOODEN_BAR_NAME,
             "bar_heights": WOODEN_BAR_HEIGHTS,
             "robot_name": "robot",
-            "stride_training_distance_range": (0.35, 0.40),
-            "obstacle_training_distance_range": (0.35, 0.40),
+            "stride_training_distance_range": (0.20, 0.20),
+            "obstacle_training_distance_range": (0.50, 0.50),
             "drop_clearance": 0.01,
             "command_name": "base_velocity",
         },
