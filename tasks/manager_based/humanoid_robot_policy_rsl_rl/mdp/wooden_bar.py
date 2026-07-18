@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from isaaclab.managers import SceneEntityCfg
 
 
-DEFAULT_BAR_DISTANCE = 0.40
+DEFAULT_BAR_DISTANCE = 0.50
 NORMAL_WALKING_PHASE = 0
 STRIDE_TRAINING_PHASE = 1
 OBSTACLE_TRAINING_PHASE = 2
@@ -417,7 +417,7 @@ def wooden_bar_distance(
     default_distance: float = DEFAULT_BAR_DISTANCE,
     noise_range: tuple[float, float] = (0.0, 0.0),
 ) -> torch.Tensor:
-    """Return signed forward bar distance, or 40 cm when absent/already crossed."""
+    """Return signed forward bar distance, or 50 cm when absent/already crossed."""
     state = _update_crossed(env, feet_cfg)
     bar_pose_w = _active_bar_pose_w(env, bar_names, state)
     robot = env.scene[feet_cfg.name]
