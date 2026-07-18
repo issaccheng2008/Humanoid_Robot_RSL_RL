@@ -683,7 +683,7 @@ class RewardsCfg:
 
     flat_orientation_l2 = RewTerm(
         func=mdp.flat_orientation_l2,
-        weight=-1.0,
+        weight=-3.0,
     )
 
     # Penalize sudden sideways base acceleration.
@@ -1011,7 +1011,7 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
     #
     # Set this to 0 when training a new policy from scratch.  For another
     # model_N checkpoint, set it to N * num_steps_per_env.
-    curriculum_start_step: int = 650 * 24
+    curriculum_start_step: int = 0
 
 
     # Scene settings.
@@ -1068,12 +1068,12 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
 
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
-        self.episode_length_s = 200.0
+        self.episode_length_s = 20.0
         self.terminations.time_out.params.update(
             {
-                "normal_training_length_s": 200.0,
-                "stride_training_length_s": 200.0,
-                "obstacle_training_length_s": 200.0,
+                "normal_training_length_s": 20.0,
+                "stride_training_length_s": 20.0,
+                "obstacle_training_length_s": 20.0,
             }
         )
 
