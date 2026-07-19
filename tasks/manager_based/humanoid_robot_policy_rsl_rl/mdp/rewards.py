@@ -290,28 +290,31 @@ def feet_stride_length_reward(
     return normalized_stride * alternating_touchdown.float() * reward_scale
 
 
-def track_lin_vel_xy_yaw_frame_exp_relative(
+def track_lin_vel_xy_yaw_frame_quadratic_relative(
     env: ManagerBasedRLEnv,
     command_name: str,
-    std: float,
     asset_cfg: SceneEntityCfg,
     moving_command_threshold: float = 0.05,
+    standing_std: float = 0.20,
 ) -> torch.Tensor:
-    """Velocity tracking reward whose value is zero at zero velocity.
+    """Track commanded planar velocity without rewarding zero-net rocking.
 
     For moving commands:
-        stationary robot -> 0
-        perfect tracking -> 1
-        movement away from the command -> negative
+        perfect tracking       -> +1
+        stationary robot       ->  0
+        opposite-direction     -> -1
+        excessive overspeed    -> negative, bounded at -1
 
-    For standing commands, the ordinary exponential tracking reward is used.
+    For standing commands, use an exponential penalty on planar velocity.
     """
-    if std <= 0.0:
-        raise ValueError("std must be greater than zero.")
+    if moving_command_threshold <= 0.0:
+        raise ValueError("moving_command_threshold must be positive.")
+    if standing_std <= 0.0:
+        raise ValueError("standing_std must be positive.")
 
     robot: Articulation = env.scene[asset_cfg.name]
 
-    # Express world-frame velocity in the gravity-aligned robot yaw frame.
+    # World velocity expressed in the gravity-aligned robot yaw frame.
     base_lin_vel_yaw = quat_apply_inverse(
         yaw_quat(robot.data.root_quat_w),
         robot.data.root_lin_vel_w,
@@ -320,30 +323,35 @@ def track_lin_vel_xy_yaw_frame_exp_relative(
     command_xy = env.command_manager.get_command(command_name)[:, :2]
     actual_xy = base_lin_vel_yaw[:, :2]
 
-    squared_error = torch.sum(
+    command_speed_sq = torch.sum(torch.square(command_xy), dim=1)
+    tracking_error_sq = torch.sum(
         torch.square(command_xy - actual_xy),
         dim=1,
     )
-    tracking_score = torch.exp(-squared_error / std**2)
 
-    command_squared = torch.sum(torch.square(command_xy), dim=1)
-    stationary_score = torch.exp(-command_squared / std**2)
-
-    # Normalize so stationary=0 and perfect tracking=1.
-    relative_score = (
-        (tracking_score - stationary_score)
-        / torch.clamp(1.0 - stationary_score, min=1.0e-6)
+    # Normalizing by command speed makes:
+    # actual = 0          -> 0
+    # actual = command    -> 1
+    # actual = -command   -> -1 after clipping
+    denominator = torch.clamp(
+        command_speed_sq,
+        min=moving_command_threshold**2,
     )
-    relative_score = torch.clamp(relative_score, min=-1.0, max=1.0)
+
+    moving_score = 1.0 - tracking_error_sq / denominator
+    moving_score = torch.clamp(moving_score, min=-1.0, max=1.0)
+
+    # Standing environments should minimize all planar motion.
+    standing_score = torch.exp(
+        -torch.sum(torch.square(actual_xy), dim=1) / standing_std**2
+    )
 
     moving_command = (
-        torch.linalg.vector_norm(command_xy, dim=1)
-        > moving_command_threshold
+        torch.sqrt(command_speed_sq) > moving_command_threshold
     )
 
-    # Preserve normal stand-still training for zero commands.
     return torch.where(
         moving_command,
-        relative_score,
-        tracking_score,
+        moving_score,
+        standing_score,
     )

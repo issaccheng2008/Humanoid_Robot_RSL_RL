@@ -621,12 +621,12 @@ class RewardsCfg:
     # Stronger and sharper than your current version.
     # Your old std=0.5 was too forgiving, so standing still could still get reward.
     track_lin_vel_xy_exp = RewTerm(
-        func=mdp.track_lin_vel_xy_yaw_frame_exp_relative,
+        func=mdp.track_lin_vel_xy_yaw_frame_quadratic_relative,
         weight=4.0,
         params={
             "command_name": "base_velocity",
-            "std": 0.20,
             "moving_command_threshold": 0.05,
+            "standing_std": 0.20,
             "asset_cfg": SceneEntityCfg("robot"),
         },
     )
