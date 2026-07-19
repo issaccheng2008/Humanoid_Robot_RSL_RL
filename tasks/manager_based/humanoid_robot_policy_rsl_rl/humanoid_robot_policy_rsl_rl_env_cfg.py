@@ -350,7 +350,7 @@ class CommandsCfg:
             #start fresh
 #            lin_vel_x=(0.2, 0.2),
 
-            lin_vel_x=(0.2, 0.2),
+            lin_vel_x=(0.4, 0.4),
             ang_vel_z=(0.0, 0.0),
             heading=(-math.pi, math.pi),
         ),
@@ -621,14 +621,15 @@ class RewardsCfg:
     # Stronger and sharper than your current version.
     # Your old std=0.5 was too forgiving, so standing still could still get reward.
     track_lin_vel_xy_exp = RewTerm(
-        func=mdp.track_lin_vel_xy_yaw_frame_exp,
-        weight=2.5,
+        func=mdp.track_lin_vel_xy_yaw_frame_exp_relative,
+        weight=4.0,
         params={
             "command_name": "base_velocity",
-            "std": 0.35,
+            "std": 0.20,
+            "moving_command_threshold": 0.05,
+            "asset_cfg": SceneEntityCfg("robot"),
         },
     )
-
     # Track the sampled yaw-rate commands so the policy learns turning together
     # with forward locomotion.
     track_ang_vel_z_exp = RewTerm(
@@ -694,7 +695,7 @@ class RewardsCfg:
     # Extra penalty applied only when the wooden bar moves.
     wooden_bar_moved_penalty = RewTerm(
         func=mdp.is_terminated_term,
-        weight=-800.0,
+        weight=50.0,
         params={
             "term_keys": "wooden_bar_moved",
         },
@@ -703,7 +704,7 @@ class RewardsCfg:
     # Give a matching extra penalty when the obstacle-crossing deadline expires.
     wooden_bar_deadline_penalty = RewTerm(
         func=mdp.is_terminated_term,
-        weight=-800.0,
+        weight=-200.0,
         params={
             "term_keys": "wooden_bar_deadline",
         },
@@ -718,7 +719,7 @@ class RewardsCfg:
 
     flat_orientation_l2 = RewTerm(
         func=mdp.flat_orientation_l2,
-        weight=-1,
+        weight=-3,
     )
 
     # Penalize sudden sideways base acceleration.
@@ -956,18 +957,18 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Learn normal walking, long strides near a bar, then obstacle crossing."""
 # start fresh
-    fixed_forward_speed = CurrTerm(
-        func=mdp.fixed_forward_speed_curriculum,
-        params={
-            "command_name": "base_velocity",
-            "initial_speed": 0.2,
-            "final_speed": 0.40,
-            "start_step": 500,
-            # 24,000 control steps / 24 rollout steps
-            # is approximately 1,000 PPO iterations.
-            "end_step": 2_500,
-        },
-    )
+    # fixed_forward_speed = CurrTerm(
+    #     func=mdp.fixed_forward_speed_curriculum,
+    #     params={
+    #         "command_name": "base_velocity",
+    #         "initial_speed": 0.2,
+    #         "final_speed": 0.40,
+    #         "start_step": 500,
+    #         # 24,000 control steps / 24 rollout steps
+    #         # is approximately 1,000 PPO iterations.
+    #         "end_step": 2_500,
+    #     },
+    # )
 
     wooden_bar = CurrTerm(
         func=mdp.wooden_bar_curriculum,
