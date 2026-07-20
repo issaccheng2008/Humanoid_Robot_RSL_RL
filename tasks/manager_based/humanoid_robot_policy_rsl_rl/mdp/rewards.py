@@ -19,6 +19,25 @@ def joint_pos_target_l2(env: ManagerBasedRLEnv, target: float, asset_cfg: SceneE
     return torch.sum(torch.square(joint_pos - target), dim=1)
 
 
+def joint_torque_limit_penalty(
+    env: ManagerBasedRLEnv,
+    threshold: float,
+    asset_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """Penalize only torque magnitude above ``threshold`` in N.m.
+
+    Each joint contributes ``max(abs(actual_torque) - threshold, 0)`` so the
+    penalty increases linearly as its applied torque approaches the hard limit.
+    """
+    if threshold < 0.0:
+        raise ValueError("threshold must be greater than or equal to zero.")
+
+    asset: Articulation = env.scene[asset_cfg.name]
+    actual_torque = asset.data.applied_torque[:, asset_cfg.joint_ids]
+    excess_torque = torch.clamp(torch.abs(actual_torque) - threshold, min=0.0)
+    return torch.sum(excess_torque, dim=1)
+
+
 from isaaclab.sensors import ContactSensor
 
 

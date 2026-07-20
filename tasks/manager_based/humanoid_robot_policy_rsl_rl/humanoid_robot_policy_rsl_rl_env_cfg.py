@@ -770,6 +770,20 @@ class RewardsCfg:
         },
     )
 
+    # Softly discourage operation near the 5 N.m actuator ceiling. Torques at
+    # or below 4 N.m are unpenalized; above it, cost grows linearly with excess.
+    high_joint_torque = RewTerm(
+        func=mdp.joint_torque_limit_penalty,
+        weight=-0.1,
+        params={
+            "threshold": 4.0,
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=LEG_JOINT_NAMES,
+            ),
+        },
+    )
+
     dof_acc_l2 = RewTerm(
         func=mdp.joint_acc_l2,
         weight=-2.0e-7,
