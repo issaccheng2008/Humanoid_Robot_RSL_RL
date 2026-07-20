@@ -1114,9 +1114,9 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         )
 
         # Keyboard controls the base_velocity command.
-        self.commands.base_velocity.class_type = (
-            mdp.KeyboardVelocityCommand
-        )
+        # self.commands.base_velocity.class_type = (
+        #     mdp.KeyboardVelocityCommand
+        # )
 
         self.commands.base_velocity.ranges.lin_vel_x = (0.4, 0.4)
         self.commands.base_velocity.ranges.ang_vel_z = (-0.8, 0.8)
