@@ -119,35 +119,66 @@ MAX_BASE_TILT = math.radians(65.0)
 
 WOODEN_BAR_LENGTH = 0.35
 WOODEN_BAR_WIDTH = 0.01
-# Nine evenly spaced heights from 2 mm to 20 mm.
-WOODEN_BAR_HEIGHTS = (
-    0.00100,  # 2.00 mm
-    0.00225,  # 4.25 mm
-    0.00350,  # 6.50 mm
-    0.00475,  # 8.75 mm
-    0.00600,  # 11.00 mm
-    0.00925,  # 13.25 mm
-    0.01250,  # 15.50 mm
-    0.01775,  # 17.75 mm
-    0.02000,  # 20.00 mm
+WOODEN_BAR_HEIGHT = 0.02
+WOODEN_BAR_BAND_HALF_WIDTH = 0.02
+PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
+COLLISIONLESS_WOODEN_BAR_NAME = "wooden_bar_collisionless"
+ALL_WOODEN_BAR_NAMES = (
+    PHYSICAL_WOODEN_BAR_NAME,
+    COLLISIONLESS_WOODEN_BAR_NAME,
 )
 
-WOODEN_BAR_NAMES = (
-    "wooden_bar_level_1",
-    "wooden_bar_level_2",
-    "wooden_bar_level_3",
-    "wooden_bar_level_4",
-    "wooden_bar_level_5",
-    "wooden_bar_level_6",
-    "wooden_bar_level_7",
-    "wooden_bar_level_8",
-    "wooden_bar_level_9",
-)
+# EL05 nominal torque, used only by the copied walking reward term.
+EL05_RATED_TORQUE = 2.2
 
-# A separate collisionless bar is used during stride training.  Keeping it
-# separate preserves the physical colliders required by obstacle training.
-STRIDE_WOODEN_BAR_NAME = "wooden_bar_stride"
-ALL_WOODEN_BAR_NAMES = WOODEN_BAR_NAMES + (STRIDE_WOODEN_BAR_NAME,)
+# Convex perimeters of the physical lowest sole surfaces, measured from the
+# supplied ankle-roll STL meshes. Order matches FOOT_BODY_NAMES: left, right.
+FOOT_SOLE_VERTICES = (
+    (
+        (-0.113911822, 0.028337635, -0.043790001),
+        (-0.114087179, -0.027662093, -0.043790001),
+        (-0.113337964, -0.031491291, -0.043790001),
+        (-0.111180402, -0.034742296, -0.043790001),
+        (-0.107942976, -0.036920171, -0.043790001),
+        (-0.104118548, -0.037693355, -0.043790001),
+        (0.045880727, -0.038163058, -0.043790001),
+        (0.049709924, -0.037413843, -0.043790001),
+        (0.052960925, -0.035256285, -0.043790001),
+        (0.055138804, -0.032018855, -0.043790001),
+        (0.055911988, -0.028194424, -0.043790001),
+        (0.056087345, 0.027805304, -0.043790001),
+        (0.055338129, 0.031634502, -0.043790001),
+        (0.053180564, 0.034885507, -0.043790001),
+        (0.049943142, 0.037063383, -0.043790001),
+        (0.046118710, 0.037836567, -0.043790001),
+        (-0.103880562, 0.038306270, -0.043790001),
+        (-0.107709758, 0.037557054, -0.043790001),
+        (-0.110960759, 0.035399497, -0.043790001),
+        (-0.113138638, 0.032162067, -0.043790001),
+    ),
+    (
+        (0.045730848, 0.038124181, -0.043790001),
+        (-0.104268424, 0.037654478, -0.043790001),
+        (-0.108092859, 0.036881294, -0.043790001),
+        (-0.111330278, 0.034703419, -0.043790001),
+        (-0.113487840, 0.031452414, -0.043790001),
+        (-0.114237063, 0.027623216, -0.043790001),
+        (-0.114061706, -0.028376512, -0.043790001),
+        (-0.113288522, -0.032200944, -0.043790001),
+        (-0.111110643, -0.035438374, -0.043790001),
+        (-0.107859641, -0.037595931, -0.043790001),
+        (-0.104030438, -0.038345147, -0.043790001),
+        (0.045968831, -0.037875444, -0.043790001),
+        (0.049793262, -0.037102260, -0.043790001),
+        (0.053030688, -0.034924384, -0.043790001),
+        (0.055188250, -0.031673379, -0.043790001),
+        (0.055937465, -0.027844181, -0.043790001),
+        (0.055762108, 0.028155547, -0.043790001),
+        (0.054988924, 0.031979978, -0.043790001),
+        (0.052811045, 0.035217408, -0.043790001),
+        (0.049560048, 0.037374966, -0.043790001),
+    ),
+)
 
 ANKLE_JOINT_NAMES = [
     ".*_ankle_pitch_joint",
@@ -189,8 +220,8 @@ def _make_wooden_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
     )
 
 
-def _make_stride_training_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
-    """Create a collisionless visual reference for stride training."""
+def _make_collisionless_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
+    """Create a collisionless visual reference for curriculum stage one."""
     return RigidObjectCfg(
         prim_path=f"{{ENV_REGEX_NS}}/{prim_name}",
         spawn=sim_utils.CuboidCfg(
@@ -274,40 +305,14 @@ class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
         force_threshold=1.0,
     )
 
-    # Pre-create fixed collider heights. Runtime scale changes are unsupported
-    # during tensorized training, so the curriculum activates one variant.
-    wooden_bar_level_1 = _make_wooden_bar_cfg(
-        "WoodenBarLevel1", WOODEN_BAR_HEIGHTS[0]
+    # Both curriculum stages use the same 20 mm x 10 mm cross-section.
+    wooden_bar = _make_wooden_bar_cfg(
+        "WoodenBar",
+        WOODEN_BAR_HEIGHT,
     )
-    wooden_bar_level_2 = _make_wooden_bar_cfg(
-        "WoodenBarLevel2", WOODEN_BAR_HEIGHTS[1]
-    )
-    wooden_bar_level_3 = _make_wooden_bar_cfg(
-        "WoodenBarLevel3", WOODEN_BAR_HEIGHTS[2]
-    )
-    wooden_bar_level_4 = _make_wooden_bar_cfg(
-        "WoodenBarLevel4", WOODEN_BAR_HEIGHTS[3]
-    )
-    wooden_bar_level_5 = _make_wooden_bar_cfg(
-        "WoodenBarLevel5", WOODEN_BAR_HEIGHTS[4]
-    )
-    wooden_bar_level_6 = _make_wooden_bar_cfg(
-        "WoodenBarLevel6", WOODEN_BAR_HEIGHTS[5]
-    )
-    wooden_bar_level_7 = _make_wooden_bar_cfg(
-        "WoodenBarLevel7", WOODEN_BAR_HEIGHTS[6]
-    )
-    wooden_bar_level_8 = _make_wooden_bar_cfg(
-        "WoodenBarLevel8", WOODEN_BAR_HEIGHTS[7]
-    )
-    wooden_bar_level_9 = _make_wooden_bar_cfg(
-        "WoodenBarLevel9", WOODEN_BAR_HEIGHTS[8]
-    )
-
-    # Kinematic and collisionless: it stays at the requested ground pose while
-    # the robot passes through it during stride training.
-    wooden_bar_stride = _make_stride_training_bar_cfg(
-        "WoodenBarStride", WOODEN_BAR_HEIGHTS[0]
+    wooden_bar_collisionless = _make_collisionless_bar_cfg(
+        "WoodenBarCollisionless",
+        WOODEN_BAR_HEIGHT,
     )
 
     # Light.
@@ -332,10 +337,9 @@ class CommandsCfg:
         asset_name="robot",
         resampling_time_range=(10.0, 10.0),
 
-        # Standing commands are deliberately common enough to train reliable
-        # stop-and-stand behavior. The command term suppresses them while a bar
-        # is active.
-        rel_standing_envs=0.05,
+        # Every episode starts at 0.4 m/s. The command term switches all three
+        # command components to zero after both complete feet clear the band.
+        rel_standing_envs=0.0,
 
         # Use direct yaw-rate commands for turning. ``heading_command=False`` means
         # angular velocity is sampled from ``ang_vel_z`` instead of deriving it
@@ -346,10 +350,6 @@ class CommandsCfg:
 
         debug_vis=True,
         ranges=mdp.ObstacleAwareVelocityCommandCfg.Ranges(
-            # Fixed forward speed with sampled yaw-rate commands.
-            #start fresh
-#            lin_vel_x=(0.2, 0.2),
-
             lin_vel_x=(0.4, 0.4),
             ang_vel_z=(0.0, 0.0),
             heading=(-math.pi, math.pi),
@@ -418,12 +418,14 @@ class ObservationsCfg:
         )
 
         # Signed distance to the active bar along the crossing direction. The
-        # underlying value is 0.50 m when no bar is present or after both foot
-        # centers have crossed it.
+        # value becomes 0.50 m only after every sole-perimeter point on both
+        # feet is beyond the front edge of the 4 cm activation band.
         wooden_bar_distance = ObsTerm(
             func=mdp.wooden_bar_distance,
             params={
                 "bar_names": ALL_WOODEN_BAR_NAMES,
+                "sole_vertices": FOOT_SOLE_VERTICES,
+                "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
                 "feet_cfg": SceneEntityCfg(
                     "robot",
                     body_names=FOOT_BODY_NAMES,
@@ -517,27 +519,23 @@ class EventCfg:
         params={
             "bar_names": ALL_WOODEN_BAR_NAMES,
             "hidden_depth": 2.0,
-            "stride_training_spawn_probability": 1.00,
-            "obstacle_training_spawn_probability": 0.70,
-            "stride_training_spawn_delay_s": 5.0,
-            "obstacle_training_spawn_delay_range_s": (3.0, 6.0),
         },
     )
 
-    # Poll once per control step. The reset event stores an episode-relative
-    # appearance time: 5 s for stride training and 3-6 s for obstacle training.
+    # Poll once per control step so the selected stage's bar appears
+    # immediately after reset.
     spawn_wooden_bar = EventTerm(
         func=mdp.spawn_wooden_bar,
         mode="interval",
         interval_range_s=(0.02, 0.02),
         is_global_time=False,
         params={
-            "bar_names": WOODEN_BAR_NAMES,
-            "stride_bar_name": STRIDE_WOODEN_BAR_NAME,
-            "bar_heights": WOODEN_BAR_HEIGHTS,
+            "bar_names": ALL_WOODEN_BAR_NAMES,
+            "physical_bar_name": PHYSICAL_WOODEN_BAR_NAME,
+            "collisionless_bar_name": COLLISIONLESS_WOODEN_BAR_NAME,
+            "bar_height": WOODEN_BAR_HEIGHT,
             "robot_name": "robot",
-            "stride_training_distance_range": (0.20, 0.20),
-            "obstacle_training_distance_range": (0.50, 0.50),
+            "distance_range": (0.15, 0.30),
             "drop_clearance": 0.01,
             "command_name": "base_velocity",
         },
@@ -682,6 +680,47 @@ class RewardsCfg:
         },
     )
 
+    ground_contact_flatness = RewTerm(
+        func=mdp.ground_contact_flatness,
+        weight=1.0,
+        params={
+            "flat_tolerance": math.radians(3.0),
+            "penalty_start_angle": math.radians(5.0),
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+        },
+    )
+
+    # Copied from the walking task without its reward-weight curriculum.
+    # The reward reaches one at 1 cm and remains saturated above that height.
+    swing_foot_clearance = RewTerm(
+        func=mdp.swing_foot_clearance_reward,
+        weight=1.5,
+        params={
+            "min_clearance": 0.01,
+            "sole_vertices": FOOT_SOLE_VERTICES,
+            "command_name": "base_velocity",
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+        },
+    )
+
     # -------------------------------------------------------------------------
     # Contact / termination terms
     # -------------------------------------------------------------------------
@@ -770,6 +809,18 @@ class RewardsCfg:
         },
     )
 
+    dof_torque_over_nominal = RewTerm(
+        func=mdp.joint_torque_over_nominal,
+        weight=-0.1,
+        params={
+            "nominal_torque": EL05_RATED_TORQUE,
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=LEG_JOINT_NAMES,
+            ),
+        },
+    )
+
     dof_acc_l2 = RewTerm(
         func=mdp.joint_acc_l2,
         weight=-2.0e-7,
@@ -823,31 +874,33 @@ class RewardsCfg:
         },
     )
 
-    # # Sparse task reward for fully clearing the bar within its lateral span.
-    # wooden_bar_crossing = RewTerm(
-    #     func=mdp.wooden_bar_crossing_reward,
-    #     weight=100.0,
-    #     params={
-    #         "feet_cfg": SceneEntityCfg(
-    #             "robot",
-    #             body_names=FOOT_BODY_NAMES,
-    #             preserve_order=True,
-    #         ),
-    #     },
-    # )
-    wooden_bar_crossing = None
+    # Emit exactly once when all sole-perimeter points on both feet are beyond
+    # the front edge of the configurable bar band.
+    wooden_bar_crossing = RewTerm(
+        func=mdp.wooden_bar_crossing_reward,
+        weight=100.0,
+        params={
+            "sole_vertices": FOOT_SOLE_VERTICES,
+            "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
+            "feet_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+        },
+    )
 
-    # Stage two only: encourage the swing foot to reach 3 cm above the support
-    # foot while a nearby wooden bar is visible.
+    # Apply to every foot whose physical sole footprint overlaps the 4 cm
+    # band, including a contacting/support foot. The score is zero at 50% of
+    # the target, negative below it, and saturated at one above the target.
     feet_clearance = RewTerm(
         func=mdp.feet_clearance_reward,
         weight=1.5,
         params={
             "target_height": 0.03,
-            "command_name": "base_velocity",
-            "bar_names": ALL_WOODEN_BAR_NAMES,
-            "activation_distance": 0.20,
-            "full_weight_distance": 0.10,
+            "minimum_clearance_ratio": 0.5,
+            "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
+            "sole_vertices": FOOT_SOLE_VERTICES,
             "asset_cfg": SceneEntityCfg(
                 "robot",
                 body_names=FOOT_BODY_NAMES,
@@ -861,18 +914,15 @@ class RewardsCfg:
         },
     )
 
-    # Stage two only: strongly reward touchdown strides longer than one 14 cm
-    # foot, with full reward at 20 cm. The MDP term supplies the phase/bar mask.
-    feet_stride_length = RewTerm(
-        func=mdp.feet_stride_length_reward,
+    # Apply only to airborne/stepping feet whose sole footprint overlaps the
+    # band; forward speed saturates at 0.2 m/s.
+    stepping_feet_forward_movement = RewTerm(
+        func=mdp.stepping_feet_forward_movement_reward,
         weight=50.0,
         params={
-            "foot_length": 0.14,
-            "target_stride_length": 0.20,
-            "command_name": "base_velocity",
-            "bar_names": ALL_WOODEN_BAR_NAMES,
-            "activation_distance": 0.20,
-            "full_weight_distance": 0.15,
+            "target_forward_velocity": 0.2,
+            "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
+            "sole_vertices": FOOT_SOLE_VERTICES,
             "asset_cfg": SceneEntityCfg(
                 "robot",
                 body_names=FOOT_BODY_NAMES,
@@ -895,15 +945,7 @@ class RewardsCfg:
 class TerminationsCfg:
     """Termination terms for the MDP."""
 
-    time_out = DoneTerm(
-        func=mdp.curriculum_time_out,
-        time_out=True,
-        params={
-            "normal_training_length_s": 20.0,
-            "stride_training_length_s": 10.0,
-            "obstacle_training_length_s": 20.0,
-        },
-    )
+    time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
     bad_orientation = DoneTerm(
         func=mdp.bad_orientation,
@@ -925,6 +967,8 @@ class TerminationsCfg:
         func=mdp.wooden_bar_moved,
         params={
             "bar_names": ALL_WOODEN_BAR_NAMES,
+            "sole_vertices": FOOT_SOLE_VERTICES,
+            "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
             "feet_cfg": SceneEntityCfg(
                 "robot",
                 body_names=FOOT_BODY_NAMES,
@@ -939,6 +983,8 @@ class TerminationsCfg:
     wooden_bar_deadline = DoneTerm(
         func=mdp.wooden_bar_deadline,
         params={
+            "sole_vertices": FOOT_SOLE_VERTICES,
+            "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
             "feet_cfg": SceneEntityCfg(
                 "robot",
                 body_names=FOOT_BODY_NAMES,
@@ -955,81 +1001,15 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
-    """Learn normal walking, long strides near a bar, then obstacle crossing."""
-# start fresh
-    # fixed_forward_speed = CurrTerm(
-    #     func=mdp.fixed_forward_speed_curriculum,
-    #     params={
-    #         "command_name": "base_velocity",
-    #         "initial_speed": 0.2,
-    #         "final_speed": 0.40,
-    #         "start_step": 500,
-    #         # 24,000 control steps / 24 rollout steps
-    #         # is approximately 1,000 PPO iterations.
-    #         "end_step": 2_500,
-    #     },
-    # )
+    """Use a collisionless bar first, then enable obstacle physics."""
 
     wooden_bar = CurrTerm(
-        func=mdp.wooden_bar_curriculum,
+        func=mdp.two_stage_wooden_bar_curriculum,
         params={
-            "bar_heights": WOODEN_BAR_HEIGHTS,
-            # Stage one: normal walking before step 6,000.
-            # Stage two: stride training from step 6,000 through step 40,000.
-            "stride_training_start_step": 4_000,
-            # Stage three: current nine-height obstacle curriculum.
-            "obstacle_training_start_step": 60_001,
-            "end_step": 180_000,
+            # Existing episodes retain their assigned stage until reset.
+            "obstacle_training_start_step": 60_000,
         },
     )
-
-
-    stride_reward_weights = CurrTerm(
-        func=mdp.stride_reward_weight_curriculum,
-        params={
-            # Must match wooden_bar.stride_training_start_step.
-            "stride_training_start_step": 4_000,
-
-            # Reach the current weights here and remain constant afterward.
-            "decay_end_step": 40_000,
-
-            # Start at 3x the current values.
-            "initial_clearance_weight": 5.0,
-            "initial_stride_weight": 200.0,
-
-            # Current values from RewardsCfg.
-            "final_clearance_weight": 1.5,
-            "final_stride_weight": 50.0,
-        },
-    )
-
-    # termination_penalty_after_bar = CurrTerm(
-    #     func=mdp.modify_reward_weight,
-    #     params={
-    #         "term_name": "termination_penalty",
-    #         "weight": -200.0,
-    #         # Use the same step at which wooden-bar training begins.
-    #         "num_steps": 5_000,
-    #     },
-    # )
-
-
-    # wooden_bar = CurrTerm(
-    #     func=mdp.wooden_bar_curriculum,
-    #     params={
-    #         "bar_heights": WOODEN_BAR_HEIGHTS,
-    #         # Stage one: normal walking before step 6,000.
-    #         # Stage two: 50% nearby-bar stride training from 6,000 to 12,000.
-    #         "stride_training_start_step": 0,
-    #         # Stage three: current nine-height obstacle curriculum.
-    #         "obstacle_training_start_step": 40_000,
-    #         "end_step": 180_000,
-    #     },
-    # )
-
-
-
-
 
 ##
 # Environment configuration
@@ -1072,9 +1052,7 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
 
         # General settings.
         self.decimation = 4
-        # Maximum buffer length; curriculum_time_out ends earlier phases at
-        # 8 s (normal) or 10 s (stride), and obstacle episodes at 20 s.
-        self.episode_length_s = 20.0
+        self.episode_length_s = 10.0
 
         # Simulation settings.
         self.sim.dt = 0.005
@@ -1105,13 +1083,6 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
         self.episode_length_s = 10.0
-        self.terminations.time_out.params.update(
-            {
-                "normal_training_length_s": 10.0,
-                "stride_training_length_s": 10.0,
-                "obstacle_training_length_s": 10.0,
-            }
-        )
 
         # Keyboard controls the base_velocity command.
         # self.commands.base_velocity.class_type = (
@@ -1119,20 +1090,15 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         # )
 
         self.commands.base_velocity.ranges.lin_vel_x = (0.4, 0.4)
-        self.commands.base_velocity.ranges.ang_vel_z = (-0.8, 0.8)
+        self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
         self.commands.base_velocity.ranges.heading = None
 
         self.commands.base_velocity.heading_command = False
         self.commands.base_velocity.rel_heading_envs = 0.0
         self.commands.base_velocity.rel_standing_envs = 0.0
 
-        # Make the final obstacle curriculum visible immediately during playback.
-        self.curriculum.wooden_bar.params["stride_training_start_step"] = 0
-        # self.curriculum.wooden_bar.params["obstacle_training_start_step"] = 0
-        self.curriculum.wooden_bar.params["end_step"] = 0
-        self.events.reset_wooden_bar.params["obstacle_training_spawn_probability"] = 1.0
-
-        self.events.reset_wooden_bar.params["obstacle_training_spawn_delay_range_s"] = (0.0, 0.0)
+        # Show stage two (physical bar) immediately during playback.
+        self.curriculum.wooden_bar.params["obstacle_training_start_step"] = 0
 
         self.observations.policy.enable_corruption = False
         self.observations.policy.wooden_bar_distance.params["noise_range"] = (0.0, 0.0)
@@ -1146,7 +1112,3 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         # Camera position and target relative to the robot root.
         self.viewer.eye = (2.0, 2.0, 1.2)
         self.viewer.lookat = (0.0, 0.0, 0.0)
-
-        #  # Playback should immediately use the final competition speed.
-        # self.curriculum.fixed_forward_speed.params["start_step"] = 0
-        # self.curriculum.fixed_forward_speed.params["end_step"] = 0
