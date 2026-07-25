@@ -86,7 +86,7 @@ def ground_contact_flatness(
 
 
 class swing_foot_clearance_reward(ManagerTermBase):
-    """Reward physical swing-foot clearance, saturated above a minimum height."""
+    """Reward swing-foot sole clearance inside a target height range."""
 
     def __init__(self, cfg: RewardTermCfg, env: ManagerBasedRLEnv):
         super().__init__(cfg, env)
@@ -110,6 +110,7 @@ class swing_foot_clearance_reward(ManagerTermBase):
         self,
         env: ManagerBasedRLEnv,
         min_clearance: float,
+        max_clearance: float,
         sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
         command_name: str,
         asset_cfg: SceneEntityCfg,
@@ -120,6 +121,8 @@ class swing_foot_clearance_reward(ManagerTermBase):
 
         if min_clearance <= 0.0:
             raise ValueError("min_clearance must be positive.")
+        if max_clearance <= min_clearance:
+            raise ValueError("max_clearance must be greater than min_clearance.")
 
         robot: Articulation = env.scene[asset_cfg.name]
         contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
@@ -168,11 +171,17 @@ class swing_foot_clearance_reward(ManagerTermBase):
             torch.amin(sole_z, dim=1, keepdim=True),
         )
         clearance = torch.clamp(sole_z - support_z, min=0.0)
-        clearance_score = torch.clamp(
+        score_below = torch.clamp(
             clearance / min_clearance,
             min=0.0,
             max=1.0,
         )
+        score_above = torch.clamp(
+            1.0 - (clearance - max_clearance) / min_clearance,
+            min=0.0,
+            max=1.0,
+        )
+        clearance_score = torch.minimum(score_below, score_above)
 
         moving_command = torch.linalg.vector_norm(
             env.command_manager.get_command(command_name)[:, :3],

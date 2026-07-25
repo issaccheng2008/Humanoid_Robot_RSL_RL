@@ -187,7 +187,6 @@ ANKLE_JOINT_NAMES = [
 
 YAW_ROLL_JOINT_NAMES = [
     ".*_leg_yaw_joint",
-    ".*_leg_roll_joint",
 ]
 
 
@@ -632,7 +631,7 @@ class RewardsCfg:
     # with forward locomotion.
     track_ang_vel_z_exp = RewTerm(
         func=mdp.track_ang_vel_z_world_exp,
-        weight=3,
+        weight=2,
         params={
             "command_name": "base_velocity",
             "std": 0.3,
@@ -649,7 +648,7 @@ class RewardsCfg:
     # with a custom ground-filtered reward.
     feet_air_time = RewTerm(
         func=mdp.feet_air_time_positive_biped,
-        weight=0.75,
+        weight=1.5,
         params={
             "command_name": "base_velocity",
             "sensor_cfg": SceneEntityCfg(
@@ -657,7 +656,7 @@ class RewardsCfg:
                 body_names=FOOT_BODY_NAMES,
             ),
             # 0.4 is G1-like. For your smaller/custom robot, start slightly lower.
-            "threshold": 0.25,
+            "threshold": 0.5,
         },
     )
 
@@ -699,13 +698,14 @@ class RewardsCfg:
         },
     )
 
-    # Copied from the walking task without its reward-weight curriculum.
-    # The reward reaches one at 1 cm and remains saturated above that height.
+    # Match the walking task's effective iteration-zero weight and clearance
+    # range without copying its separate reward-weight curriculum.
     swing_foot_clearance = RewTerm(
         func=mdp.swing_foot_clearance_reward,
         weight=1.5,
         params={
             "min_clearance": 0.01,
+            "max_clearance": 0.02,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "command_name": "base_velocity",
             "asset_cfg": SceneEntityCfg(
@@ -853,7 +853,7 @@ class RewardsCfg:
     # for stepping. Only softly discourage sideways/yaw flailing.
     joint_deviation_yaw_roll = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.03,
+        weight=-0.2,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot",
