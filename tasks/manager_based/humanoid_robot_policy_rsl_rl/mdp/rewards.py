@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
 import torch
 
 from isaaclab.assets import Articulation
-from isaaclab.managers import SceneEntityCfg
-from isaaclab.utils.math import quat_apply_inverse, wrap_to_pi, yaw_quat
+from isaaclab.managers import ManagerTermBase, RewardTermCfg, SceneEntityCfg
+from isaaclab.utils.math import (
+    quat_apply,
+    quat_apply_inverse,
+    wrap_to_pi,
+    yaw_quat,
+)
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -22,6 +28,164 @@ def joint_pos_target_l2(env: ManagerBasedRLEnv, target: float, asset_cfg: SceneE
 from isaaclab.sensors import ContactSensor
 
 
+def ground_contact_flatness(
+    env: ManagerBasedRLEnv,
+    flat_tolerance: float,
+    penalty_start_angle: float,
+    asset_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """Reward flat support feet and penalize tilted ground contact."""
+    if flat_tolerance < 0.0:
+        raise ValueError("flat_tolerance must be non-negative.")
+    if penalty_start_angle <= flat_tolerance:
+        raise ValueError("penalty_start_angle must be greater than flat_tolerance.")
+    if penalty_start_angle >= 0.5 * math.pi:
+        raise ValueError("penalty_start_angle must be less than 90 degrees.")
+
+    robot: Articulation = env.scene[asset_cfg.name]
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+
+    foot_quat_w = robot.data.body_quat_w[:, asset_cfg.body_ids]
+    contact_time = contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids]
+    if foot_quat_w.shape[1] != contact_time.shape[1]:
+        raise ValueError("asset_cfg and sensor_cfg must resolve the same number of feet.")
+
+    sole_normal_b = torch.zeros(
+        foot_quat_w.shape[0],
+        foot_quat_w.shape[1],
+        3,
+        dtype=foot_quat_w.dtype,
+        device=foot_quat_w.device,
+    )
+    sole_normal_b[..., 2] = 1.0
+    sole_normal_w = quat_apply(
+        foot_quat_w.reshape(-1, 4),
+        sole_normal_b.reshape(-1, 3),
+    ).reshape_as(sole_normal_b)
+
+    tilt_angle = torch.atan2(
+        torch.linalg.vector_norm(sole_normal_w[..., :2], dim=-1),
+        sole_normal_w[..., 2],
+    )
+    flat_reward = (tilt_angle <= flat_tolerance).to(tilt_angle.dtype)
+    tilt_penalty = torch.clamp(
+        (tilt_angle - penalty_start_angle)
+        / (0.5 * math.pi - penalty_start_angle),
+        min=0.0,
+        max=1.0,
+    )
+    foot_score = flat_reward - tilt_penalty
+
+    in_contact = contact_time > 0.0
+    contact_count = torch.sum(in_contact, dim=1)
+    return torch.sum(
+        foot_score * in_contact.to(foot_score.dtype),
+        dim=1,
+    ) / torch.clamp(contact_count, min=1)
+
+
+class swing_foot_clearance_reward(ManagerTermBase):
+    """Reward physical swing-foot clearance, saturated above a minimum height."""
+
+    def __init__(self, cfg: RewardTermCfg, env: ManagerBasedRLEnv):
+        super().__init__(cfg, env)
+
+        sole_vertices = cfg.params["sole_vertices"]
+        if len(sole_vertices) != 2 or any(
+            len(vertices) < 3 for vertices in sole_vertices
+        ):
+            raise ValueError(
+                "sole_vertices must contain at least three vertices "
+                "for each of two feet."
+            )
+
+        self._sole_vertices = torch.tensor(
+            sole_vertices,
+            dtype=torch.float,
+            device=env.device,
+        )
+
+    def __call__(
+        self,
+        env: ManagerBasedRLEnv,
+        min_clearance: float,
+        sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+        command_name: str,
+        asset_cfg: SceneEntityCfg,
+        sensor_cfg: SceneEntityCfg,
+        moving_command_threshold: float = 0.05,
+    ) -> torch.Tensor:
+        del sole_vertices
+
+        if min_clearance <= 0.0:
+            raise ValueError("min_clearance must be positive.")
+
+        robot: Articulation = env.scene[asset_cfg.name]
+        contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+
+        foot_pos_w = robot.data.body_pos_w[:, asset_cfg.body_ids]
+        foot_quat_w = robot.data.body_quat_w[:, asset_cfg.body_ids]
+        num_envs, num_feet = foot_pos_w.shape[:2]
+        if num_feet != self._sole_vertices.shape[0]:
+            raise ValueError(
+                "asset_cfg must resolve the same number of feet as sole_vertices."
+            )
+
+        num_vertices = self._sole_vertices.shape[1]
+        vertices = self._sole_vertices.unsqueeze(0).expand(
+            num_envs, -1, -1, -1
+        )
+        quaternions = foot_quat_w.unsqueeze(2).expand(
+            -1, -1, num_vertices, -1
+        )
+        rotated_vertices = quat_apply(
+            quaternions.reshape(-1, 4),
+            vertices.reshape(-1, 3),
+        ).reshape(num_envs, num_feet, num_vertices, 3)
+        sole_z = foot_pos_w[:, :, 2] + torch.amin(
+            rotated_vertices[:, :, :, 2],
+            dim=2,
+        )
+
+        contact_time = contact_sensor.data.current_contact_time[
+            :, sensor_cfg.body_ids
+        ]
+        in_contact = contact_time > 0.0
+        has_support_foot = torch.any(in_contact, dim=1)
+        support_z = torch.amin(
+            torch.where(
+                in_contact,
+                sole_z,
+                torch.full_like(sole_z, float("inf")),
+            ),
+            dim=1,
+            keepdim=True,
+        )
+        support_z = torch.where(
+            has_support_foot.unsqueeze(1),
+            support_z,
+            torch.amin(sole_z, dim=1, keepdim=True),
+        )
+        clearance = torch.clamp(sole_z - support_z, min=0.0)
+        clearance_score = torch.clamp(
+            clearance / min_clearance,
+            min=0.0,
+            max=1.0,
+        )
+
+        moving_command = torch.linalg.vector_norm(
+            env.command_manager.get_command(command_name)[:, :3],
+            dim=1,
+        ) > moving_command_threshold
+        swing_foot = ~in_contact
+        return (
+            torch.sum(clearance_score * swing_foot.float(), dim=1)
+            * has_support_foot.float()
+            * moving_command.float()
+        )
+
+
 def both_feet_airborne(
     env: ManagerBasedRLEnv,
     sensor_cfg: SceneEntityCfg,
@@ -35,6 +199,23 @@ def both_feet_airborne(
     in_contact = contact_time > 0.0
 
     return (~torch.any(in_contact, dim=1)).float()
+
+
+def joint_torque_over_nominal(
+    env: ManagerBasedRLEnv,
+    nominal_torque: float,
+    asset_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """Penalize only applied joint torque above the nominal actuator torque."""
+    if nominal_torque <= 0.0:
+        raise ValueError("nominal_torque must be positive.")
+
+    asset: Articulation = env.scene[asset_cfg.name]
+    applied_torque = torch.abs(
+        asset.data.applied_torque[:, asset_cfg.joint_ids]
+    )
+    excess_torque = torch.clamp(applied_torque - nominal_torque, min=0.0)
+    return torch.sum(excess_torque, dim=1)
 
 
 def base_acceleration_l2(
@@ -71,223 +252,140 @@ def base_acceleration_l2(
         f"Unsupported acceleration axis: {axis!r}. Use 'y' or 'z'."
     )
 
-def feet_clearance_reward(
-    env: ManagerBasedRLEnv,
-    target_height: float,
-    asset_cfg: SceneEntityCfg,
-    sensor_cfg: SceneEntityCfg,
-    command_name: str,
-    bar_names: tuple[str, ...],
-    activation_distance: float,
-    full_weight_distance: float,
-) -> torch.Tensor:
-    """Reward swing-foot clearance, capped at ``target_height``.
+class feet_clearance_reward(ManagerTermBase):
+    """Score both feet's physical sole clearance while they overlap the bar band."""
 
-    The grounded foot is used as the ground-height reference. This avoids
-    needing to know the vertical offset between the ankle link frame and the
-    physical bottom of the foot.
+    def __init__(self, cfg: RewardTermCfg, env: ManagerBasedRLEnv):
+        super().__init__(cfg, env)
+        self._sole_vertices = cfg.params["sole_vertices"]
 
-    Reward per swing foot:
-        0.00 m clearance -> 0
-        0.015 m clearance -> 0.5
-        >= 0.03 m clearance -> 1.0
+    def __call__(
+        self,
+        env: ManagerBasedRLEnv,
+        target_height: float,
+        minimum_clearance_ratio: float,
+        band_half_width: float,
+        sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+        asset_cfg: SceneEntityCfg,
+        sensor_cfg: SceneEntityCfg,
+    ) -> torch.Tensor:
+        del sole_vertices
 
-    The reward is disabled outside stride training, before a bar is within
-    ``activation_distance``, and after both feet have passed the bar. Its
-    effective weight increases linearly to full strength at
-    ``full_weight_distance``.
-    """
-    if target_height <= 0.0:
-        raise ValueError("target_height must be greater than zero.")
+        if target_height <= 0.0:
+            raise ValueError("target_height must be positive.")
+        if not 0.0 <= minimum_clearance_ratio < 1.0:
+            raise ValueError(
+                "minimum_clearance_ratio must be in the range [0, 1)."
+            )
+        if band_half_width <= 0.0:
+            raise ValueError("band_half_width must be positive.")
 
-    robot: Articulation = env.scene[asset_cfg.name]
-    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+        from .wooden_bar import foot_bar_geometry
 
-    # Z positions of the two ankle-roll link frames in the world frame.
-    foot_z = robot.data.body_pos_w[:, asset_cfg.body_ids, 2]
-
-    # Detect which feet are currently in contact.
-    contact_time = contact_sensor.data.current_contact_time[
-        :, sensor_cfg.body_ids
-    ]
-    in_contact = contact_time > 0.0
-    has_support_foot = torch.any(in_contact, dim=1)
-
-    # Use the lowest contacting foot as the approximate ground reference.
-    large_height = torch.full_like(foot_z, float("inf"))
-    contacting_foot_z = torch.where(in_contact, foot_z, large_height)
-    support_z = torch.min(contacting_foot_z, dim=1, keepdim=True).values
-
-    # Avoid infinity when both feet are airborne. The final support mask will
-    # disable the reward in those environments.
-    lowest_foot_z = torch.min(foot_z, dim=1, keepdim=True).values
-    support_z = torch.where(
-        has_support_foot.unsqueeze(1),
-        support_z,
-        lowest_foot_z,
-    )
-
-    # Clearance of each foot relative to the supporting foot.
-    clearance = torch.clamp(
-        foot_z - support_z,
-        min=0.0,
-        max=target_height,
-    )
-
-    # Normalize so each swing foot contributes at most 1.
-    clearance_reward = clearance / target_height
-
-    # Only the airborne/swing foot receives clearance reward.
-    swing_foot = ~in_contact
-    clearance_reward = clearance_reward * swing_foot.float()
-
-    # Do not encourage foot lifting during stand-still commands.
-    command = env.command_manager.get_command(command_name)
-    moving_command = torch.linalg.vector_norm(
-        command[:, [0, 2]],  # forward velocity and yaw rate
-        dim=1,
-    ) > 0.05
-
-    from .wooden_bar import stride_training_reward_scale
-
-    reward_scale = stride_training_reward_scale(
-        env,
-        bar_names=bar_names,
-        feet_cfg=asset_cfg,
-        activation_distance=activation_distance,
-        full_weight_distance=full_weight_distance,
-    )
-    return (
-        torch.sum(clearance_reward, dim=1)
-        * has_support_foot.float()
-        * moving_command.float()
-        * reward_scale
-    )
-
-
-def feet_stride_length_reward(
-    env: ManagerBasedRLEnv,
-    foot_length: float,
-    target_stride_length: float,
-    asset_cfg: SceneEntityCfg,
-    sensor_cfg: SceneEntityCfg,
-    command_name: str,
-    bar_names: tuple[str, ...],
-    activation_distance: float,
-    full_weight_distance: float,
-) -> torch.Tensor:
-    """Reward long forward strides only when touchdown feet alternate.
-
-    A valid touchdown must involve exactly one foot, place that foot ahead in
-    the commanded travel direction, and alternate from the previous valid
-    touchdown. Its stride receives a negative reward below one 14 cm foot
-    length, zero reward at 14 cm, and a positive reward above 14 cm. The reward
-    reaches one at ``target_stride_length`` and is bounded to [-1, 1].
-
-    The reward is active only during stride training. Its effective weight is
-    zero until the bar is closer than ``activation_distance``, increases
-    linearly, reaches full strength at ``full_weight_distance``, and returns to
-    zero after both feet pass the bar.
-    """
-    if foot_length <= 0.0:
-        raise ValueError("foot_length must be greater than zero.")
-    if target_stride_length <= foot_length:
-        raise ValueError("target_stride_length must be greater than foot_length.")
-
-    robot: Articulation = env.scene[asset_cfg.name]
-    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
-
-    foot_pos_w = robot.data.body_pos_w[:, asset_cfg.body_ids, :2]
-    if foot_pos_w.shape[1] != 2:
-        raise ValueError(
-            "Stride-length reward requires exactly two foot bodies, "
-            f"but received {foot_pos_w.shape[1]}."
+        contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+        sole_vertices_w, _, distance_to_bar_line, bar_active = (
+            foot_bar_geometry(
+                env,
+                feet_cfg=asset_cfg,
+                sole_vertices=self._sole_vertices,
+            )
         )
+        sole_z = torch.amin(sole_vertices_w[..., 2], dim=2)
 
-    foot_delta_w = foot_pos_w[:, 0] - foot_pos_w[:, 1]
-    foot_delta_b_x = quat_apply_inverse(
-        yaw_quat(robot.data.root_quat_w),
-        torch.cat(
-            (foot_delta_w, torch.zeros(env.num_envs, 1, device=env.device)),
-            dim=1,
-        ),
-    )[:, 0]
-    stride_length = torch.abs(foot_delta_b_x)
-    # Below one foot length:
-    #   0 cm  -> -1
-    #   7 cm  -> -0.5
-    #   14 cm -> 0
-    short_stride_reward = stride_length / foot_length - 1.0
+        contact_time = contact_sensor.data.current_contact_time[
+            :, sensor_cfg.body_ids
+        ]
+        in_contact = contact_time > 0.0
+        if sole_z.shape != in_contact.shape:
+            raise ValueError(
+                "asset_cfg and sensor_cfg must resolve the same two feet."
+            )
 
-    # Above one foot length:
-    #   14 cm -> 0
-    #   17 cm -> 0.5
-    #   20 cm -> 1
-    long_stride_reward = (
-        (stride_length - foot_length)
-        / (target_stride_length - foot_length)
-    )
-
-    normalized_stride = torch.where(
-        stride_length < foot_length,
-        short_stride_reward,
-        long_stride_reward,
-    )
-    normalized_stride = torch.clamp(normalized_stride, min=-1.0, max=1.0)
-
-    first_contact = contact_sensor.compute_first_contact(env.step_dt)[
-        :, sensor_cfg.body_ids
-    ]
-    single_touchdown = torch.sum(first_contact, dim=1) == 1
-    touchdown_foot = torch.argmax(first_contact.to(torch.int64), dim=1)
-
-    command = env.command_manager.get_command(command_name)
-    forward_command = torch.abs(command[:, 0]) > 0.05
-    travel_direction = torch.sign(command[:, 0])
-
-    # A long split stance alone must not earn reward: the landing foot has to
-    # be the foot that is ahead in the commanded direction.
-    touchdown_separation = torch.where(
-        touchdown_foot == 0,
-        foot_delta_b_x,
-        -foot_delta_b_x,
-    )
-    touchdown_ahead = touchdown_separation * travel_direction > 0.0
-
-    # Remember the most recent valid landing foot independently for every
-    # environment. Reset this history at the start of each episode.
-    state_name = "_stride_reward_last_touchdown_foot"
-    if not hasattr(env, state_name):
-        setattr(
-            env,
-            state_name,
-            torch.full(
-                (env.num_envs,),
-                -1,
-                dtype=torch.long,
-                device=env.device,
+        has_support_foot = torch.any(in_contact, dim=1)
+        support_z = torch.amin(
+            torch.where(
+                in_contact,
+                sole_z,
+                torch.full_like(sole_z, float("inf")),
             ),
+            dim=1,
+            keepdim=True,
         )
-    last_touchdown_foot = getattr(env, state_name)
-    last_touchdown_foot[env.episode_length_buf == 0] = -1
+        nominal_ground_z = env.scene.env_origins[:, 2].unsqueeze(1)
+        ground_z = torch.where(
+            has_support_foot.unsqueeze(1),
+            support_z,
+            nominal_ground_z,
+        )
+        clearance = torch.clamp(sole_z - ground_z, min=0.0)
+        clearance = torch.where(in_contact, torch.zeros_like(clearance), clearance)
 
-    valid_touchdown = single_touchdown & forward_command & touchdown_ahead
-    alternating_touchdown = valid_touchdown & (
-        (last_touchdown_foot == -1)
-        | (touchdown_foot != last_touchdown_foot)
-    )
-    last_touchdown_foot[valid_touchdown] = touchdown_foot[valid_touchdown]
+        zero_score_height = minimum_clearance_ratio * target_height
+        score = (clearance - zero_score_height) / (
+            target_height - zero_score_height
+        )
+        score = torch.clamp(score, min=-1.0, max=1.0)
 
-    from .wooden_bar import stride_training_reward_scale
+        within_band = distance_to_bar_line <= band_half_width
+        active = within_band & bar_active.unsqueeze(1)
+        return torch.sum(score * active.to(score.dtype), dim=1)
 
-    reward_scale = stride_training_reward_scale(
-        env,
-        bar_names=bar_names,
-        feet_cfg=asset_cfg,
-        activation_distance=activation_distance,
-        full_weight_distance=full_weight_distance,
-    )
-    return normalized_stride * alternating_touchdown.float() * reward_scale
+
+class stepping_feet_forward_movement_reward(ManagerTermBase):
+    """Reward forward velocity of airborne feet while they overlap the bar band."""
+
+    def __init__(self, cfg: RewardTermCfg, env: ManagerBasedRLEnv):
+        super().__init__(cfg, env)
+        self._sole_vertices = cfg.params["sole_vertices"]
+
+    def __call__(
+        self,
+        env: ManagerBasedRLEnv,
+        target_forward_velocity: float,
+        band_half_width: float,
+        sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+        asset_cfg: SceneEntityCfg,
+        sensor_cfg: SceneEntityCfg,
+    ) -> torch.Tensor:
+        del sole_vertices
+
+        if target_forward_velocity <= 0.0:
+            raise ValueError("target_forward_velocity must be positive.")
+        if band_half_width <= 0.0:
+            raise ValueError("band_half_width must be positive.")
+
+        from .wooden_bar import foot_bar_geometry
+
+        robot: Articulation = env.scene[asset_cfg.name]
+        contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+        _, forward_w, distance_to_bar_line, bar_active = foot_bar_geometry(
+            env,
+            feet_cfg=asset_cfg,
+            sole_vertices=self._sole_vertices,
+        )
+
+        contact_time = contact_sensor.data.current_contact_time[
+            :, sensor_cfg.body_ids
+        ]
+        stepping_feet = contact_time <= 0.0
+
+        foot_velocity_w = robot.data.body_lin_vel_w[:, asset_cfg.body_ids, :2]
+        forward_velocity = torch.sum(
+            foot_velocity_w * forward_w[:, None, :],
+            dim=2,
+        )
+        velocity_score = torch.clamp(
+            forward_velocity / target_forward_velocity,
+            min=0.0,
+            max=1.0,
+        )
+
+        within_band = distance_to_bar_line <= band_half_width
+        active = within_band & stepping_feet & bar_active.unsqueeze(1)
+        return torch.sum(
+            velocity_score * active.to(velocity_score.dtype),
+            dim=1,
+        )
 
 
 def track_lin_vel_xy_yaw_frame_quadratic_relative(
