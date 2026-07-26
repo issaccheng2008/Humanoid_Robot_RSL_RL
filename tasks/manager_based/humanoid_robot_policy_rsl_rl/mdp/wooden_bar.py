@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Two-stage wooden-bar mechanics for the humanoid locomotion task."""
+"""Delayed wooden-bar mechanics and rewards for the humanoid locomotion task."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 import torch
 
 from isaaclab.envs.mdp import UniformVelocityCommand, UniformVelocityCommandCfg
+from isaaclab.sensors import ContactSensor
 from isaaclab.utils import configclass
 from isaaclab.utils.math import quat_apply, yaw_quat
 
@@ -23,8 +24,8 @@ if TYPE_CHECKING:
 
 
 DEFAULT_BAR_DISTANCE = 0.50
-COLLISIONLESS_TRAINING_PHASE = 0
-OBSTACLE_TRAINING_PHASE = 1
+NO_BAR_TRAINING_PHASE = 0
+WOODEN_BAR_TRAINING_PHASE = 1
 
 
 def _curriculum_step(env: ManagerBasedRLEnv) -> int:
@@ -42,7 +43,6 @@ class _WoodenBarState:
             device=env.device,
         )
         self.crossed = torch.zeros_like(self.spawned)
-        self.crossing_rewarded = torch.zeros_like(self.spawned)
         self.spawn_time_s = torch.zeros(env.num_envs, device=env.device)
         self.spawn_pose_w = torch.zeros(env.num_envs, 7, device=env.device)
         self.spawn_pose_w[:, 3] = 1.0
@@ -50,10 +50,10 @@ class _WoodenBarState:
         self.movement_reference_set = torch.zeros_like(self.spawned)
         self.forward_w = torch.zeros(env.num_envs, 2, device=env.device)
         self.forward_w[:, 0] = 1.0
-        self.curriculum_phase = COLLISIONLESS_TRAINING_PHASE
+        self.curriculum_phase = NO_BAR_TRAINING_PHASE
         self.episode_phase = torch.full(
             (env.num_envs,),
-            COLLISIONLESS_TRAINING_PHASE,
+            NO_BAR_TRAINING_PHASE,
             dtype=torch.long,
             device=env.device,
         )
@@ -63,6 +63,14 @@ class _WoodenBarState:
             dtype=torch.long,
             device=env.device,
         )
+        self.first_time_entering_strip = torch.ones_like(self.spawned)
+        self.first_foot_entered = torch.zeros_like(self.spawned)
+        self.first_entry_event = torch.zeros(
+            (env.num_envs, 2),
+            dtype=torch.bool,
+            device=env.device,
+        )
+        self.band_state_update_step = -1
         self.sole_vertices = None
         self.sole_vertices_key = None
 
@@ -200,6 +208,157 @@ def foot_bar_geometry(
     )
 
 
+def _minimum_foot_clearance(
+    env: ManagerBasedRLEnv,
+    sole_vertices_w: torch.Tensor,
+    in_contact: torch.Tensor,
+) -> torch.Tensor:
+    """Estimate each foot's minimum sole height above the local support plane."""
+    sole_z = torch.amin(sole_vertices_w[..., 2], dim=2)
+    has_support_foot = torch.any(in_contact, dim=1)
+    support_z = torch.amin(
+        torch.where(
+            in_contact,
+            sole_z,
+            torch.full_like(sole_z, float("inf")),
+        ),
+        dim=1,
+        keepdim=True,
+    )
+    nominal_ground_z = env.scene.env_origins[:, 2].unsqueeze(1)
+    ground_z = torch.where(
+        has_support_foot.unsqueeze(1),
+        support_z,
+        nominal_ground_z,
+    )
+    clearance = torch.clamp(sole_z - ground_z, min=0.0)
+    return torch.where(in_contact, torch.zeros_like(clearance), clearance)
+
+
+def _update_foot_band_state(
+    env: ManagerBasedRLEnv,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    band_half_width: float,
+) -> tuple[
+    _WoodenBarState,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+]:
+    """Update the first strip-entry/contact state once per control step."""
+    if band_half_width <= 0.0:
+        raise ValueError("band_half_width must be positive.")
+
+    state = _get_state(env)
+    sole_vertices_w, forward_w, _, bar_active = foot_bar_geometry(
+        env,
+        feet_cfg=feet_cfg,
+        sole_vertices=sole_vertices,
+    )
+    relative_xy = (
+        sole_vertices_w[..., :2]
+        - state.spawn_pose_w[:, None, None, :2]
+    )
+    longitudinal = torch.sum(
+        relative_xy * forward_w[:, None, None, :],
+        dim=3,
+    )
+    footprint_min = torch.amin(longitudinal, dim=2)
+    footprint_max = torch.amax(longitudinal, dim=2)
+    overlaps_band = (
+        (footprint_max >= -band_half_width)
+        & (footprint_min <= band_half_width)
+    )
+
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    in_contact = (
+        contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids] > 0.0
+    )
+    if in_contact.shape != footprint_min.shape:
+        raise ValueError(
+            "feet_cfg and sensor_cfg must resolve the same two feet."
+        )
+
+    update_step = _curriculum_step(env)
+    if state.band_state_update_step != update_step:
+        state.first_entry_event.zero_()
+        active_feet = bar_active.unsqueeze(1)
+        new_entry_candidates = (
+            active_feet
+            & overlaps_band
+            & ~state.first_foot_entered.unsqueeze(1)
+        )
+        new_first_entry = torch.any(new_entry_candidates, dim=1)
+
+        candidate_progress = torch.where(
+            new_entry_candidates,
+            footprint_max,
+            torch.full_like(footprint_max, float("-inf")),
+        )
+        first_foot_ids = torch.argmax(candidate_progress, dim=1)
+        entry_env_ids = torch.nonzero(
+            new_first_entry,
+            as_tuple=False,
+        ).squeeze(-1)
+        state.first_entry_event[
+            entry_env_ids,
+            first_foot_ids[entry_env_ids],
+        ] = True
+        state.first_foot_entered |= new_first_entry
+
+        at_or_beyond_back_edge = footprint_max >= -band_half_width
+        ground_contact_in_or_beyond_band = torch.any(
+            in_contact & at_or_beyond_back_edge,
+            dim=1,
+        )
+        whole_foot_past_front_edge = torch.any(
+            footprint_min > band_half_width,
+            dim=1,
+        )
+        strip_attempt_finished = (
+            bar_active
+            & (
+                ground_contact_in_or_beyond_band
+                | whole_foot_past_front_edge
+            )
+        )
+        state.first_time_entering_strip &= ~strip_attempt_finished
+        state.band_state_update_step = update_step
+
+    return (
+        state,
+        sole_vertices_w,
+        forward_w,
+        footprint_min,
+        footprint_max,
+        overlaps_band,
+        in_contact,
+    )
+
+
+def first_time_entering_strip(
+    env: ManagerBasedRLEnv,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    band_half_width: float,
+) -> torch.Tensor:
+    """Return 1 until the first strip attempt touches down or clears the band."""
+    state, *_ = _update_foot_band_state(
+        env,
+        feet_cfg=feet_cfg,
+        sensor_cfg=sensor_cfg,
+        sole_vertices=sole_vertices,
+        band_half_width=band_half_width,
+    )
+    return state.first_time_entering_strip.float()
+
+
 def _update_crossed(
     env: ManagerBasedRLEnv,
     feet_cfg: SceneEntityCfg,
@@ -325,7 +484,6 @@ def reset_wooden_bar(
 
     state.spawned[env_ids] = False
     state.crossed[env_ids] = False
-    state.crossing_rewarded[env_ids] = False
     state.episode_phase[env_ids] = state.curriculum_phase
     state.active_bar_index[env_ids] = -1
     state.spawn_time_s[env_ids] = 0.0
@@ -334,6 +492,9 @@ def reset_wooden_bar(
     state.movement_reference_set[env_ids] = False
     state.forward_w[env_ids, 0] = 1.0
     state.forward_w[env_ids, 1] = 0.0
+    state.first_time_entering_strip[env_ids] = True
+    state.first_foot_entered[env_ids] = False
+    state.first_entry_event[env_ids] = False
 
 
 def spawn_wooden_bar(
@@ -341,14 +502,13 @@ def spawn_wooden_bar(
     env_ids: Sequence[int] | None,
     bar_names: tuple[str, ...],
     physical_bar_name: str,
-    collisionless_bar_name: str,
     bar_height: float,
     robot_name: str,
     distance_range: tuple[float, float],
     drop_clearance: float,
     command_name: str,
 ):
-    """Spawn the collisionless or physical 20 mm bar 15-30 cm ahead."""
+    """Spawn the physical 20 mm bar 15-30 cm ahead after curriculum activation."""
     if bar_height <= 0.0:
         raise ValueError("bar_height must be positive.")
     if (
@@ -362,6 +522,9 @@ def spawn_wooden_bar(
     state = _get_state(env)
     env_ids = _as_env_ids(env, env_ids)
     env_ids = env_ids[~state.spawned[env_ids]]
+    env_ids = env_ids[
+        state.episode_phase[env_ids] == WOODEN_BAR_TRAINING_PHASE
+    ]
     if len(env_ids) == 0:
         return
 
@@ -374,54 +537,22 @@ def spawn_wooden_bar(
         *distance_range
     )
 
-    phase = state.episode_phase[env_ids]
-    collisionless = phase == COLLISIONLESS_TRAINING_PHASE
-    obstacle = phase == OBSTACLE_TRAINING_PHASE
-
     pose = torch.zeros(len(env_ids), 7, device=env.device)
     pose[:, :2] = (
         robot.data.root_pos_w[env_ids, :2]
         + distance.unsqueeze(1) * forward_w[:, :2]
     )
     pose[:, 2] = env.scene.env_origins[env_ids, 2] + 0.5 * bar_height
-    pose[obstacle, 2] += drop_clearance
+    pose[:, 2] += drop_clearance
     pose[:, 3:7] = robot_yaw_quat_w
     velocity = torch.zeros(len(env_ids), 6, device=env.device)
-    active_bar_indices = torch.empty(
-        len(env_ids),
-        dtype=torch.long,
-        device=env.device,
-    )
-
-    if torch.any(collisionless):
-        collisionless_env_ids = env_ids[collisionless]
-        bar = env.scene[collisionless_bar_name]
-        bar.write_root_pose_to_sim(
-            pose[collisionless],
-            env_ids=collisionless_env_ids,
-        )
-        bar.write_root_velocity_to_sim(
-            velocity[collisionless],
-            env_ids=collisionless_env_ids,
-        )
-        active_bar_indices[collisionless] = bar_names.index(
-            collisionless_bar_name
-        )
-
-    if torch.any(obstacle):
-        obstacle_env_ids = env_ids[obstacle]
-        bar = env.scene[physical_bar_name]
-        bar.write_root_pose_to_sim(pose[obstacle], env_ids=obstacle_env_ids)
-        bar.write_root_velocity_to_sim(
-            velocity[obstacle],
-            env_ids=obstacle_env_ids,
-        )
-        active_bar_indices[obstacle] = bar_names.index(physical_bar_name)
+    bar = env.scene[physical_bar_name]
+    bar.write_root_pose_to_sim(pose, env_ids=env_ids)
+    bar.write_root_velocity_to_sim(velocity, env_ids=env_ids)
 
     state.spawned[env_ids] = True
-    state.active_bar_index[env_ids] = active_bar_indices
+    state.active_bar_index[env_ids] = bar_names.index(physical_bar_name)
     state.crossed[env_ids] = False
-    state.crossing_rewarded[env_ids] = False
     state.spawn_time_s[env_ids] = _episode_time_s(env)[env_ids]
     state.spawn_pose_w[env_ids] = pose
     state.movement_reference_pose_w[env_ids] = pose
@@ -515,9 +646,11 @@ def wooden_bar_moved(
     rotation = 2.0 * torch.acos(
         torch.clamp(quat_dot, min=0.0, max=1.0)
     )
-    obstacle_training = state.episode_phase == OBSTACLE_TRAINING_PHASE
+    wooden_bar_training = (
+        state.episode_phase == WOODEN_BAR_TRAINING_PHASE
+    )
     return (
-        obstacle_training
+        wooden_bar_training
         & state.movement_reference_set
         & (
             (translation > translation_tolerance)
@@ -533,7 +666,7 @@ def wooden_bar_deadline(
     band_half_width: float,
     time_limit_s: float,
 ) -> torch.Tensor:
-    """Terminate stage two if the robot has not crossed within the limit."""
+    """Terminate active bar episodes if crossing exceeds the time limit."""
     state = _update_crossed(
         env,
         feet_cfg=feet_cfg,
@@ -541,54 +674,225 @@ def wooden_bar_deadline(
         band_half_width=band_half_width,
     )
     elapsed = _episode_time_s(env) - state.spawn_time_s
-    obstacle_training = state.episode_phase == OBSTACLE_TRAINING_PHASE
+    wooden_bar_training = (
+        state.episode_phase == WOODEN_BAR_TRAINING_PHASE
+    )
     return (
-        obstacle_training
+        wooden_bar_training
         & state.spawned
         & ~state.crossed
         & (elapsed > time_limit_s)
     )
 
 
-def wooden_bar_crossing_reward(
+def wooden_bar_step_reward(
     env: ManagerBasedRLEnv,
     feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
     sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
     band_half_width: float,
+    height_saturation: float,
+    forward_velocity_saturation: float,
+    progress_unit: float,
 ) -> torch.Tensor:
-    """Give a one-frame reward when both full sole footprints clear the band."""
-    state = _update_crossed(
+    """Reward height, signed forward speed, and progress during first entry."""
+    if height_saturation <= 0.0:
+        raise ValueError("height_saturation must be positive.")
+    if forward_velocity_saturation <= 0.0:
+        raise ValueError("forward_velocity_saturation must be positive.")
+    if progress_unit <= 0.0:
+        raise ValueError("progress_unit must be positive.")
+
+    (
+        state,
+        sole_vertices_w,
+        forward_w,
+        _,
+        footprint_max,
+        overlaps_band,
+        in_contact,
+    ) = _update_foot_band_state(
         env,
         feet_cfg=feet_cfg,
+        sensor_cfg=sensor_cfg,
         sole_vertices=sole_vertices,
         band_half_width=band_half_width,
     )
-    newly_crossed = state.crossed & ~state.crossing_rewarded
-    state.crossing_rewarded |= newly_crossed
-    return newly_crossed.float()
+
+    clearance = _minimum_foot_clearance(
+        env,
+        sole_vertices_w=sole_vertices_w,
+        in_contact=in_contact,
+    )
+    height_score = torch.clamp(
+        clearance / height_saturation,
+        min=0.0,
+        max=1.0,
+    )
+
+    robot = env.scene[feet_cfg.name]
+    foot_velocity_w = robot.data.body_lin_vel_w[:, feet_cfg.body_ids, :2]
+    forward_velocity = torch.sum(
+        foot_velocity_w * forward_w[:, None, :],
+        dim=2,
+    )
+    velocity_score = torch.clamp(
+        forward_velocity / forward_velocity_saturation,
+        min=-1.0,
+        max=1.0,
+    )
+
+    # The frontmost point has made zero progress when it first reaches the
+    # band's back edge. Every progress_unit metres thereafter adds one.
+    progress_score = torch.clamp(
+        (footprint_max + band_half_width) / progress_unit,
+        min=0.0,
+    )
+    bar_active = state.spawned & ~state.crossed
+    active = (
+        overlaps_band
+        & bar_active.unsqueeze(1)
+        & state.first_time_entering_strip.unsqueeze(1)
+    )
+    return torch.sum(
+        height_score
+        * velocity_score
+        * progress_score
+        * active.to(height_score.dtype),
+        dim=1,
+    )
 
 
-def two_stage_wooden_bar_curriculum(
+def distance_to_front_edge_of_bar(
+    env: ManagerBasedRLEnv,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    band_half_width: float,
+    desired_distance: float,
+    linear_falloff_distance: float,
+) -> torch.Tensor:
+    """Reward an airborne foot for reaching a target past the band's front edge.
+
+    The curve is zero while the frontmost sole point has not cleared the front
+    edge, rises steeply to one at desired_distance, then falls linearly to zero
+    over linear_falloff_distance.
+    """
+    if desired_distance <= 0.0:
+        raise ValueError("desired_distance must be positive.")
+    if linear_falloff_distance <= 0.0:
+        raise ValueError("linear_falloff_distance must be positive.")
+
+    (
+        state,
+        _,
+        _,
+        _,
+        footprint_max,
+        overlaps_band,
+        in_contact,
+    ) = _update_foot_band_state(
+        env,
+        feet_cfg=feet_cfg,
+        sensor_cfg=sensor_cfg,
+        sole_vertices=sole_vertices,
+        band_half_width=band_half_width,
+    )
+
+    distance_past_front_edge = torch.clamp(
+        footprint_max - band_half_width,
+        min=0.0,
+    )
+    rapid_rise = torch.sqrt(
+        torch.clamp(
+            distance_past_front_edge / desired_distance,
+            min=0.0,
+            max=1.0,
+        )
+    )
+    linear_fall = torch.clamp(
+        1.0
+        - (distance_past_front_edge - desired_distance)
+        / linear_falloff_distance,
+        min=0.0,
+        max=1.0,
+    )
+    distance_score = torch.where(
+        distance_past_front_edge <= desired_distance,
+        rapid_rise,
+        linear_fall,
+    )
+
+    bar_active = state.spawned & ~state.crossed
+    active = (
+        overlaps_band
+        & ~in_contact
+        & bar_active.unsqueeze(1)
+        & state.first_time_entering_strip.unsqueeze(1)
+    )
+    return torch.sum(
+        distance_score * active.to(distance_score.dtype),
+        dim=1,
+    )
+
+
+def feet_height_entering_band_reward(
+    env: ManagerBasedRLEnv,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    band_half_width: float,
+) -> torch.Tensor:
+    """Return the first entering foot's minimum clearance for one frame."""
+    (
+        state,
+        sole_vertices_w,
+        _,
+        _,
+        _,
+        _,
+        in_contact,
+    ) = _update_foot_band_state(
+        env,
+        feet_cfg=feet_cfg,
+        sensor_cfg=sensor_cfg,
+        sole_vertices=sole_vertices,
+        band_half_width=band_half_width,
+    )
+    clearance = _minimum_foot_clearance(
+        env,
+        sole_vertices_w=sole_vertices_w,
+        in_contact=in_contact,
+    )
+    return torch.sum(
+        clearance * state.first_entry_event.to(clearance.dtype),
+        dim=1,
+    )
+
+
+def delayed_wooden_bar_curriculum(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int],
-    obstacle_training_start_step: int,
+    wooden_bar_training_start_step: int,
 ) -> dict[str, float]:
-    """Use a collisionless bar first, then enable collision and terminations."""
+    """Enable physical bars and all bar-specific terms after a global step."""
     del env_ids
-    if obstacle_training_start_step < 0:
-        raise ValueError("obstacle_training_start_step must be non-negative.")
+    if wooden_bar_training_start_step < 0:
+        raise ValueError(
+            "wooden_bar_training_start_step must be non-negative."
+        )
 
     state = _get_state(env)
     step = _curriculum_step(env)
-    if step < obstacle_training_start_step:
-        state.curriculum_phase = COLLISIONLESS_TRAINING_PHASE
+    if step < wooden_bar_training_start_step:
+        state.curriculum_phase = NO_BAR_TRAINING_PHASE
     else:
-        state.curriculum_phase = OBSTACLE_TRAINING_PHASE
+        state.curriculum_phase = WOODEN_BAR_TRAINING_PHASE
 
     return {
         "curriculum_step": float(step),
         "bar_curriculum_phase": float(state.curriculum_phase),
-        "bar_collision_enabled": float(
-            state.curriculum_phase == OBSTACLE_TRAINING_PHASE
+        "wooden_bar_training_enabled": float(
+            state.curriculum_phase == WOODEN_BAR_TRAINING_PHASE
         ),
     }
