@@ -120,12 +120,10 @@ MAX_BASE_TILT = math.radians(65.0)
 WOODEN_BAR_LENGTH = 0.35
 WOODEN_BAR_WIDTH = 0.01
 WOODEN_BAR_HEIGHT = 0.02
-WOODEN_BAR_BAND_HALF_WIDTH = 0.02
+WOODEN_BAR_BAND_HALF_WIDTH = 0.007
 PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
-COLLISIONLESS_WOODEN_BAR_NAME = "wooden_bar_collisionless"
 ALL_WOODEN_BAR_NAMES = (
     PHYSICAL_WOODEN_BAR_NAME,
-    COLLISIONLESS_WOODEN_BAR_NAME,
 )
 
 # EL05 nominal torque, used only by the copied walking reward term.
@@ -219,29 +217,6 @@ def _make_wooden_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
     )
 
 
-def _make_collisionless_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
-    """Create a collisionless visual reference for curriculum stage one."""
-    return RigidObjectCfg(
-        prim_path=f"{{ENV_REGEX_NS}}/{prim_name}",
-        spawn=sim_utils.CuboidCfg(
-            size=(WOODEN_BAR_WIDTH, WOODEN_BAR_LENGTH, height),
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                kinematic_enabled=True,
-                disable_gravity=True,
-            ),
-            collision_props=sim_utils.CollisionPropertiesCfg(
-                collision_enabled=False,
-            ),
-            mass_props=sim_utils.MassPropertiesCfg(density=500.0),
-            visual_material=sim_utils.PreviewSurfaceCfg(
-                diffuse_color=(0.8, 0.02, 0.02),
-                roughness=0.7,
-            ),
-        ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, -2.0)),
-    )
-
-
 ##
 # Scene definition
 ##
@@ -304,13 +279,9 @@ class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
         force_threshold=1.0,
     )
 
-    # Both curriculum stages use the same 20 mm x 10 mm cross-section.
+    # The physical wooden bar is hidden until the delayed curriculum enables it.
     wooden_bar = _make_wooden_bar_cfg(
         "WoodenBar",
-        WOODEN_BAR_HEIGHT,
-    )
-    wooden_bar_collisionless = _make_collisionless_bar_cfg(
-        "WoodenBarCollisionless",
         WOODEN_BAR_HEIGHT,
     )
 
@@ -418,7 +389,7 @@ class ObservationsCfg:
 
         # Signed distance to the active bar along the crossing direction. The
         # value becomes 0.50 m only after every sole-perimeter point on both
-        # feet is beyond the front edge of the 4 cm activation band.
+        # feet is beyond the front edge of the 1.4 cm activation band.
         wooden_bar_distance = ObsTerm(
             func=mdp.wooden_bar_distance,
             params={
@@ -521,8 +492,8 @@ class EventCfg:
         },
     )
 
-    # Poll once per control step so the selected stage's bar appears
-    # immediately after reset.
+    # Poll once per control step so the physical bar appears immediately after
+    # reset once the delayed wooden-bar curriculum is active.
     spawn_wooden_bar = EventTerm(
         func=mdp.spawn_wooden_bar,
         mode="interval",
@@ -531,7 +502,6 @@ class EventCfg:
         params={
             "bar_names": ALL_WOODEN_BAR_NAMES,
             "physical_bar_name": PHYSICAL_WOODEN_BAR_NAME,
-            "collisionless_bar_name": COLLISIONLESS_WOODEN_BAR_NAME,
             "bar_height": WOODEN_BAR_HEIGHT,
             "robot_name": "robot",
             "distance_range": (0.15, 0.30),
@@ -874,34 +844,16 @@ class RewardsCfg:
         },
     )
 
-    # Emit exactly once when all sole-perimeter points on both feet are beyond
-    # the front edge of the configurable bar band.
-    wooden_bar_crossing = RewTerm(
-        func=mdp.wooden_bar_crossing_reward,
-        weight=100.0,
+    wooden_bar_step_reward = RewTerm(
+        func=mdp.wooden_bar_step_reward,
+        weight=1.0,
         params={
-            "sole_vertices": FOOT_SOLE_VERTICES,
+            "height_saturation": 0.03,
+            "forward_velocity_saturation": 0.2,
+            "progress_unit": 0.01,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
+            "sole_vertices": FOOT_SOLE_VERTICES,
             "feet_cfg": SceneEntityCfg(
-                "robot",
-                body_names=FOOT_BODY_NAMES,
-                preserve_order=True,
-            ),
-        },
-    )
-
-    # Apply to every foot whose physical sole footprint overlaps the 4 cm
-    # band, including a contacting/support foot. The score is zero at 50% of
-    # the target, negative below it, and saturated at one above the target.
-    feet_clearance = RewTerm(
-        func=mdp.feet_clearance_reward,
-        weight=10,
-        params={
-            "target_height": 0.03,
-            "minimum_clearance_ratio": 0.2,
-            "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
-            "sole_vertices": FOOT_SOLE_VERTICES,
-            "asset_cfg": SceneEntityCfg(
                 "robot",
                 body_names=FOOT_BODY_NAMES,
                 preserve_order=True,
@@ -914,16 +866,34 @@ class RewardsCfg:
         },
     )
 
-    # Apply only to airborne/stepping feet whose sole footprint overlaps the
-    # band; forward speed saturates at 0.2 m/s.
-    stepping_feet_forward_movement = RewTerm(
-        func=mdp.stepping_feet_forward_movement_reward,
-        weight=2.0,
+    distance_to_front_edge_of_bar = RewTerm(
+        func=mdp.distance_to_front_edge_of_bar,
+        weight=1.0,
         params={
-            "target_forward_velocity": 0.2,
+            "desired_distance": 0.05,
+            "linear_falloff_distance": 0.15,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
-            "asset_cfg": SceneEntityCfg(
+            "feet_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+        },
+    )
+
+    feet_height_entering_band_reward = RewTerm(
+        func=mdp.feet_height_entering_band_reward,
+        weight=50.0,
+        params={
+            "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
+            "sole_vertices": FOOT_SOLE_VERTICES,
+            "feet_cfg": SceneEntityCfg(
                 "robot",
                 body_names=FOOT_BODY_NAMES,
                 preserve_order=True,
@@ -1001,13 +971,13 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
-    """Use a collisionless bar first, then enable obstacle physics."""
+    """Delay wooden-bar generation and all bar-specific terms."""
 
     wooden_bar = CurrTerm(
-        func=mdp.two_stage_wooden_bar_curriculum,
+        func=mdp.delayed_wooden_bar_curriculum,
         params={
             # Existing episodes retain their assigned stage until reset.
-            "obstacle_training_start_step": 160_000,
+            "wooden_bar_training_start_step": 5_000,
         },
     )
 
@@ -1097,8 +1067,8 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         self.commands.base_velocity.rel_heading_envs = 0.0
         self.commands.base_velocity.rel_standing_envs = 0.0
 
-        # Show stage two (physical bar) immediately during playback.
-#        self.curriculum.wooden_bar.params["obstacle_training_start_step"] = 0
+        # Uncomment to show the physical bar immediately during playback.
+#        self.curriculum.wooden_bar.params["wooden_bar_training_start_step"] = 0
 
         self.observations.policy.enable_corruption = False
         self.observations.policy.wooden_bar_distance.params["noise_range"] = (0.0, 0.0)
