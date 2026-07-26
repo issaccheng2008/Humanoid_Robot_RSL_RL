@@ -1101,7 +1101,7 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         self.commands.base_velocity.rel_standing_envs = 0.0
 
         # Uncomment both lines to show the physical bar immediately during playback.
-#        self.curriculum.wooden_bar.params["collisionless_training_start_step"] = 0
+        self.curriculum.wooden_bar.params["collisionless_training_start_step"] = 0
 #        self.curriculum.wooden_bar.params["obstacle_training_start_step"] = 0
 
         self.observations.policy.enable_corruption = False
