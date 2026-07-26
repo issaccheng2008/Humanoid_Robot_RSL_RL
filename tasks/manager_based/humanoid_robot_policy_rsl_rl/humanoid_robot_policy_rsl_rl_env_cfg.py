@@ -129,7 +129,7 @@ ALL_WOODEN_BAR_NAMES = (
 )
 
 # EL05 nominal torque, used only by the copied walking reward term.
-EL05_RATED_TORQUE = 2.2
+EL05_RATED_TORQUE = 4
 
 # Convex perimeters of the physical lowest sole surfaces, measured from the
 # supplied ankle-roll STL meshes. Order matches FOOT_BODY_NAMES: left, right.
@@ -683,8 +683,8 @@ class RewardsCfg:
         func=mdp.ground_contact_flatness,
         weight=1.0,
         params={
-            "flat_tolerance": math.radians(3.0),
-            "penalty_start_angle": math.radians(5.0),
+            "flat_tolerance": math.radians(5.0),
+            "penalty_start_angle": math.radians(10.0),
             "asset_cfg": SceneEntityCfg(
                 "robot",
                 body_names=FOOT_BODY_NAMES,
@@ -876,7 +876,7 @@ class RewardsCfg:
 
     wooden_bar_step_reward = RewTerm(
         func=mdp.wooden_bar_step_reward,
-        weight=1.0,
+        weight=5.0,
         params={
             "height_saturation": 0.03,
             "forward_velocity_saturation": 0.2,
@@ -898,10 +898,10 @@ class RewardsCfg:
 
     distance_to_front_edge_of_bar = RewTerm(
         func=mdp.distance_to_front_edge_of_bar,
-        weight=1.0,
+        weight=5.0,
         params={
-            "desired_distance": 0.05,
-            "linear_falloff_distance": 0.15,
+            "desired_distance": 0.005,
+            "linear_falloff_distance": 0.02,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "feet_cfg": SceneEntityCfg(
@@ -919,7 +919,7 @@ class RewardsCfg:
 
     feet_height_entering_band_reward = RewTerm(
         func=mdp.feet_height_entering_band_reward,
-        weight=50.0,
+        weight=100.0,
         params={
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
@@ -1007,7 +1007,7 @@ class CurriculumCfg:
         func=mdp.three_stage_wooden_bar_curriculum,
         params={
             # Existing episodes retain their assigned stage until reset.
-            "collisionless_training_start_step": 5_000,
+            "collisionless_training_start_step": 3_000,
             "obstacle_training_start_step": 160_000,
         },
     )
