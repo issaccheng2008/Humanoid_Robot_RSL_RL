@@ -705,7 +705,7 @@ class RewardsCfg:
         weight=1.5,
         params={
             "min_clearance": 0.01,
-            "max_clearance": 0.02,
+            "max_clearance": 0.04,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "command_name": "base_velocity",
             "asset_cfg": SceneEntityCfg(
@@ -734,7 +734,7 @@ class RewardsCfg:
     # Extra penalty applied only when the wooden bar moves.
     wooden_bar_moved_penalty = RewTerm(
         func=mdp.is_terminated_term,
-        weight=50.0,
+        weight=-50.0,
         params={
             "term_keys": "wooden_bar_moved",
         },
@@ -895,10 +895,10 @@ class RewardsCfg:
     # the target, negative below it, and saturated at one above the target.
     feet_clearance = RewTerm(
         func=mdp.feet_clearance_reward,
-        weight=1.5,
+        weight=10,
         params={
             "target_height": 0.03,
-            "minimum_clearance_ratio": 0.5,
+            "minimum_clearance_ratio": 0.2,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "asset_cfg": SceneEntityCfg(
@@ -918,7 +918,7 @@ class RewardsCfg:
     # band; forward speed saturates at 0.2 m/s.
     stepping_feet_forward_movement = RewTerm(
         func=mdp.stepping_feet_forward_movement_reward,
-        weight=50.0,
+        weight=2.0,
         params={
             "target_forward_velocity": 0.2,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
@@ -990,7 +990,7 @@ class TerminationsCfg:
                 body_names=FOOT_BODY_NAMES,
                 preserve_order=True,
             ),
-            "time_limit_s": 10.0,
+            "time_limit_s": 3.0,
         },
     )
 
@@ -1007,7 +1007,7 @@ class CurriculumCfg:
         func=mdp.two_stage_wooden_bar_curriculum,
         params={
             # Existing episodes retain their assigned stage until reset.
-            "obstacle_training_start_step": 60_000,
+            "obstacle_training_start_step": 160_000,
         },
     )
 
@@ -1052,7 +1052,7 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
 
         # General settings.
         self.decimation = 4
-        self.episode_length_s = 10.0
+        self.episode_length_s = 4.0
 
         # Simulation settings.
         self.sim.dt = 0.005
@@ -1082,7 +1082,7 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
 
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
-        self.episode_length_s = 10.0
+        self.episode_length_s = 4.0
 
         # Keyboard controls the base_velocity command.
         # self.commands.base_velocity.class_type = (
@@ -1098,7 +1098,7 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         self.commands.base_velocity.rel_standing_envs = 0.0
 
         # Show stage two (physical bar) immediately during playback.
-        self.curriculum.wooden_bar.params["obstacle_training_start_step"] = 0
+#        self.curriculum.wooden_bar.params["obstacle_training_start_step"] = 0
 
         self.observations.policy.enable_corruption = False
         self.observations.policy.wooden_bar_distance.params["noise_range"] = (0.0, 0.0)
