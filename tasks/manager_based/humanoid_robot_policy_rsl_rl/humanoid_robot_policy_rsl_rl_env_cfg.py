@@ -535,7 +535,7 @@ class EventCfg:
             "collisionless_bar_name": COLLISIONLESS_WOODEN_BAR_NAME,
             "bar_height": WOODEN_BAR_HEIGHT,
             "robot_name": "robot",
-            "distance_range": (0.15, 0.30),
+            "distance_range": (0.30, 0.50),
             "drop_clearance": 0.01,
             "command_name": "base_velocity",
         },
@@ -1055,7 +1055,7 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
 
         # General settings.
         self.decimation = 4
-        self.episode_length_s = 4.0
+        self.episode_length_s = 5.0
 
         # Simulation settings.
         self.sim.dt = 0.005
@@ -1085,7 +1085,7 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
 
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
-        self.episode_length_s = 4.0
+        self.episode_length_s = 5.0
 
         # Keyboard controls the base_velocity command.
         # self.commands.base_velocity.class_type = (
