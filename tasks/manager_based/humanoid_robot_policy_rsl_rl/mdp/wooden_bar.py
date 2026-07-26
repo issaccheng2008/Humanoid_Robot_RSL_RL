@@ -367,7 +367,7 @@ def _update_foot_band_state(
 
         at_or_beyond_back_edge = footprint_max >= -band_half_width
         foot_reward_finished = (
-            (in_contact & at_or_beyond_back_edge)
+            (state.bar_reward_foot_active & in_contact)
             | whole_foot_past_front_edge
         )
         state.bar_reward_foot_active &= ~foot_reward_finished
