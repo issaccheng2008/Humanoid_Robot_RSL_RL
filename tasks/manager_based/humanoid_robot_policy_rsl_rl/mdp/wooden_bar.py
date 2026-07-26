@@ -878,8 +878,11 @@ def feet_height_entering_band_reward(
     sensor_cfg: SceneEntityCfg,
     sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
     band_half_width: float,
+    height_saturation: float,
 ) -> torch.Tensor:
-    """Return the first entering foot's minimum clearance for one frame."""
+    """Return the first entering foot's saturated minimum clearance for one frame."""
+    if height_saturation <= 0.0:
+        raise ValueError("height_saturation must be positive.")
     (
         state,
         sole_vertices_w,
@@ -900,8 +903,10 @@ def feet_height_entering_band_reward(
         sole_vertices_w=sole_vertices_w,
         in_contact=in_contact,
     )
+    saturated_clearance = torch.clamp(clearance, max=height_saturation)
     return torch.sum(
-        clearance * state.first_entry_event.to(clearance.dtype),
+        saturated_clearance
+        * state.first_entry_event.to(saturated_clearance.dtype),
         dim=1,
     )
 
