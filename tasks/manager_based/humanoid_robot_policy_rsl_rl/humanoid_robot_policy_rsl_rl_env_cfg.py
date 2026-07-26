@@ -122,8 +122,10 @@ WOODEN_BAR_WIDTH = 0.01
 WOODEN_BAR_HEIGHT = 0.02
 WOODEN_BAR_BAND_HALF_WIDTH = 0.007
 PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
+COLLISIONLESS_WOODEN_BAR_NAME = "wooden_bar_collisionless"
 ALL_WOODEN_BAR_NAMES = (
     PHYSICAL_WOODEN_BAR_NAME,
+    COLLISIONLESS_WOODEN_BAR_NAME,
 )
 
 # EL05 nominal torque, used only by the copied walking reward term.
@@ -217,6 +219,29 @@ def _make_wooden_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
     )
 
 
+def _make_collisionless_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
+    """Create a collisionless visual reference for the stepping curriculum."""
+    return RigidObjectCfg(
+        prim_path=f"{{ENV_REGEX_NS}}/{prim_name}",
+        spawn=sim_utils.CuboidCfg(
+            size=(WOODEN_BAR_WIDTH, WOODEN_BAR_LENGTH, height),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                kinematic_enabled=True,
+                disable_gravity=True,
+            ),
+            collision_props=sim_utils.CollisionPropertiesCfg(
+                collision_enabled=False,
+            ),
+            mass_props=sim_utils.MassPropertiesCfg(density=500.0),
+            visual_material=sim_utils.PreviewSurfaceCfg(
+                diffuse_color=(0.8, 0.02, 0.02),
+                roughness=0.7,
+            ),
+        ),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, -2.0)),
+    )
+
+
 ##
 # Scene definition
 ##
@@ -279,9 +304,13 @@ class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
         force_threshold=1.0,
     )
 
-    # The physical wooden bar is hidden until the delayed curriculum enables it.
+    # Both curriculum bar variants use the same 20 mm x 10 mm cross-section.
     wooden_bar = _make_wooden_bar_cfg(
         "WoodenBar",
+        WOODEN_BAR_HEIGHT,
+    )
+    wooden_bar_collisionless = _make_collisionless_bar_cfg(
+        "WoodenBarCollisionless",
         WOODEN_BAR_HEIGHT,
     )
 
@@ -492,8 +521,8 @@ class EventCfg:
         },
     )
 
-    # Poll once per control step so the physical bar appears immediately after
-    # reset once the delayed wooden-bar curriculum is active.
+    # Poll once per control step so the bar selected for the episode appears
+    # immediately after reset once bar training is active.
     spawn_wooden_bar = EventTerm(
         func=mdp.spawn_wooden_bar,
         mode="interval",
@@ -502,6 +531,7 @@ class EventCfg:
         params={
             "bar_names": ALL_WOODEN_BAR_NAMES,
             "physical_bar_name": PHYSICAL_WOODEN_BAR_NAME,
+            "collisionless_bar_name": COLLISIONLESS_WOODEN_BAR_NAME,
             "bar_height": WOODEN_BAR_HEIGHT,
             "robot_name": "robot",
             "distance_range": (0.15, 0.30),
@@ -971,13 +1001,14 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
-    """Delay wooden-bar generation and all bar-specific terms."""
+    """No bar first, then collisionless stepping, then physical-bar training."""
 
     wooden_bar = CurrTerm(
-        func=mdp.delayed_wooden_bar_curriculum,
+        func=mdp.three_stage_wooden_bar_curriculum,
         params={
             # Existing episodes retain their assigned stage until reset.
-            "wooden_bar_training_start_step": 5_000,
+            "collisionless_training_start_step": 5_000,
+            "obstacle_training_start_step": 160_000,
         },
     )
 
@@ -1067,8 +1098,9 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         self.commands.base_velocity.rel_heading_envs = 0.0
         self.commands.base_velocity.rel_standing_envs = 0.0
 
-        # Uncomment to show the physical bar immediately during playback.
-#        self.curriculum.wooden_bar.params["wooden_bar_training_start_step"] = 0
+        # Uncomment both lines to show the physical bar immediately during playback.
+#        self.curriculum.wooden_bar.params["collisionless_training_start_step"] = 0
+#        self.curriculum.wooden_bar.params["obstacle_training_start_step"] = 0
 
         self.observations.policy.enable_corruption = False
         self.observations.policy.wooden_bar_distance.params["noise_range"] = (0.0, 0.0)

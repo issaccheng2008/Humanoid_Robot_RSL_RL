@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Delayed wooden-bar mechanics and rewards for the humanoid locomotion task."""
+"""Three-stage wooden-bar mechanics and rewards for the humanoid locomotion task."""
 
 from __future__ import annotations
 
@@ -25,7 +25,8 @@ if TYPE_CHECKING:
 
 DEFAULT_BAR_DISTANCE = 0.50
 NO_BAR_TRAINING_PHASE = 0
-WOODEN_BAR_TRAINING_PHASE = 1
+COLLISIONLESS_TRAINING_PHASE = 1
+OBSTACLE_TRAINING_PHASE = 2
 
 
 def _curriculum_step(env: ManagerBasedRLEnv) -> int:
@@ -502,13 +503,14 @@ def spawn_wooden_bar(
     env_ids: Sequence[int] | None,
     bar_names: tuple[str, ...],
     physical_bar_name: str,
+    collisionless_bar_name: str,
     bar_height: float,
     robot_name: str,
     distance_range: tuple[float, float],
     drop_clearance: float,
     command_name: str,
 ):
-    """Spawn the physical 20 mm bar 15-30 cm ahead after curriculum activation."""
+    """Spawn no bar, a collisionless bar, or a physical bar for the episode phase."""
     if bar_height <= 0.0:
         raise ValueError("bar_height must be positive.")
     if (
@@ -523,7 +525,7 @@ def spawn_wooden_bar(
     env_ids = _as_env_ids(env, env_ids)
     env_ids = env_ids[~state.spawned[env_ids]]
     env_ids = env_ids[
-        state.episode_phase[env_ids] == WOODEN_BAR_TRAINING_PHASE
+        state.episode_phase[env_ids] != NO_BAR_TRAINING_PHASE
     ]
     if len(env_ids) == 0:
         return
@@ -537,21 +539,55 @@ def spawn_wooden_bar(
         *distance_range
     )
 
+    phase = state.episode_phase[env_ids]
+    collisionless = phase == COLLISIONLESS_TRAINING_PHASE
+    obstacle = phase == OBSTACLE_TRAINING_PHASE
+
     pose = torch.zeros(len(env_ids), 7, device=env.device)
     pose[:, :2] = (
         robot.data.root_pos_w[env_ids, :2]
         + distance.unsqueeze(1) * forward_w[:, :2]
     )
     pose[:, 2] = env.scene.env_origins[env_ids, 2] + 0.5 * bar_height
-    pose[:, 2] += drop_clearance
+    pose[obstacle, 2] += drop_clearance
     pose[:, 3:7] = robot_yaw_quat_w
     velocity = torch.zeros(len(env_ids), 6, device=env.device)
-    bar = env.scene[physical_bar_name]
-    bar.write_root_pose_to_sim(pose, env_ids=env_ids)
-    bar.write_root_velocity_to_sim(velocity, env_ids=env_ids)
+    active_bar_indices = torch.empty(
+        len(env_ids),
+        dtype=torch.long,
+        device=env.device,
+    )
+
+    if torch.any(collisionless):
+        collisionless_env_ids = env_ids[collisionless]
+        collisionless_bar = env.scene[collisionless_bar_name]
+        collisionless_bar.write_root_pose_to_sim(
+            pose[collisionless],
+            env_ids=collisionless_env_ids,
+        )
+        collisionless_bar.write_root_velocity_to_sim(
+            velocity[collisionless],
+            env_ids=collisionless_env_ids,
+        )
+        active_bar_indices[collisionless] = bar_names.index(
+            collisionless_bar_name
+        )
+
+    if torch.any(obstacle):
+        obstacle_env_ids = env_ids[obstacle]
+        physical_bar = env.scene[physical_bar_name]
+        physical_bar.write_root_pose_to_sim(
+            pose[obstacle],
+            env_ids=obstacle_env_ids,
+        )
+        physical_bar.write_root_velocity_to_sim(
+            velocity[obstacle],
+            env_ids=obstacle_env_ids,
+        )
+        active_bar_indices[obstacle] = bar_names.index(physical_bar_name)
 
     state.spawned[env_ids] = True
-    state.active_bar_index[env_ids] = bar_names.index(physical_bar_name)
+    state.active_bar_index[env_ids] = active_bar_indices
     state.crossed[env_ids] = False
     state.spawn_time_s[env_ids] = _episode_time_s(env)[env_ids]
     state.spawn_pose_w[env_ids] = pose
@@ -646,11 +682,11 @@ def wooden_bar_moved(
     rotation = 2.0 * torch.acos(
         torch.clamp(quat_dot, min=0.0, max=1.0)
     )
-    wooden_bar_training = (
-        state.episode_phase == WOODEN_BAR_TRAINING_PHASE
+    obstacle_training = (
+        state.episode_phase == OBSTACLE_TRAINING_PHASE
     )
     return (
-        wooden_bar_training
+        obstacle_training
         & state.movement_reference_set
         & (
             (translation > translation_tolerance)
@@ -674,11 +710,11 @@ def wooden_bar_deadline(
         band_half_width=band_half_width,
     )
     elapsed = _episode_time_s(env) - state.spawn_time_s
-    wooden_bar_training = (
-        state.episode_phase == WOODEN_BAR_TRAINING_PHASE
+    obstacle_training = (
+        state.episode_phase == OBSTACLE_TRAINING_PHASE
     )
     return (
-        wooden_bar_training
+        obstacle_training
         & state.spawned
         & ~state.crossed
         & (elapsed > time_limit_s)
@@ -870,29 +906,40 @@ def feet_height_entering_band_reward(
     )
 
 
-def delayed_wooden_bar_curriculum(
+def three_stage_wooden_bar_curriculum(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int],
-    wooden_bar_training_start_step: int,
+    collisionless_training_start_step: int,
+    obstacle_training_start_step: int,
 ) -> dict[str, float]:
-    """Enable physical bars and all bar-specific terms after a global step."""
+    """Use no bar, then a collisionless bar, then a physical obstacle."""
     del env_ids
-    if wooden_bar_training_start_step < 0:
+    if collisionless_training_start_step < 0:
         raise ValueError(
-            "wooden_bar_training_start_step must be non-negative."
+            "collisionless_training_start_step must be non-negative."
+        )
+    if obstacle_training_start_step < collisionless_training_start_step:
+        raise ValueError(
+            "obstacle_training_start_step must be greater than or equal to "
+            "collisionless_training_start_step."
         )
 
     state = _get_state(env)
     step = _curriculum_step(env)
-    if step < wooden_bar_training_start_step:
+    if step < collisionless_training_start_step:
         state.curriculum_phase = NO_BAR_TRAINING_PHASE
+    elif step < obstacle_training_start_step:
+        state.curriculum_phase = COLLISIONLESS_TRAINING_PHASE
     else:
-        state.curriculum_phase = WOODEN_BAR_TRAINING_PHASE
+        state.curriculum_phase = OBSTACLE_TRAINING_PHASE
 
     return {
         "curriculum_step": float(step),
         "bar_curriculum_phase": float(state.curriculum_phase),
-        "wooden_bar_training_enabled": float(
-            state.curriculum_phase == WOODEN_BAR_TRAINING_PHASE
+        "bar_spawn_enabled": float(
+            state.curriculum_phase != NO_BAR_TRAINING_PHASE
+        ),
+        "bar_collision_enabled": float(
+            state.curriculum_phase == OBSTACLE_TRAINING_PHASE
         ),
     }
