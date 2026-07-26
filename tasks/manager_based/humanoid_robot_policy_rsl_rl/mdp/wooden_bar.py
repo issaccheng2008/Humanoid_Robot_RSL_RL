@@ -972,6 +972,46 @@ def feet_height_entering_band_reward(
     )
 
 
+def wooden_bar_reward_weight_curriculum(
+    env: ManagerBasedRLEnv,
+    env_ids: Sequence[int],
+    reward_weight_ranges: dict[str, tuple[float, float]],
+    start_step: int,
+    end_step: int,
+) -> dict[str, float]:
+    """Linearly reduce selected bar-reward weights, then hold them constant."""
+    del env_ids
+    if start_step < 0:
+        raise ValueError("start_step must be non-negative.")
+    if end_step <= start_step:
+        raise ValueError("end_step must be greater than start_step.")
+    if not reward_weight_ranges:
+        raise ValueError("reward_weight_ranges must not be empty.")
+
+    step = _curriculum_step(env)
+    progress = min(
+        max((step - start_step) / (end_step - start_step), 0.0),
+        1.0,
+    )
+    metrics = {"wooden_bar_reward_weight_progress": progress}
+
+    for term_name, weight_range in reward_weight_ranges.items():
+        if len(weight_range) != 2:
+            raise ValueError(
+                f"Reward {term_name!r} must define exactly two weights."
+            )
+        initial_weight, final_weight = map(float, weight_range)
+        weight = initial_weight + progress * (
+            final_weight - initial_weight
+        )
+        term_cfg = env.reward_manager.get_term_cfg(term_name)
+        term_cfg.weight = weight
+        env.reward_manager.set_term_cfg(term_name, term_cfg)
+        metrics[f"{term_name}_weight"] = weight
+
+    return metrics
+
+
 def three_stage_wooden_bar_curriculum(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int],

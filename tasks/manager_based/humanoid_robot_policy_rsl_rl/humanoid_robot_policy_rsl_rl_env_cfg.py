@@ -129,6 +129,10 @@ ALL_WOODEN_BAR_NAMES = (
     COLLISIONLESS_WOODEN_BAR_NAME,
 )
 
+COLLISIONLESS_BAR_TRAINING_START_STEP = 3_000
+WOODEN_BAR_REWARD_WEIGHT_DECAY_END_ITERATION = 100_000
+PPO_STEPS_PER_ITERATION = 24
+
 # EL05 nominal torque, used only by the copied walking reward term.
 EL05_RATED_TORQUE = 4
 
@@ -1009,8 +1013,26 @@ class CurriculumCfg:
         func=mdp.three_stage_wooden_bar_curriculum,
         params={
             # Existing episodes retain their assigned stage until reset.
-            "collisionless_training_start_step": 3_000,
+            "collisionless_training_start_step": (
+                COLLISIONLESS_BAR_TRAINING_START_STEP
+            ),
             "obstacle_training_start_step": 160_000,
+        },
+    )
+
+    wooden_bar_reward_weights = CurrTerm(
+        func=mdp.wooden_bar_reward_weight_curriculum,
+        params={
+            "reward_weight_ranges": {
+                "wooden_bar_step_reward": (5.0, 2.5),
+                "feet_height_entering_band_reward": (100.0, 50.0),
+                "distance_to_front_edge_of_bar": (5.0, 2.5),
+            },
+            "start_step": COLLISIONLESS_BAR_TRAINING_START_STEP,
+            "end_step": (
+                WOODEN_BAR_REWARD_WEIGHT_DECAY_END_ITERATION
+                * PPO_STEPS_PER_ITERATION
+            ),
         },
     )
 
