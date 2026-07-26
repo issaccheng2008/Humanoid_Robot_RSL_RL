@@ -71,6 +71,12 @@ class _WoodenBarState:
             dtype=torch.bool,
             device=env.device,
         )
+        self.bar_reward_foot_entered = torch.zeros_like(
+            self.first_entry_event
+        )
+        self.bar_reward_foot_active = torch.zeros_like(
+            self.first_entry_event
+        )
         self.band_state_update_step = -1
         self.sole_vertices = None
         self.sole_vertices_key = None
@@ -310,22 +316,71 @@ def _update_foot_band_state(
             entry_env_ids,
             first_foot_ids[entry_env_ids],
         ] = True
+        state.bar_reward_foot_entered[
+            entry_env_ids,
+            first_foot_ids[entry_env_ids],
+        ] = True
+        state.bar_reward_foot_active[
+            entry_env_ids,
+            first_foot_ids[entry_env_ids],
+        ] = True
         state.first_foot_entered |= new_first_entry
 
-        at_or_beyond_back_edge = footprint_max >= -band_half_width
-        ground_contact_in_or_beyond_band = torch.any(
-            in_contact & at_or_beyond_back_edge,
+        whole_foot_past_front_edge = footprint_min > band_half_width
+        lead_foot_crossed = torch.any(
+            state.bar_reward_foot_entered
+            & whole_foot_past_front_edge,
             dim=1,
         )
-        whole_foot_past_front_edge = torch.any(
-            footprint_min > band_half_width,
+        following_entry_candidates = (
+            active_feet
+            & overlaps_band
+            & ~state.bar_reward_foot_entered
+            & lead_foot_crossed.unsqueeze(1)
+        )
+        new_following_entry = torch.any(
+            following_entry_candidates,
+            dim=1,
+        )
+        following_progress = torch.where(
+            following_entry_candidates,
+            footprint_max,
+            torch.full_like(footprint_max, float("-inf")),
+        )
+        following_foot_ids = torch.argmax(following_progress, dim=1)
+        following_env_ids = torch.nonzero(
+            new_following_entry,
+            as_tuple=False,
+        ).squeeze(-1)
+        state.first_entry_event[
+            following_env_ids,
+            following_foot_ids[following_env_ids],
+        ] = True
+        state.bar_reward_foot_entered[
+            following_env_ids,
+            following_foot_ids[following_env_ids],
+        ] = True
+        state.bar_reward_foot_active[
+            following_env_ids,
+            following_foot_ids[following_env_ids],
+        ] = True
+
+        at_or_beyond_back_edge = footprint_max >= -band_half_width
+        foot_reward_finished = (
+            (state.bar_reward_foot_active & in_contact)
+            | whole_foot_past_front_edge
+        )
+        state.bar_reward_foot_active &= ~foot_reward_finished
+
+        ground_contact_in_or_beyond_band = torch.any(
+            in_contact & at_or_beyond_back_edge,
             dim=1,
         )
         strip_attempt_finished = (
             bar_active
             & (
                 ground_contact_in_or_beyond_band
-                | whole_foot_past_front_edge
+                | torch.any(whole_foot_past_front_edge, dim=1)
             )
         )
         state.first_time_entering_strip &= ~strip_attempt_finished
@@ -496,6 +551,8 @@ def reset_wooden_bar(
     state.first_time_entering_strip[env_ids] = True
     state.first_foot_entered[env_ids] = False
     state.first_entry_event[env_ids] = False
+    state.bar_reward_foot_entered[env_ids] = False
+    state.bar_reward_foot_active[env_ids] = False
 
 
 def spawn_wooden_bar(
@@ -788,7 +845,7 @@ def wooden_bar_step_reward(
     active = (
         overlaps_band
         & bar_active.unsqueeze(1)
-        & state.first_time_entering_strip.unsqueeze(1)
+        & state.bar_reward_foot_active
     )
     return torch.sum(
         height_score
@@ -880,7 +937,7 @@ def feet_height_entering_band_reward(
     band_half_width: float,
     height_saturation: float,
 ) -> torch.Tensor:
-    """Return the first entering foot's saturated minimum clearance for one frame."""
+    """Reward each eligible foot's entry clearance for one frame."""
     if height_saturation <= 0.0:
         raise ValueError("height_saturation must be positive.")
     (
@@ -904,9 +961,13 @@ def feet_height_entering_band_reward(
         in_contact=in_contact,
     )
     saturated_clearance = torch.clamp(clearance, max=height_saturation)
+    active_entry_event = (
+        state.first_entry_event
+        & state.bar_reward_foot_active
+    )
     return torch.sum(
         saturated_clearance
-        * state.first_entry_event.to(saturated_clearance.dtype),
+        * active_entry_event.to(saturated_clearance.dtype),
         dim=1,
     )
 
