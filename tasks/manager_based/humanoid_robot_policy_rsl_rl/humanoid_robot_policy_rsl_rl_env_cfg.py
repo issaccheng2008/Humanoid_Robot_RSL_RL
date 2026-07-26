@@ -121,6 +121,7 @@ WOODEN_BAR_LENGTH = 0.35
 WOODEN_BAR_WIDTH = 0.01
 WOODEN_BAR_HEIGHT = 0.02
 WOODEN_BAR_BAND_HALF_WIDTH = 0.007
+FOOT_HEIGHT_SATURATION = 0.03
 PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
 COLLISIONLESS_WOODEN_BAR_NAME = "wooden_bar_collisionless"
 ALL_WOODEN_BAR_NAMES = (
@@ -878,7 +879,7 @@ class RewardsCfg:
         func=mdp.wooden_bar_step_reward,
         weight=5.0,
         params={
-            "height_saturation": 0.03,
+            "height_saturation": FOOT_HEIGHT_SATURATION,
             "forward_velocity_saturation": 0.2,
             "progress_unit": 0.01,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
@@ -921,6 +922,7 @@ class RewardsCfg:
         func=mdp.feet_height_entering_band_reward,
         weight=100.0,
         params={
+            "height_saturation": FOOT_HEIGHT_SATURATION,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "feet_cfg": SceneEntityCfg(
