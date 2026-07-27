@@ -129,8 +129,8 @@ ALL_WOODEN_BAR_NAMES = (
     COLLISIONLESS_WOODEN_BAR_NAME,
 )
 
-COLLISIONLESS_BAR_TRAINING_START_STEP = 3_000
-WOODEN_BAR_REWARD_WEIGHT_DECAY_END_ITERATION = 1500
+COLLISIONLESS_BAR_TRAINING_START_STEP = 0
+WOODEN_BAR_REWARD_WEIGHT_DECAY_END_ITERATION = 300
 PPO_STEPS_PER_ITERATION = 24
 
 # EL05 nominal torque, used only by the copied walking reward term.
@@ -539,7 +539,7 @@ class EventCfg:
             "collisionless_bar_name": COLLISIONLESS_WOODEN_BAR_NAME,
             "bar_height": WOODEN_BAR_HEIGHT,
             "robot_name": "robot",
-            "distance_range": (0.30, 0.5),
+            "distance_range": (0.40, 0.5),
             "drop_clearance": 0.01,
             "command_name": "base_velocity",
         },
@@ -903,7 +903,7 @@ class RewardsCfg:
 
     distance_to_front_edge_of_bar = RewTerm(
         func=mdp.distance_to_front_edge_of_bar,
-        weight=5.0,
+        weight=100.0,
         params={
             "desired_distance": 0.005,
             "linear_falloff_distance": 0.02,
@@ -1024,9 +1024,9 @@ class CurriculumCfg:
         func=mdp.wooden_bar_reward_weight_curriculum,
         params={
             "reward_weight_ranges": {
-                "wooden_bar_step_reward": (10.0, 2.5),
-                "feet_height_entering_band_reward": (200.0, 100.0),
-                "distance_to_front_edge_of_bar": (20.0, 5),
+                "wooden_bar_step_reward": (5.0, 1.5),
+                "feet_height_entering_band_reward": (200.0, 50.0),
+                "distance_to_front_edge_of_bar": (100.0, 30),
             },
             "start_step": COLLISIONLESS_BAR_TRAINING_START_STEP,
             "end_step": (
