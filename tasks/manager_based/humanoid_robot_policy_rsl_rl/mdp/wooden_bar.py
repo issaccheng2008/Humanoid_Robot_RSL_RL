@@ -65,7 +65,6 @@ class _WoodenBarState:
             device=env.device,
         )
         self.first_time_entering_strip = torch.ones_like(self.spawned)
-        self.first_foot_entered = torch.zeros_like(self.spawned)
         self.first_entry_event = torch.zeros(
             (env.num_envs, 2),
             dtype=torch.bool,
@@ -295,76 +294,19 @@ def _update_foot_band_state(
     if state.band_state_update_step != update_step:
         state.first_entry_event.zero_()
         active_feet = bar_active.unsqueeze(1)
-        new_entry_candidates = (
-            active_feet
-            & overlaps_band
-            & ~state.first_foot_entered.unsqueeze(1)
-        )
-        new_first_entry = torch.any(new_entry_candidates, dim=1)
-
-        candidate_progress = torch.where(
-            new_entry_candidates,
-            footprint_max,
-            torch.full_like(footprint_max, float("-inf")),
-        )
-        first_foot_ids = torch.argmax(candidate_progress, dim=1)
-        entry_env_ids = torch.nonzero(
-            new_first_entry,
-            as_tuple=False,
-        ).squeeze(-1)
-        state.first_entry_event[
-            entry_env_ids,
-            first_foot_ids[entry_env_ids],
-        ] = True
-        state.bar_reward_foot_entered[
-            entry_env_ids,
-            first_foot_ids[entry_env_ids],
-        ] = True
-        state.bar_reward_foot_active[
-            entry_env_ids,
-            first_foot_ids[entry_env_ids],
-        ] = True
-        state.first_foot_entered |= new_first_entry
-
-        whole_foot_past_front_edge = footprint_min > band_half_width
-        lead_foot_crossed = torch.any(
-            state.bar_reward_foot_entered
-            & whole_foot_past_front_edge,
-            dim=1,
-        )
-        following_entry_candidates = (
+        # Register each foot independently the first time its footprint
+        # overlaps the band. The following foot does not have to wait for
+        # the leading foot to clear the band.
+        new_entry = (
             active_feet
             & overlaps_band
             & ~state.bar_reward_foot_entered
-            & lead_foot_crossed.unsqueeze(1)
         )
-        new_following_entry = torch.any(
-            following_entry_candidates,
-            dim=1,
-        )
-        following_progress = torch.where(
-            following_entry_candidates,
-            footprint_max,
-            torch.full_like(footprint_max, float("-inf")),
-        )
-        following_foot_ids = torch.argmax(following_progress, dim=1)
-        following_env_ids = torch.nonzero(
-            new_following_entry,
-            as_tuple=False,
-        ).squeeze(-1)
-        state.first_entry_event[
-            following_env_ids,
-            following_foot_ids[following_env_ids],
-        ] = True
-        state.bar_reward_foot_entered[
-            following_env_ids,
-            following_foot_ids[following_env_ids],
-        ] = True
-        state.bar_reward_foot_active[
-            following_env_ids,
-            following_foot_ids[following_env_ids],
-        ] = True
+        state.first_entry_event |= new_entry
+        state.bar_reward_foot_entered |= new_entry
+        state.bar_reward_foot_active |= new_entry
 
+        whole_foot_past_front_edge = footprint_min > band_half_width
         at_or_beyond_back_edge = footprint_max >= -band_half_width
         foot_reward_finished = (
             (state.bar_reward_foot_active & in_contact)
@@ -549,7 +491,6 @@ def reset_wooden_bar(
     state.forward_w[env_ids, 0] = 1.0
     state.forward_w[env_ids, 1] = 0.0
     state.first_time_entering_strip[env_ids] = True
-    state.first_foot_entered[env_ids] = False
     state.first_entry_event[env_ids] = False
     state.bar_reward_foot_entered[env_ids] = False
     state.bar_reward_foot_active[env_ids] = False
@@ -976,10 +917,11 @@ def wooden_bar_reward_weight_curriculum(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int],
     reward_weight_ranges: dict[str, tuple[float, float]],
+    pre_start_reward_weights: dict[str, float],
     start_step: int,
     end_step: int,
 ) -> dict[str, float]:
-    """Linearly reduce selected bar-reward weights, then hold them constant."""
+    """Apply pre-stride weights, then decay selected weights and hold them."""
     del env_ids
     if start_step < 0:
         raise ValueError("start_step must be non-negative.")
@@ -987,6 +929,11 @@ def wooden_bar_reward_weight_curriculum(
         raise ValueError("end_step must be greater than start_step.")
     if not reward_weight_ranges:
         raise ValueError("reward_weight_ranges must not be empty.")
+    if set(pre_start_reward_weights) != set(reward_weight_ranges):
+        raise ValueError(
+            "pre_start_reward_weights must define the same reward terms as "
+            "reward_weight_ranges."
+        )
 
     step = _curriculum_step(env)
     progress = min(
@@ -1001,9 +948,12 @@ def wooden_bar_reward_weight_curriculum(
                 f"Reward {term_name!r} must define exactly two weights."
             )
         initial_weight, final_weight = map(float, weight_range)
-        weight = initial_weight + progress * (
-            final_weight - initial_weight
-        )
+        if step < start_step:
+            weight = float(pre_start_reward_weights[term_name])
+        else:
+            weight = initial_weight + progress * (
+                final_weight - initial_weight
+            )
         term_cfg = env.reward_manager.get_term_cfg(term_name)
         term_cfg.weight = weight
         env.reward_manager.set_term_cfg(term_name, term_cfg)
