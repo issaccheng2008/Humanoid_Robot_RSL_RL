@@ -130,7 +130,8 @@ ALL_WOODEN_BAR_NAMES = (
 )
 
 COLLISIONLESS_BAR_TRAINING_START_STEP = 0
-WOODEN_BAR_REWARD_WEIGHT_DECAY_END_ITERATION = 300
+STRIDE_BAR_REWARD_START_ITERATION = 1_000
+COLLISION_BAR_TRAINING_START_ITERATION = 1_200
 PPO_STEPS_PER_ITERATION = 24
 
 # EL05 nominal torque, used only by the copied walking reward term.
@@ -881,7 +882,7 @@ class RewardsCfg:
 
     wooden_bar_step_reward = RewTerm(
         func=mdp.wooden_bar_step_reward,
-        weight=5.0,
+        weight=0.0,
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "forward_velocity_saturation": 0.2,
@@ -924,7 +925,7 @@ class RewardsCfg:
 
     feet_height_entering_band_reward = RewTerm(
         func=mdp.feet_height_entering_band_reward,
-        weight=100.0,
+        weight=0.0,
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
@@ -1007,30 +1008,46 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
-    """No bar first, then collisionless stepping, then physical-bar training."""
+    """Distance shaping, collisionless stepping, then physical-bar training."""
 
     wooden_bar = CurrTerm(
         func=mdp.three_stage_wooden_bar_curriculum,
         params={
-            # Existing episodes retain their assigned stage until reset.
+            # The visual collisionless bar is present from iteration zero.
+            # Existing episodes retain their assigned bar type until reset.
             "collisionless_training_start_step": (
                 COLLISIONLESS_BAR_TRAINING_START_STEP
             ),
-            "obstacle_training_start_step": 160_000,
+            "obstacle_training_start_step": (
+                COLLISION_BAR_TRAINING_START_ITERATION
+                * PPO_STEPS_PER_ITERATION
+            ),
         },
     )
 
     wooden_bar_reward_weights = CurrTerm(
         func=mdp.wooden_bar_reward_weight_curriculum,
         params={
+            # Iterations 0-999 train landing distance. At iteration 1,000,
+            # stride/height shaping turns on at its large initial weights and
+            # decays through iteration 1,200. The physical bar then starts
+            # with the existing steady collision-phase weights.
+            "pre_start_reward_weights": {
+                "wooden_bar_step_reward": 0.0,
+                "feet_height_entering_band_reward": 0.0,
+                "distance_to_front_edge_of_bar": 100.0,
+            },
             "reward_weight_ranges": {
                 "wooden_bar_step_reward": (5.0, 1.5),
                 "feet_height_entering_band_reward": (200.0, 50.0),
-                "distance_to_front_edge_of_bar": (100.0, 30),
+                "distance_to_front_edge_of_bar": (30.0, 30.0),
             },
-            "start_step": COLLISIONLESS_BAR_TRAINING_START_STEP,
+            "start_step": (
+                STRIDE_BAR_REWARD_START_ITERATION
+                * PPO_STEPS_PER_ITERATION
+            ),
             "end_step": (
-                WOODEN_BAR_REWARD_WEIGHT_DECAY_END_ITERATION
+                COLLISION_BAR_TRAINING_START_ITERATION
                 * PPO_STEPS_PER_ITERATION
             ),
         },
