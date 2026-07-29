@@ -39,8 +39,8 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         critic_obs_normalization=False,
 
         # Same network dimensions as the existing SKRL configuration.
-        actor_hidden_dims=[256, 128, 128],
-        critic_hidden_dims=[256, 128, 128],
+        actor_hidden_dims=[512, 256, 128],
+        critic_hidden_dims=[512, 256, 256],
         activation="elu",
     )
 

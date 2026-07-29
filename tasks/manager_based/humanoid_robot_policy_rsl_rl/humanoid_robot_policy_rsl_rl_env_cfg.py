@@ -130,8 +130,9 @@ ALL_WOODEN_BAR_NAMES = (
 )
 
 COLLISIONLESS_BAR_TRAINING_START_STEP = 0
-STRIDE_BAR_REWARD_START_ITERATION = 1_000
-COLLISION_BAR_TRAINING_START_ITERATION = 1_200
+STRIDE_BAR_REWARD_START_ITERATION = 3_000
+REWARD_STEADY_ITERATION = 3_001
+COLLISION_BAR_TRAINING_START_ITERATION = 6_000
 PPO_STEPS_PER_ITERATION = 24
 
 # EL05 nominal torque, used only by the copied walking reward term.
@@ -540,7 +541,7 @@ class EventCfg:
             "collisionless_bar_name": COLLISIONLESS_WOODEN_BAR_NAME,
             "bar_height": WOODEN_BAR_HEIGHT,
             "robot_name": "robot",
-            "distance_range": (0.40, 0.5),
+            "distance_range": (0.60, 0.8),
             "drop_clearance": 0.01,
             "command_name": "base_velocity",
         },
@@ -882,7 +883,7 @@ class RewardsCfg:
 
     wooden_bar_step_reward = RewTerm(
         func=mdp.wooden_bar_step_reward,
-        weight=0.0,
+        weight=1.5,
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "forward_velocity_saturation": 0.2,
@@ -904,10 +905,10 @@ class RewardsCfg:
 
     distance_to_front_edge_of_bar = RewTerm(
         func=mdp.distance_to_front_edge_of_bar,
-        weight=100.0,
+        weight=150.0,
         params={
             "desired_distance": 0.005,
-            "linear_falloff_distance": 0.02,
+            "linear_falloff_distance": 0.01,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "feet_cfg": SceneEntityCfg(
@@ -925,7 +926,7 @@ class RewardsCfg:
 
     feet_height_entering_band_reward = RewTerm(
         func=mdp.feet_height_entering_band_reward,
-        weight=0.0,
+        weight=100,
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
@@ -1035,19 +1036,19 @@ class CurriculumCfg:
             "pre_start_reward_weights": {
                 "wooden_bar_step_reward": 0.0,
                 "feet_height_entering_band_reward": 0.0,
-                "distance_to_front_edge_of_bar": 100.0,
+                "distance_to_front_edge_of_bar": 200.0,
             },
             "reward_weight_ranges": {
-                "wooden_bar_step_reward": (5.0, 1.5),
-                "feet_height_entering_band_reward": (200.0, 50.0),
-                "distance_to_front_edge_of_bar": (30.0, 30.0),
+                "wooden_bar_step_reward": (1.5, 1.5),
+                "feet_height_entering_band_reward": (50.0, 50.0),
+                "distance_to_front_edge_of_bar": (200.0, 200.0),
             },
             "start_step": (
                 STRIDE_BAR_REWARD_START_ITERATION
                 * PPO_STEPS_PER_ITERATION
             ),
             "end_step": (
-                COLLISION_BAR_TRAINING_START_ITERATION
+                REWARD_STEADY_ITERATION
                 * PPO_STEPS_PER_ITERATION
             ),
         },
