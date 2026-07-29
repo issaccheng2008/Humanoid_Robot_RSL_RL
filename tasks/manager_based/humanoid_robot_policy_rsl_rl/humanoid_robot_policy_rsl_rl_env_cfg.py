@@ -981,7 +981,6 @@ class TerminationsCfg:
         },
     )
 
-
     first_foot_entered_bar_band = DoneTerm(
         func=mdp.first_foot_entered_bar_band,
         params={
@@ -1058,7 +1057,6 @@ class CurriculumCfg:
             ),
         },
     )
-
 
     distance_reward_gaussian = CurrTerm(
         func=mdp.distance_reward_gaussian_curriculum,
