@@ -734,8 +734,18 @@ class RewardsCfg:
 
     # Strong penalty for early termination, G1-style.
     termination_penalty = RewTerm(
-        func=mdp.is_terminated,
+        func=mdp.is_any_terminated_term,
         weight=-200.0,
+        params={
+            # The alignment-phase band-entry termination intentionally has no
+            # early-termination penalty.
+            "term_keys": [
+                "bad_orientation",
+                "low_base_height",
+                "wooden_bar_moved",
+                "wooden_bar_deadline",
+            ],
+        },
     )
 
     # Extra penalty applied only when the wooden bar moves.
@@ -908,7 +918,7 @@ class RewardsCfg:
         weight=150.0,
         params={
             "desired_distance": 0.005,
-            "linear_falloff_distance": 0.01,
+            "gaussian_std": 0.02,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "feet_cfg": SceneEntityCfg(
@@ -971,6 +981,28 @@ class TerminationsCfg:
         },
     )
 
+    first_foot_entered_bar_band = DoneTerm(
+        func=mdp.first_foot_entered_bar_band,
+        params={
+            "alignment_end_step": (
+                STRIDE_BAR_REWARD_START_ITERATION
+                * PPO_STEPS_PER_ITERATION
+            ),
+            "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
+            "sole_vertices": FOOT_SOLE_VERTICES,
+            "feet_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+        },
+    )
+
     wooden_bar_moved = DoneTerm(
         func=mdp.wooden_bar_moved,
         params={
@@ -1021,6 +1053,20 @@ class CurriculumCfg:
             ),
             "obstacle_training_start_step": (
                 COLLISION_BAR_TRAINING_START_ITERATION
+                * PPO_STEPS_PER_ITERATION
+            ),
+        },
+    )
+
+    distance_reward_gaussian = CurrTerm(
+        func=mdp.distance_reward_gaussian_curriculum,
+        params={
+            "reward_term_name": "distance_to_front_edge_of_bar",
+            "initial_std": 0.02,
+            "final_std": 0.005,
+            "start_step": 0,
+            "end_step": (
+                STRIDE_BAR_REWARD_START_ITERATION
                 * PPO_STEPS_PER_ITERATION
             ),
         },

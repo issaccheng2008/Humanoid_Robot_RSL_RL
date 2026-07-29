@@ -70,6 +70,17 @@ class _WoodenBarState:
             dtype=torch.bool,
             device=env.device,
         )
+        self.last_pre_band_touchdown_gap = torch.zeros(
+            (env.num_envs, 2),
+            device=env.device,
+        )
+        self.last_pre_band_touchdown_step = torch.full(
+            (env.num_envs, 2),
+            -1,
+            dtype=torch.long,
+            device=env.device,
+        )
+        self.distance_reward_paid = torch.zeros_like(self.spawned)
         self.bar_reward_foot_entered = torch.zeros_like(
             self.first_entry_event
         )
@@ -294,6 +305,33 @@ def _update_foot_band_state(
     if state.band_state_update_step != update_step:
         state.first_entry_event.zero_()
         active_feet = bar_active.unsqueeze(1)
+
+        # Cache the gap at touchdown so sliding a planted foot toward the band
+        # cannot improve the delayed approach-placement reward.
+        first_contact = contact_sensor.compute_first_contact(env.step_dt)[
+            :, sensor_cfg.body_ids
+        ]
+        gap_before_band = -band_half_width - footprint_max
+        valid_pre_band_touchdown = (
+            active_feet
+            & first_contact
+            & (gap_before_band >= 0.0)
+        )
+        state.last_pre_band_touchdown_gap = torch.where(
+            valid_pre_band_touchdown,
+            gap_before_band,
+            state.last_pre_band_touchdown_gap,
+        )
+        touchdown_step = torch.full_like(
+            state.last_pre_band_touchdown_step,
+            update_step,
+        )
+        state.last_pre_band_touchdown_step = torch.where(
+            valid_pre_band_touchdown,
+            touchdown_step,
+            state.last_pre_band_touchdown_step,
+        )
+
         # Register each foot independently the first time its footprint
         # overlaps the band. The following foot does not have to wait for
         # the leading foot to clear the band.
@@ -492,6 +530,9 @@ def reset_wooden_bar(
     state.forward_w[env_ids, 1] = 0.0
     state.first_time_entering_strip[env_ids] = True
     state.first_entry_event[env_ids] = False
+    state.last_pre_band_touchdown_gap[env_ids] = 0.0
+    state.last_pre_band_touchdown_step[env_ids] = -1
+    state.distance_reward_paid[env_ids] = False
     state.bar_reward_foot_entered[env_ids] = False
     state.bar_reward_foot_active[env_ids] = False
 
@@ -719,6 +760,54 @@ def wooden_bar_deadline(
     )
 
 
+def is_any_terminated_term(
+    env: ManagerBasedRLEnv,
+    term_keys: str | list[str],
+) -> torch.Tensor:
+    """Return one when any selected termination term is active."""
+    terminated = torch.zeros(
+        env.num_envs,
+        dtype=torch.bool,
+        device=env.device,
+    )
+    for term_name in env.termination_manager.find_terms(term_keys):
+        terminated |= env.termination_manager.get_term(term_name).bool()
+    return terminated.float()
+
+
+def first_foot_entered_bar_band(
+    env: ManagerBasedRLEnv,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    band_half_width: float,
+    alignment_end_step: int,
+) -> torch.Tensor:
+    """Terminate alignment episodes when either footprint first enters the band.
+
+    Isaac Lab computes terminations before rewards and resets only after reward
+    computation. Updating the shared entry event here therefore lets the
+    distance reward consume the same transition before the environment resets.
+    """
+    if alignment_end_step < 0:
+        raise ValueError("alignment_end_step must be non-negative.")
+    if _curriculum_step(env) >= alignment_end_step:
+        return torch.zeros(
+            env.num_envs,
+            dtype=torch.bool,
+            device=env.device,
+        )
+
+    state, *_ = _update_foot_band_state(
+        env,
+        feet_cfg=feet_cfg,
+        sensor_cfg=sensor_cfg,
+        sole_vertices=sole_vertices,
+        band_half_width=band_half_width,
+    )
+    return torch.any(state.first_entry_event, dim=1)
+
+
 def wooden_bar_step_reward(
     env: ManagerBasedRLEnv,
     feet_cfg: SceneEntityCfg,
@@ -804,26 +893,28 @@ def distance_to_front_edge_of_bar(
     sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
     band_half_width: float,
     desired_distance: float,
-    linear_falloff_distance: float,
+    gaussian_std: float,
 ) -> torch.Tensor:
-    """Reward an airborne foot for reaching a target past the band's front edge.
+    """Reward the final support-foot landing before the first band entry.
 
-    The curve is zero while the frontmost sole point has not cleared the front
-    edge, rises steeply to one at desired_distance, then falls linearly to zero
-    over linear_falloff_distance.
+    Each pre-band touchdown gap is cached when contact begins. When the other,
+    airborne foot first enters the band, the latest currently grounded support
+    foot receives a one-time Gaussian score centred on desired_distance.
+    Grounded entries receive no reward, which prevents sliding into the band
+    from satisfying the crossing event.
     """
-    if desired_distance <= 0.0:
-        raise ValueError("desired_distance must be positive.")
-    if linear_falloff_distance <= 0.0:
-        raise ValueError("linear_falloff_distance must be positive.")
+    if desired_distance < 0.0:
+        raise ValueError("desired_distance must be non-negative.")
+    if gaussian_std <= 0.0:
+        raise ValueError("gaussian_std must be positive.")
 
     (
         state,
         _,
         _,
         _,
-        footprint_max,
-        overlaps_band,
+        _,
+        _,
         in_contact,
     ) = _update_foot_band_state(
         env,
@@ -833,41 +924,48 @@ def distance_to_front_edge_of_bar(
         band_half_width=band_half_width,
     )
 
-    distance_past_front_edge = torch.clamp(
-        footprint_max - band_half_width,
-        min=0.0,
+    airborne_entry = state.first_entry_event & ~in_contact
+    support_candidates = (
+        in_contact
+        & ~airborne_entry
+        & (state.last_pre_band_touchdown_step >= 0)
     )
-    rapid_rise = torch.sqrt(
-        torch.clamp(
-            distance_past_front_edge / desired_distance,
-            min=0.0,
-            max=1.0,
+    latest_support_step = torch.where(
+        support_candidates,
+        state.last_pre_band_touchdown_step,
+        torch.full_like(state.last_pre_band_touchdown_step, -1),
+    )
+    support_foot = torch.argmax(latest_support_step, dim=1)
+    selected_gap = torch.gather(
+        state.last_pre_band_touchdown_gap,
+        1,
+        support_foot.unsqueeze(1),
+    ).squeeze(1)
+
+    distance_score = torch.exp(
+        -0.5
+        * torch.square(
+            (selected_gap - desired_distance) / gaussian_std
         )
     )
-    linear_fall = torch.clamp(
-        1.0
-        - (distance_past_front_edge - desired_distance)
-        / linear_falloff_distance,
-        min=0.0,
-        max=1.0,
+    eligible = (
+        torch.any(airborne_entry, dim=1)
+        & torch.any(support_candidates, dim=1)
+        & ~state.distance_reward_paid
     )
-    distance_score = torch.where(
-        distance_past_front_edge <= desired_distance,
-        rapid_rise,
-        linear_fall,
+    reward = torch.where(
+        eligible,
+        distance_score,
+        torch.zeros_like(distance_score),
     )
 
-    bar_active = state.spawned & ~state.crossed
-    active = (
-        overlaps_band
-        & ~in_contact
-        & bar_active.unsqueeze(1)
-        & state.first_time_entering_strip.unsqueeze(1)
-    )
-    return torch.sum(
-        distance_score * active.to(distance_score.dtype),
+    # The first entry consumes the delayed reward opportunity even if it was a
+    # grounded slide or there was no valid grounded support-foot touchdown.
+    state.distance_reward_paid |= torch.any(
+        state.first_entry_event,
         dim=1,
     )
+    return reward
 
 
 def feet_height_entering_band_reward(
@@ -911,6 +1009,40 @@ def feet_height_entering_band_reward(
         * active_entry_event.to(saturated_clearance.dtype),
         dim=1,
     )
+
+
+def distance_reward_gaussian_curriculum(
+    env: ManagerBasedRLEnv,
+    env_ids: Sequence[int],
+    reward_term_name: str,
+    initial_std: float,
+    final_std: float,
+    start_step: int,
+    end_step: int,
+) -> dict[str, float]:
+    """Narrow the delayed foot-placement Gaussian over the alignment phase."""
+    del env_ids
+    if initial_std <= 0.0 or final_std <= 0.0:
+        raise ValueError("Gaussian standard deviations must be positive.")
+    if start_step < 0:
+        raise ValueError("start_step must be non-negative.")
+    if end_step <= start_step:
+        raise ValueError("end_step must be greater than start_step.")
+
+    step = _curriculum_step(env)
+    progress = min(
+        max((step - start_step) / (end_step - start_step), 0.0),
+        1.0,
+    )
+    gaussian_std = initial_std + progress * (final_std - initial_std)
+
+    term_cfg = env.reward_manager.get_term_cfg(reward_term_name)
+    term_cfg.params["gaussian_std"] = gaussian_std
+    env.reward_manager.set_term_cfg(reward_term_name, term_cfg)
+    return {
+        "distance_reward_gaussian_progress": progress,
+        "distance_reward_gaussian_std": gaussian_std,
+    }
 
 
 def wooden_bar_reward_weight_curriculum(
