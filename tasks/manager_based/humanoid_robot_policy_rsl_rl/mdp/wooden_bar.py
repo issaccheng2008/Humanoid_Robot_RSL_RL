@@ -760,6 +760,21 @@ def wooden_bar_deadline(
     )
 
 
+def is_any_terminated_term(
+    env: ManagerBasedRLEnv,
+    term_keys: str | list[str],
+) -> torch.Tensor:
+    """Return one when any selected termination term is active."""
+    terminated = torch.zeros(
+        env.num_envs,
+        dtype=torch.bool,
+        device=env.device,
+    )
+    for term_name in env.termination_manager.find_terms(term_keys):
+        terminated |= env.termination_manager.get_term(term_name).bool()
+    return terminated.float()
+
+
 def first_foot_entered_bar_band(
     env: ManagerBasedRLEnv,
     feet_cfg: SceneEntityCfg,
@@ -871,7 +886,6 @@ def wooden_bar_step_reward(
     )
 
 
-
 def distance_to_front_edge_of_bar(
     env: ManagerBasedRLEnv,
     feet_cfg: SceneEntityCfg,
@@ -952,6 +966,7 @@ def distance_to_front_edge_of_bar(
         dim=1,
     )
     return reward
+
 
 def feet_height_entering_band_reward(
     env: ManagerBasedRLEnv,
