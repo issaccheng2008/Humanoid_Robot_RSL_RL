@@ -1036,12 +1036,12 @@ class CurriculumCfg:
             "pre_start_reward_weights": {
                 "wooden_bar_step_reward": 0.0,
                 "feet_height_entering_band_reward": 0.0,
-                "distance_to_front_edge_of_bar": 200.0,
+                "distance_to_front_edge_of_bar": 100.0,
             },
             "reward_weight_ranges": {
                 "wooden_bar_step_reward": (1.5, 1.5),
                 "feet_height_entering_band_reward": (50.0, 50.0),
-                "distance_to_front_edge_of_bar": (200.0, 200.0),
+                "distance_to_front_edge_of_bar": (150.0, 150.0),
             },
             "start_step": (
                 STRIDE_BAR_REWARD_START_ITERATION
