@@ -734,7 +734,7 @@ class RewardsCfg:
 
     # Strong penalty for early termination, G1-style.
     termination_penalty = RewTerm(
-        func=mdp.is_terminated_term,
+        func=mdp.is_any_terminated_term,
         weight=-200.0,
         params={
             # The alignment-phase band-entry termination intentionally has no
