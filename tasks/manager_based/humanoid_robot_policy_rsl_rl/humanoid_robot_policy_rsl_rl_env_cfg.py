@@ -130,8 +130,8 @@ ALL_WOODEN_BAR_NAMES = (
 )
 
 COLLISIONLESS_BAR_TRAINING_START_STEP = 0
-STRIDE_BAR_REWARD_START_ITERATION = 3_000
-REWARD_STEADY_ITERATION = 3_001
+STRIDE_BAR_REWARD_START_ITERATION = 0
+REWARD_STEADY_ITERATION = 1000
 COLLISION_BAR_TRAINING_START_ITERATION = 6_000
 PPO_STEPS_PER_ITERATION = 24
 
@@ -897,7 +897,7 @@ class RewardsCfg:
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "forward_velocity_saturation": 0.2,
-            "progress_unit": 0.01,
+            "progress_unit": 0.19,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "feet_cfg": SceneEntityCfg(
@@ -981,27 +981,27 @@ class TerminationsCfg:
         },
     )
 
-    first_foot_entered_bar_band = DoneTerm(
-        func=mdp.first_foot_entered_bar_band,
-        params={
-            "alignment_end_step": (
-                STRIDE_BAR_REWARD_START_ITERATION
-                * PPO_STEPS_PER_ITERATION
-            ),
-            "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
-            "sole_vertices": FOOT_SOLE_VERTICES,
-            "feet_cfg": SceneEntityCfg(
-                "robot",
-                body_names=FOOT_BODY_NAMES,
-                preserve_order=True,
-            ),
-            "sensor_cfg": SceneEntityCfg(
-                "contact_forces",
-                body_names=FOOT_BODY_NAMES,
-                preserve_order=True,
-            ),
-        },
-    )
+    # first_foot_entered_bar_band = DoneTerm(
+    #     func=mdp.first_foot_entered_bar_band,
+    #     params={
+    #         "alignment_end_step": (
+    #             STRIDE_BAR_REWARD_START_ITERATION
+    #             * PPO_STEPS_PER_ITERATION
+    #         ),
+    #         "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
+    #         "sole_vertices": FOOT_SOLE_VERTICES,
+    #         "feet_cfg": SceneEntityCfg(
+    #             "robot",
+    #             body_names=FOOT_BODY_NAMES,
+    #             preserve_order=True,
+    #         ),
+    #         "sensor_cfg": SceneEntityCfg(
+    #             "contact_forces",
+    #             body_names=FOOT_BODY_NAMES,
+    #             preserve_order=True,
+    #         ),
+    #     },
+    # )
 
     wooden_bar_moved = DoneTerm(
         func=mdp.wooden_bar_moved,
@@ -1066,7 +1066,7 @@ class CurriculumCfg:
             "final_std": 0.005,
             "start_step": 0,
             "end_step": (
-                STRIDE_BAR_REWARD_START_ITERATION
+                1
                 * PPO_STEPS_PER_ITERATION
             ),
         },
@@ -1080,14 +1080,14 @@ class CurriculumCfg:
             # decays through iteration 1,200. The physical bar then starts
             # with the existing steady collision-phase weights.
             "pre_start_reward_weights": {
-                "wooden_bar_step_reward": 0.0,
-                "feet_height_entering_band_reward": 0.0,
-                "distance_to_front_edge_of_bar": 100.0,
+                "wooden_bar_step_reward": 1.5,
+                "feet_height_entering_band_reward": 400.0,
+                "distance_to_front_edge_of_bar": 200.0,
             },
             "reward_weight_ranges": {
-                "wooden_bar_step_reward": (1.5, 1.5),
-                "feet_height_entering_band_reward": (50.0, 50.0),
-                "distance_to_front_edge_of_bar": (150.0, 150.0),
+                "wooden_bar_step_reward": (80, 40),
+                "feet_height_entering_band_reward": (400.0, 400.0),
+                "distance_to_front_edge_of_bar": (200.0, 200.0),
             },
             "start_step": (
                 STRIDE_BAR_REWARD_START_ITERATION
