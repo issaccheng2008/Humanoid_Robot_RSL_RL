@@ -890,15 +890,19 @@ def distance_to_center_axis_punishment(
     env: ManagerBasedRLEnv,
     asset_cfg: SceneEntityCfg,
     distance_threshold: float,
+    punishment_offset: float,
 ) -> torch.Tensor:
-    """Return the linear lateral-distance punishment outside the bar corridor.
+    """Return an offset linear punishment outside the bar corridor.
 
     The center axis passes through the middle of the wooden bar and is
     perpendicular to it. The returned value is zero inside the configured
-    corridor and grows one-for-one with lateral distance beyond it.
+    corridor. Outside it, the punishment jumps to punishment_offset and then
+    grows one-for-one with the additional lateral distance.
     """
     if distance_threshold < 0.0:
         raise ValueError("distance_threshold must be non-negative.")
+    if punishment_offset < 0.0:
+        raise ValueError("punishment_offset must be non-negative.")
 
     state = _get_state(env)
     robot = env.scene[asset_cfg.name]
@@ -913,9 +917,14 @@ def distance_to_center_axis_punishment(
     distance_to_axis = torch.abs(
         torch.sum(relative_xy * lateral_w, dim=1)
     )
-    punishment = torch.clamp(
+    excess_distance = torch.clamp(
         distance_to_axis - distance_threshold,
         min=0.0,
+    )
+    punishment = torch.where(
+        excess_distance > 0.0,
+        punishment_offset + excess_distance,
+        torch.zeros_like(excess_distance),
     )
 
     # The bar spawns immediately in the current curriculum. Keep the value at
