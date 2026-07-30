@@ -896,6 +896,7 @@ class RewardsCfg:
         weight=-1.0,
         params={
             "distance_threshold": 0.05,
+            "punishment_offset": 5.0,
             "asset_cfg": SceneEntityCfg("robot"),
         },
     )
