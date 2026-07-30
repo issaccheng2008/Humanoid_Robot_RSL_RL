@@ -81,10 +81,20 @@ class _WoodenBarState:
             device=env.device,
         )
         self.distance_reward_paid = torch.zeros_like(self.spawned)
+        self.distance_reward_score = torch.zeros(
+            env.num_envs,
+            device=env.device,
+        )
         self.bar_reward_foot_entered = torch.zeros_like(
             self.first_entry_event
         )
         self.bar_reward_foot_active = torch.zeros_like(
+            self.first_entry_event
+        )
+        self.bar_reward_stepping_foot = torch.zeros_like(
+            self.first_entry_event
+        )
+        self.bar_reward_following_foot = torch.zeros_like(
             self.first_entry_event
         )
         self.band_state_update_step = -1
@@ -340,7 +350,28 @@ def _update_foot_band_state(
             & overlaps_band
             & ~state.bar_reward_foot_entered
         )
+        had_entered = torch.any(
+            state.bar_reward_foot_entered,
+            dim=1,
+            keepdim=True,
+        )
+        frontmost_new_foot = torch.argmax(
+            torch.where(
+                new_entry,
+                footprint_max,
+                torch.full_like(footprint_max, -torch.inf),
+            ),
+            dim=1,
+            keepdim=True,
+        )
+        first_entry_role = torch.zeros_like(new_entry)
+        first_entry_role.scatter_(1, frontmost_new_foot, True)
+        stepping_entry = new_entry & ~had_entered & first_entry_role
+        following_entry = new_entry & ~stepping_entry
+
         state.first_entry_event |= new_entry
+        state.bar_reward_stepping_foot |= stepping_entry
+        state.bar_reward_following_foot |= following_entry
         state.bar_reward_foot_entered |= new_entry
         state.bar_reward_foot_active |= new_entry
 
@@ -533,8 +564,11 @@ def reset_wooden_bar(
     state.last_pre_band_touchdown_gap[env_ids] = 0.0
     state.last_pre_band_touchdown_step[env_ids] = -1
     state.distance_reward_paid[env_ids] = False
+    state.distance_reward_score[env_ids] = 0.0
     state.bar_reward_foot_entered[env_ids] = False
     state.bar_reward_foot_active[env_ids] = False
+    state.bar_reward_stepping_foot[env_ids] = False
+    state.bar_reward_following_foot[env_ids] = False
 
 
 def spawn_wooden_bar(
@@ -808,7 +842,7 @@ def first_foot_entered_bar_band(
     return torch.any(state.first_entry_event, dim=1)
 
 
-def wooden_bar_step_reward(
+def _wooden_bar_step_score(
     env: ManagerBasedRLEnv,
     feet_cfg: SceneEntityCfg,
     sensor_cfg: SceneEntityCfg,
@@ -817,8 +851,8 @@ def wooden_bar_step_reward(
     height_saturation: float,
     forward_velocity_saturation: float,
     progress_unit: float,
-) -> torch.Tensor:
-    """Reward height, signed forward speed, and progress during first entry."""
+) -> tuple[_WoodenBarState, torch.Tensor]:
+    """Return per-foot height, speed, and progress scores during first entry."""
     if height_saturation <= 0.0:
         raise ValueError("height_saturation must be positive.")
     if forward_velocity_saturation <= 0.0:
@@ -877,11 +911,67 @@ def wooden_bar_step_reward(
         & bar_active.unsqueeze(1)
         & state.bar_reward_foot_active
     )
-    return torch.sum(
+    return state, (
         height_score
         * velocity_score
         * progress_score
-        * active.to(height_score.dtype),
+        * active.to(height_score.dtype)
+    )
+
+
+def stepping_wooden_bar_step_reward(
+    env: ManagerBasedRLEnv,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    band_half_width: float,
+    height_saturation: float,
+    forward_velocity_saturation: float,
+    progress_unit: float,
+) -> torch.Tensor:
+    """Reward the stepping foot, scaled by its cached approach-distance score."""
+    state, step_score = _wooden_bar_step_score(
+        env,
+        feet_cfg=feet_cfg,
+        sensor_cfg=sensor_cfg,
+        sole_vertices=sole_vertices,
+        band_half_width=band_half_width,
+        height_saturation=height_saturation,
+        forward_velocity_saturation=forward_velocity_saturation,
+        progress_unit=progress_unit,
+    )
+    return torch.sum(
+        step_score
+        * state.bar_reward_stepping_foot.to(step_score.dtype)
+        * state.distance_reward_score.unsqueeze(1),
+        dim=1,
+    )
+
+
+def following_wooden_bar_step_reward(
+    env: ManagerBasedRLEnv,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    band_half_width: float,
+    height_saturation: float,
+    forward_velocity_saturation: float,
+    progress_unit: float,
+) -> torch.Tensor:
+    """Reward the following foot without approach-distance scaling."""
+    state, step_score = _wooden_bar_step_score(
+        env,
+        feet_cfg=feet_cfg,
+        sensor_cfg=sensor_cfg,
+        sole_vertices=sole_vertices,
+        band_half_width=band_half_width,
+        height_saturation=height_saturation,
+        forward_velocity_saturation=forward_velocity_saturation,
+        progress_unit=progress_unit,
+    )
+    return torch.sum(
+        step_score
+        * state.bar_reward_following_foot.to(step_score.dtype),
         dim=1,
     )
 
@@ -1007,6 +1097,11 @@ def distance_to_front_edge_of_bar(
         eligible,
         distance_score,
         torch.zeros_like(distance_score),
+    )
+    state.distance_reward_score = torch.where(
+        eligible,
+        distance_score,
+        state.distance_reward_score,
     )
 
     # The first entry consumes the delayed reward opportunity even if it was a
