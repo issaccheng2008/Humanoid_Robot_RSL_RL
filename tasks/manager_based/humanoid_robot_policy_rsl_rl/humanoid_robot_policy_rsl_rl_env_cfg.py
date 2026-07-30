@@ -893,9 +893,9 @@ class RewardsCfg:
 
     distance_to_center_axis_punishment = RewTerm(
         func=mdp.distance_to_center_axis_punishment,
-        weight=-1.0,
+        weight=-3.0,
         params={
-            "distance_threshold": 0.05,
+            "distance_threshold": 0.2,
             "punishment_offset": 5.0,
             "asset_cfg": SceneEntityCfg("robot"),
         },
