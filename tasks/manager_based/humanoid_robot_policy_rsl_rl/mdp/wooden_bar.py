@@ -886,6 +886,47 @@ def wooden_bar_step_reward(
     )
 
 
+def distance_to_center_axis_punishment(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    distance_threshold: float,
+) -> torch.Tensor:
+    """Return the linear lateral-distance punishment outside the bar corridor.
+
+    The center axis passes through the middle of the wooden bar and is
+    perpendicular to it. The returned value is zero inside the configured
+    corridor and grows one-for-one with lateral distance beyond it.
+    """
+    if distance_threshold < 0.0:
+        raise ValueError("distance_threshold must be non-negative.")
+
+    state = _get_state(env)
+    robot = env.scene[asset_cfg.name]
+    relative_xy = robot.data.root_pos_w[:, :2] - state.spawn_pose_w[:, :2]
+
+    # Rotating the bar's forward vector by 90 degrees gives the lateral
+    # direction normal to the desired center axis.
+    lateral_w = torch.stack(
+        (-state.forward_w[:, 1], state.forward_w[:, 0]),
+        dim=1,
+    )
+    distance_to_axis = torch.abs(
+        torch.sum(relative_xy * lateral_w, dim=1)
+    )
+    punishment = torch.clamp(
+        distance_to_axis - distance_threshold,
+        min=0.0,
+    )
+
+    # The bar spawns immediately in the current curriculum. Keep the value at
+    # zero during reset before its pose and direction have been initialized.
+    return torch.where(
+        state.spawned,
+        punishment,
+        torch.zeros_like(punishment),
+    )
+
+
 def distance_to_front_edge_of_bar(
     env: ManagerBasedRLEnv,
     feet_cfg: SceneEntityCfg,
