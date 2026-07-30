@@ -895,8 +895,8 @@ class RewardsCfg:
         func=mdp.distance_to_center_axis_punishment,
         weight=-3.0,
         params={
-            "distance_threshold": 0.2,
-            "punishment_offset": 5.0,
+            "distance_threshold": 0.00,
+            "punishment_offset": 0.0,
             "asset_cfg": SceneEntityCfg("robot"),
         },
     )
@@ -1095,7 +1095,7 @@ class CurriculumCfg:
                 "distance_to_front_edge_of_bar": 200.0,
             },
             "reward_weight_ranges": {
-                "wooden_bar_step_reward": (80, 40),
+                "wooden_bar_step_reward": (50, 25),
                 "feet_height_entering_band_reward": (400.0, 400.0),
                 "distance_to_front_edge_of_bar": (200.0, 200.0),
             },
