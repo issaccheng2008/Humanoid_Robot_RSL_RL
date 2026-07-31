@@ -40,6 +40,7 @@ from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from . import mdp
 
 from .humanoid_robot import HUMANOID_ROBOT_CFG
+from .training_phase import WOODEN_BAR_TRAINING_PHASE
 
 SMALL_RANDOM_ROUGH_TERRAIN_CFG = TerrainGeneratorCfg(
     # Size of each generated terrain patch.
@@ -132,8 +133,8 @@ ALL_WOODEN_BAR_NAMES = (
 COLLISIONLESS_BAR_TRAINING_START_STEP = 0
 STRIDE_BAR_REWARD_START_ITERATION = 0
 REWARD_STEADY_ITERATION = 1000
-COLLISION_BAR_TRAINING_START_ITERATION = 6_000
 PPO_STEPS_PER_ITERATION = 24
+OBSTACLE_TRAINING_DISABLED_STEP = 1_000_000_000
 
 # EL05 nominal torque, used only by the copied walking reward term.
 EL05_RATED_TORQUE = 4
@@ -901,9 +902,36 @@ class RewardsCfg:
         },
     )
 
-    wooden_bar_step_reward = RewTerm(
-        func=mdp.wooden_bar_step_reward,
-        weight=1.5,
+    distance_to_front_edge_of_bar = RewTerm(
+        func=mdp.distance_to_front_edge_of_bar,
+        weight=(
+            200.0
+            if WOODEN_BAR_TRAINING_PHASE == 1
+            else 150.0 if WOODEN_BAR_TRAINING_PHASE == 2 else 0.0
+        ),
+        params={
+            "desired_distance": 0.005,
+            "gaussian_std": (
+                0.02 if WOODEN_BAR_TRAINING_PHASE == 1 else 0.005
+            ),
+            "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
+            "sole_vertices": FOOT_SOLE_VERTICES,
+            "feet_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces",
+                body_names=FOOT_BODY_NAMES,
+                preserve_order=True,
+            ),
+        },
+    )
+
+    stepping_wooden_bar_step_reward = RewTerm(
+        func=mdp.stepping_wooden_bar_step_reward,
+        weight=1.5 if WOODEN_BAR_TRAINING_PHASE == 2 else 0.0,
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "forward_velocity_saturation": 0.2,
@@ -923,12 +951,13 @@ class RewardsCfg:
         },
     )
 
-    distance_to_front_edge_of_bar = RewTerm(
-        func=mdp.distance_to_front_edge_of_bar,
-        weight=150.0,
+    following_wooden_bar_step_reward = RewTerm(
+        func=mdp.following_wooden_bar_step_reward,
+        weight=3.0 if WOODEN_BAR_TRAINING_PHASE == 2 else 0.0,
         params={
-            "desired_distance": 0.005,
-            "gaussian_std": 0.02,
+            "height_saturation": FOOT_HEIGHT_SATURATION,
+            "forward_velocity_saturation": 0.2,
+            "progress_unit": 0.19,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "feet_cfg": SceneEntityCfg(
@@ -946,7 +975,7 @@ class RewardsCfg:
 
     feet_height_entering_band_reward = RewTerm(
         func=mdp.feet_height_entering_band_reward,
-        weight=100,
+        weight=100 if WOODEN_BAR_TRAINING_PHASE == 2 else 0.0,
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "band_half_width": WOODEN_BAR_BAND_HALF_WIDTH,
@@ -1051,63 +1080,65 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
-    """Distance shaping, collisionless stepping, then physical-bar training."""
+    """Configure the selected independently resumed wooden-bar phase."""
 
     wooden_bar = CurrTerm(
         func=mdp.three_stage_wooden_bar_curriculum,
         params={
-            # The visual collisionless bar is present from iteration zero.
-            # Existing episodes retain their assigned bar type until reset.
             "collisionless_training_start_step": (
                 COLLISIONLESS_BAR_TRAINING_START_STEP
             ),
             "obstacle_training_start_step": (
-                COLLISION_BAR_TRAINING_START_ITERATION
-                * PPO_STEPS_PER_ITERATION
+                0
+                if WOODEN_BAR_TRAINING_PHASE == 3
+                else OBSTACLE_TRAINING_DISABLED_STEP
             ),
         },
     )
 
-    distance_reward_gaussian = CurrTerm(
-        func=mdp.distance_reward_gaussian_curriculum,
-        params={
-            "reward_term_name": "distance_to_front_edge_of_bar",
-            "initial_std": 0.02,
-            "final_std": 0.005,
-            "start_step": 0,
-            "end_step": (
-                1
-                * PPO_STEPS_PER_ITERATION
-            ),
-        },
+    distance_reward_gaussian = (
+        CurrTerm(
+            func=mdp.distance_reward_gaussian_curriculum,
+            params={
+                "reward_term_name": "distance_to_front_edge_of_bar",
+                "initial_std": 0.02,
+                "final_std": 0.005,
+                "start_step": 0,
+                "end_step": PPO_STEPS_PER_ITERATION,
+            },
+        )
+        if WOODEN_BAR_TRAINING_PHASE == 1
+        else None
     )
 
-    wooden_bar_reward_weights = CurrTerm(
-        func=mdp.wooden_bar_reward_weight_curriculum,
-        params={
-            # Iterations 0-999 train landing distance. At iteration 1,000,
-            # stride/height shaping turns on at its large initial weights and
-            # decays through iteration 1,200. The physical bar then starts
-            # with the existing steady collision-phase weights.
-            "pre_start_reward_weights": {
-                "wooden_bar_step_reward": 1.5,
-                "feet_height_entering_band_reward": 400.0,
-                "distance_to_front_edge_of_bar": 200.0,
+    wooden_bar_reward_weights = (
+        CurrTerm(
+            func=mdp.wooden_bar_reward_weight_curriculum,
+            params={
+                "pre_start_reward_weights": {
+                    "stepping_wooden_bar_step_reward": 1.5,
+                    "following_wooden_bar_step_reward": 3.0,
+                    "feet_height_entering_band_reward": 400.0,
+                    "distance_to_front_edge_of_bar": 200.0,
+                },
+                "reward_weight_ranges": {
+                    "stepping_wooden_bar_step_reward": (50.0, 25.0),
+                    "following_wooden_bar_step_reward": (100.0, 50.0),
+                    "feet_height_entering_band_reward": (400.0, 400.0),
+                    "distance_to_front_edge_of_bar": (200.0, 200.0),
+                },
+                "start_step": (
+                    STRIDE_BAR_REWARD_START_ITERATION
+                    * PPO_STEPS_PER_ITERATION
+                ),
+                "end_step": (
+                    REWARD_STEADY_ITERATION
+                    * PPO_STEPS_PER_ITERATION
+                ),
             },
-            "reward_weight_ranges": {
-                "wooden_bar_step_reward": (50, 25),
-                "feet_height_entering_band_reward": (400.0, 400.0),
-                "distance_to_front_edge_of_bar": (200.0, 200.0),
-            },
-            "start_step": (
-                STRIDE_BAR_REWARD_START_ITERATION
-                * PPO_STEPS_PER_ITERATION
-            ),
-            "end_step": (
-                REWARD_STEADY_ITERATION
-                * PPO_STEPS_PER_ITERATION
-            ),
-        },
+        )
+        if WOODEN_BAR_TRAINING_PHASE == 2
+        else None
     )
 
 ##
