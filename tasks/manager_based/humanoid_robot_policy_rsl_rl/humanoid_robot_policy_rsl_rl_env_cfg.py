@@ -1118,6 +1118,14 @@ class CurriculumCfg:
         CurrTerm(
             func=mdp.wooden_bar_reward_weight_curriculum,
             params={
+                "pre_start_reward_weights": {
+                    "stepping_wooden_bar_step_reward": 1.5,
+                    "following_wooden_bar_step_reward": 3.0,
+                    "feet_height_entering_band_reward": 400.0,
+                    "distance_to_front_edge_of_bar": (
+                        DISTANCE_TO_FRONT_EDGE_OF_BAR_WEIGHTS
+                    ),
+                },
                 "reward_weight_ranges": {
                     "stepping_wooden_bar_step_reward": (50.0, 25.0),
                     "following_wooden_bar_step_reward": (100.0, 50.0),
