@@ -133,6 +133,8 @@ COLLISIONLESS_BAR_TRAINING_START_STEP = 0
 STRIDE_BAR_REWARD_START_ITERATION = 0
 REWARD_STEADY_ITERATION = 1000
 COLLISION_BAR_TRAINING_START_ITERATION = 6_000
+CENTER_AXIS_PUNISHMENT_START_ITERATION = 300
+CENTER_AXIS_PUNISHMENT_RAMP_ITERATIONS = 500
 PPO_STEPS_PER_ITERATION = 24
 
 # EL05 nominal torque, used only by the copied walking reward term.
@@ -893,7 +895,7 @@ class RewardsCfg:
 
     distance_to_center_axis_punishment = RewTerm(
         func=mdp.distance_to_center_axis_punishment,
-        weight=-3.0,
+        weight=-1.0,
         params={
             "distance_threshold": 0.00,
             "punishment_offset": 0.0,
@@ -1105,6 +1107,29 @@ class CurriculumCfg:
             ),
             "end_step": (
                 REWARD_STEADY_ITERATION
+                * PPO_STEPS_PER_ITERATION
+            ),
+        },
+    )
+
+    center_axis_punishment_weight = CurrTerm(
+        func=mdp.wooden_bar_reward_weight_curriculum,
+        params={
+            "pre_start_reward_weights": {
+                "distance_to_center_axis_punishment": 0.0,
+            },
+            "reward_weight_ranges": {
+                "distance_to_center_axis_punishment": (-1.0, -5.0),
+            },
+            "start_step": (
+                CENTER_AXIS_PUNISHMENT_START_ITERATION
+                * PPO_STEPS_PER_ITERATION
+            ),
+            "end_step": (
+                (
+                    CENTER_AXIS_PUNISHMENT_START_ITERATION
+                    + CENTER_AXIS_PUNISHMENT_RAMP_ITERATIONS
+                )
                 * PPO_STEPS_PER_ITERATION
             ),
         },
