@@ -637,11 +637,50 @@ def _update_crossing_state_once(
 def update_crossing_state(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int] | None,
-    **kwargs,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    training_phase: int,
+    physical_bar_name: str,
+    bar_height: float,
+    physical_bar_half_width: float,
+    virtual_band_half_width: float,
+    virtual_band_near_edge_offset: float,
+    physical_bar_center_distance: float,
+    physical_bar_position_error_range: tuple[float, float],
+    physical_bar_drop_clearance: float,
+    default_step_distance: float,
+    crossing_step_distance: float,
+    phase_2_post_crossing_step_distance: float,
+    phase_3_post_crossing_step_distance: float,
+    normal_step_default_probability: float,
+    random_step_distance_range: tuple[float, float],
+    minimum_air_time_s: float,
 ):
     """Interval-event wrapper for the shared once-per-step state update."""
     del env_ids
-    _update_crossing_state_once(env, **kwargs)
+    _update_crossing_state_once(
+        env,
+        feet_cfg,
+        sensor_cfg,
+        sole_vertices,
+        training_phase,
+        physical_bar_name,
+        bar_height,
+        physical_bar_half_width,
+        virtual_band_half_width,
+        virtual_band_near_edge_offset,
+        physical_bar_center_distance,
+        physical_bar_position_error_range,
+        physical_bar_drop_clearance,
+        default_step_distance,
+        crossing_step_distance,
+        phase_2_post_crossing_step_distance,
+        phase_3_post_crossing_step_distance,
+        normal_step_default_probability,
+        random_step_distance_range,
+        minimum_air_time_s,
+    )
 
 
 class ObstacleAwareVelocityCommand(UniformVelocityCommand):
@@ -724,12 +763,51 @@ def crossing_command(env: ManagerBasedRLEnv) -> torch.Tensor:
 def step_distance_tracking_reward(
     env: ManagerBasedRLEnv,
     gaussian_std: float,
-    **update_kwargs,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    training_phase: int,
+    physical_bar_name: str,
+    bar_height: float,
+    physical_bar_half_width: float,
+    virtual_band_half_width: float,
+    virtual_band_near_edge_offset: float,
+    physical_bar_center_distance: float,
+    physical_bar_position_error_range: tuple[float, float],
+    physical_bar_drop_clearance: float,
+    default_step_distance: float,
+    crossing_step_distance: float,
+    phase_2_post_crossing_step_distance: float,
+    phase_3_post_crossing_step_distance: float,
+    normal_step_default_probability: float,
+    random_step_distance_range: tuple[float, float],
+    minimum_air_time_s: float,
 ) -> torch.Tensor:
     """Score a valid touchdown once using its cached signed step distance."""
     if gaussian_std <= 0.0:
         raise ValueError("gaussian_std must be positive.")
-    state = _update_crossing_state_once(env, **update_kwargs)
+    state = _update_crossing_state_once(
+        env,
+        feet_cfg,
+        sensor_cfg,
+        sole_vertices,
+        training_phase,
+        physical_bar_name,
+        bar_height,
+        physical_bar_half_width,
+        virtual_band_half_width,
+        virtual_band_near_edge_offset,
+        physical_bar_center_distance,
+        physical_bar_position_error_range,
+        physical_bar_drop_clearance,
+        default_step_distance,
+        crossing_step_distance,
+        phase_2_post_crossing_step_distance,
+        phase_3_post_crossing_step_distance,
+        normal_step_default_probability,
+        random_step_distance_range,
+        minimum_air_time_s,
+    )
     error = (
         state.touchdown_actual_step - state.touchdown_target_step
     ) / gaussian_std
@@ -1008,11 +1086,49 @@ def wooden_bar_moved(
     translation_tolerance: float,
     rotation_tolerance: float,
     settling_time_s: float,
-    **update_kwargs,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    training_phase: int,
+    physical_bar_name: str,
+    bar_height: float,
+    physical_bar_half_width: float,
+    virtual_band_half_width: float,
+    virtual_band_near_edge_offset: float,
+    physical_bar_center_distance: float,
+    physical_bar_position_error_range: tuple[float, float],
+    physical_bar_drop_clearance: float,
+    default_step_distance: float,
+    crossing_step_distance: float,
+    phase_2_post_crossing_step_distance: float,
+    phase_3_post_crossing_step_distance: float,
+    normal_step_default_probability: float,
+    random_step_distance_range: tuple[float, float],
+    minimum_air_time_s: float,
 ) -> torch.Tensor:
     """Terminate Phase 3 when the settled physical bar is disturbed."""
-    state = _update_crossing_state_once(env, **update_kwargs)
-    physical_bar_name = update_kwargs["physical_bar_name"]
+    state = _update_crossing_state_once(
+        env,
+        feet_cfg,
+        sensor_cfg,
+        sole_vertices,
+        training_phase,
+        physical_bar_name,
+        bar_height,
+        physical_bar_half_width,
+        virtual_band_half_width,
+        virtual_band_near_edge_offset,
+        physical_bar_center_distance,
+        physical_bar_position_error_range,
+        physical_bar_drop_clearance,
+        default_step_distance,
+        crossing_step_distance,
+        phase_2_post_crossing_step_distance,
+        phase_3_post_crossing_step_distance,
+        normal_step_default_probability,
+        random_step_distance_range,
+        minimum_air_time_s,
+    )
     bar_pose_w = env.scene[physical_bar_name].data.root_state_w[:, :7]
     physical = (
         state.training_phase == PHYSICAL_BAR_PHASE
