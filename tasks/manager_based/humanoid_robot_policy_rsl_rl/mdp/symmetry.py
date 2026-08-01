@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 NUM_JOINTS = 12
-POLICY_OBS_DIM = 48
+POLICY_OBS_DIM = 49
 
 
 def _mirror_joint_data(joint_data: torch.Tensor) -> torch.Tensor:
@@ -55,10 +55,11 @@ def _mirror_policy_observation(obs: torch.Tensor) -> torch.Tensor:
     # 3:6    imu_angular_velocity
     # 6:9    projected_gravity
     # 9:11   velocity_commands [forward, yaw]
-    # 11:12  wooden_bar_distance
-    # 12:24  joint_pos
-    # 24:36  joint_vel
-    # 36:48  previous actions
+    # 11:12  step_distance
+    # 12:13  crossing_command
+    # 13:25  joint_pos
+    # 25:37  joint_vel
+    # 37:49  previous actions
 
     # IMU linear acceleration is a polar vector:
     # [ax, ay, az] -> [ax, -ay, az]
@@ -78,15 +79,15 @@ def _mirror_policy_observation(obs: torch.Tensor) -> torch.Tensor:
         [1.0, -1.0, 1.0], device=device, dtype=dtype
     )
 
-    # Velocity commands and obstacle distance:
-    # [vx, wz, distance] -> [vx, -wz, distance]
-    mirrored[..., 9:12] *= torch.tensor(
-        [1.0, -1.0, 1.0], device=device, dtype=dtype
+    # Only yaw rate changes sign. The forward command, signed longitudinal
+    # step distance, and binary crossing command are mirror-invariant.
+    mirrored[..., 9:13] *= torch.tensor(
+        [1.0, -1.0, 1.0, 1.0], device=device, dtype=dtype
     )
 
-    mirrored[..., 12:24] = _mirror_joint_data(obs[..., 12:24])
-    mirrored[..., 24:36] = _mirror_joint_data(obs[..., 24:36])
-    mirrored[..., 36:48] = _mirror_joint_data(obs[..., 36:48])
+    mirrored[..., 13:25] = _mirror_joint_data(obs[..., 13:25])
+    mirrored[..., 25:37] = _mirror_joint_data(obs[..., 25:37])
+    mirrored[..., 37:49] = _mirror_joint_data(obs[..., 37:49])
 
     return mirrored
 
