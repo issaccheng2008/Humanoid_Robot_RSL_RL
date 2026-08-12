@@ -387,6 +387,14 @@ class CommandsCfg:
         heading_command=False,
         heading_control_stiffness=0.5,
 
+        # Playback/debug geometry uses the same sole and band dimensions as the
+        # command, reward, and crossing calculations.
+        feet_cfg=_ordered_feet_cfg(),
+        sensor_cfg=_ordered_feet_sensor_cfg(),
+        sole_vertices=FOOT_SOLE_VERTICES,
+        virtual_band_length=WOODEN_BAR_LENGTH,
+        virtual_band_height=FOOT_HEIGHT_SATURATION,
+
         debug_vis=True,
         ranges=mdp.ObstacleAwareVelocityCommandCfg.Ranges(
             lin_vel_x=(0.4, 0.4),
