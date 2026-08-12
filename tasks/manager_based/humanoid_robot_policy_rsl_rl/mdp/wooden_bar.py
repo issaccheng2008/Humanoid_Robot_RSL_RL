@@ -1195,7 +1195,7 @@ def step_distance_gaussian_curriculum(
     progress = min(
         max((step - start_step) / (end_step - start_step), 0.0), 1.0
     )
-    gaussian_std = initial_std + progress * (final_std - initial_std)
+    gaussian_std = initial_std * (final_std / initial_std) ** progress
     term_cfg = env.reward_manager.get_term_cfg(reward_term_name)
     term_cfg.params["gaussian_std"] = gaussian_std
     env.reward_manager.set_term_cfg(reward_term_name, term_cfg)
