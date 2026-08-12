@@ -14,14 +14,16 @@ from typing import TYPE_CHECKING
 
 import torch
 
+import isaaclab.sim as sim_utils
 from isaaclab.envs.mdp import UniformVelocityCommand, UniformVelocityCommandCfg
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.sensors import ContactSensor
 from isaaclab.utils import configclass
 from isaaclab.utils.math import quat_apply, yaw_quat
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
-    from isaaclab.managers import SceneEntityCfg
 
 
 NORMAL_WALKING_PHASE = 1
@@ -684,7 +686,12 @@ def update_crossing_state(
 
 
 class ObstacleAwareVelocityCommand(UniformVelocityCommand):
-    """Forward/yaw command that keeps walking after a crossing completes."""
+    """Forward/yaw command with step-target and virtual-band visualization."""
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self.cfg.feet_cfg.resolve(env.scene)
+        self.cfg.sensor_cfg.resolve(env.scene)
 
     def _resample_command(self, env_ids: Sequence[int]):
         env_ids = _as_env_ids(self._env, env_ids)
@@ -716,12 +723,174 @@ class ObstacleAwareVelocityCommand(UniformVelocityCommand):
         self.vel_command_b[active, 1] = 0.0
         self.vel_command_b[active, 2] = 0.0
 
+    def _set_debug_vis_impl(self, debug_vis: bool):
+        """Create and toggle the additional playback markers."""
+        super()._set_debug_vis_impl(debug_vis)
+        if debug_vis:
+            if not hasattr(self, "step_target_visualizer"):
+                self.step_target_visualizer = VisualizationMarkers(
+                    self.cfg.step_target_visualizer_cfg
+                )
+                self.virtual_band_visualizer = VisualizationMarkers(
+                    self.cfg.virtual_band_visualizer_cfg
+                )
+            self.step_target_visualizer.set_visibility(True)
+            self.virtual_band_visualizer.set_visibility(True)
+        elif hasattr(self, "step_target_visualizer"):
+            self.step_target_visualizer.set_visibility(False)
+            self.virtual_band_visualizer.set_visibility(False)
+
+    def _debug_vis_callback(self, event):
+        """Draw the commanded swing-foot front and the Phase 2 band."""
+        super()._debug_vis_callback(event)
+        if not self.robot.is_initialized:
+            return
+
+        state = _get_state(self._env)
+        sole_vertices_w = _sole_geometry_w(
+            self._env, self.cfg.feet_cfg, self.cfg.sole_vertices
+        )
+        forward_w, robot_yaw_quat_w, sole_front_x = (
+            _base_forward_and_sole_front(
+                self._env, self.cfg.feet_cfg, sole_vertices_w
+            )
+        )
+
+        contact_sensor: ContactSensor = self._env.scene.sensors[
+            self.cfg.sensor_cfg.name
+        ]
+        in_contact = (
+            contact_sensor.data.current_contact_time[
+                :, self.cfg.sensor_cfg.body_ids
+            ]
+            > 0.0
+        )
+        swing_mask = ~in_contact
+        has_one_swing_foot = torch.sum(swing_mask, dim=1) == 1
+        stepping_foot = torch.argmax(swing_mask.long(), dim=1)
+        support_foot = 1 - stepping_foot
+
+        support_front = torch.gather(
+            sole_front_x, 1, support_foot.unsqueeze(1)
+        ).squeeze(1)
+        target_longitudinal = support_front + state.step_distance
+        target_position_w = self.robot.data.root_pos_w.clone()
+        target_position_w[:, :2] += (
+            target_longitudinal.unsqueeze(1) * forward_w
+        )
+
+        num_vertices = sole_vertices_w.shape[2]
+        support_vertices_z = torch.gather(
+            sole_vertices_w[..., 2],
+            1,
+            support_foot[:, None, None].expand(-1, 1, num_vertices),
+        ).squeeze(1)
+        target_position_w[:, 2] = (
+            torch.amin(support_vertices_z, dim=1)
+            + 0.5 * self.cfg.step_target_marker_height
+        )
+
+        sole_vertices_b = _sole_vertices_tensor(
+            self._env, self.cfg.sole_vertices
+        )
+        sole_widths = (
+            torch.amax(sole_vertices_b[..., 1], dim=1)
+            - torch.amin(sole_vertices_b[..., 1], dim=1)
+        )
+        target_scales = torch.ones(
+            (self.num_envs, 3), device=self.device
+        )
+        target_scales[:, 0] = self.cfg.step_target_marker_depth
+        target_scales[:, 1] = sole_widths[stepping_foot]
+        target_scales[:, 2] = self.cfg.step_target_marker_height
+        target_visible = state.initialized & has_one_swing_foot
+        self.step_target_visualizer.visualize(
+            target_position_w,
+            robot_yaw_quat_w,
+            target_scales,
+            marker_indices=(~target_visible).long(),
+        )
+
+        band_position_w = state.spawn_pose_w[:, :3].clone()
+        band_position_w[:, 2] = (
+            self._env.scene.env_origins[:, 2]
+            + 0.5 * self.cfg.virtual_band_height
+        )
+        band_scales = torch.ones(
+            (self.num_envs, 3), device=self.device
+        )
+        band_scales[:, 0] = 2.0 * state.crossing_half_width
+        band_scales[:, 1] = self.cfg.virtual_band_length
+        band_scales[:, 2] = self.cfg.virtual_band_height
+        band_visible = (
+            (state.training_phase == VIRTUAL_BAND_PHASE)
+            & state.spawned
+        )
+        self.virtual_band_visualizer.visualize(
+            band_position_w,
+            state.spawn_pose_w[:, 3:7],
+            band_scales,
+            marker_indices=(~band_visible).long(),
+        )
+
 
 @configclass
 class ObstacleAwareVelocityCommandCfg(UniformVelocityCommandCfg):
     """Forward/yaw-only command configuration."""
 
     class_type: type = ObstacleAwareVelocityCommand
+
+    feet_cfg: SceneEntityCfg = MISSING
+    sensor_cfg: SceneEntityCfg = MISSING
+    sole_vertices: tuple[
+        tuple[tuple[float, float, float], ...], ...
+    ] = MISSING
+    virtual_band_length: float = MISSING
+    virtual_band_height: float = MISSING
+
+    # The landing target is a short vertical plane at the commanded sole-front
+    # position. Keeping it 1.5 cm tall avoids obscuring the foot.
+    step_target_marker_depth: float = 0.006
+    step_target_marker_height: float = 0.015
+
+    step_target_visualizer_cfg: VisualizationMarkersCfg = (
+        VisualizationMarkersCfg(
+            prim_path="/Visuals/Command/step_distance_target",
+            markers={
+                "target": sim_utils.CuboidCfg(
+                    size=(1.0, 1.0, 1.0),
+                    visual_material=sim_utils.PreviewSurfaceCfg(
+                        diffuse_color=(1.0, 0.75, 0.0),
+                        emissive_color=(0.15, 0.08, 0.0),
+                        opacity=0.50,
+                    ),
+                ),
+                "hidden": sim_utils.CuboidCfg(
+                    size=(1.0, 1.0, 1.0),
+                    visible=False,
+                ),
+            },
+        )
+    )
+    virtual_band_visualizer_cfg: VisualizationMarkersCfg = (
+        VisualizationMarkersCfg(
+            prim_path="/Visuals/Command/virtual_band",
+            markers={
+                "band": sim_utils.CuboidCfg(
+                    size=(1.0, 1.0, 1.0),
+                    visual_material=sim_utils.PreviewSurfaceCfg(
+                        diffuse_color=(0.0, 0.65, 1.0),
+                        emissive_color=(0.0, 0.05, 0.10),
+                        opacity=0.25,
+                    ),
+                ),
+                "hidden": sim_utils.CuboidCfg(
+                    size=(1.0, 1.0, 1.0),
+                    visible=False,
+                ),
+            },
+        )
+    )
 
     @configclass
     class Ranges:
