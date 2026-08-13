@@ -1143,7 +1143,7 @@ def _update_foot_band_state(
     )
 
 
-def _wooden_bar_step_score(
+def _wooden_bar_step_score_components(
     env: ManagerBasedRLEnv,
     feet_cfg: SceneEntityCfg,
     sensor_cfg: SceneEntityCfg,
@@ -1152,8 +1152,14 @@ def _wooden_bar_step_score(
     height_saturation: float,
     forward_velocity_saturation: float,
     progress_unit: float,
-) -> tuple[_CrossingState, torch.Tensor]:
-    """Return height, forward-speed, and band-progress score per foot."""
+) -> tuple[
+    _CrossingState,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+]:
+    """Return the shared per-foot inputs for role-specific step scores."""
     if height_saturation <= 0.0:
         raise ValueError("height_saturation must be positive.")
     if forward_velocity_saturation <= 0.0:
@@ -1186,10 +1192,36 @@ def _wooden_bar_step_score(
         min=-1.0,
         max=1.0,
     )
+    active = overlaps_band & state.bar_reward_foot_active
+    return state, height_score, velocity_score, footprint_max, active
+
+
+def _stepping_wooden_bar_step_score(
+    env: ManagerBasedRLEnv,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    band_half_width: float,
+    height_saturation: float,
+    forward_velocity_saturation: float,
+    progress_unit: float,
+) -> tuple[_CrossingState, torch.Tensor]:
+    """Return the original increasing-progress score for the stepping foot."""
+    state, height_score, velocity_score, footprint_max, active = (
+        _wooden_bar_step_score_components(
+            env,
+            feet_cfg,
+            sensor_cfg,
+            sole_vertices,
+            band_half_width,
+            height_saturation,
+            forward_velocity_saturation,
+            progress_unit,
+        )
+    )
     progress_score = torch.clamp(
         (footprint_max + band_half_width) / progress_unit, min=0.0
     )
-    active = overlaps_band & state.bar_reward_foot_active
     return state, (
         height_score
         * velocity_score
@@ -1198,6 +1230,39 @@ def _wooden_bar_step_score(
     )
 
 
+def _following_wooden_bar_step_score(
+    env: ManagerBasedRLEnv,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    band_half_width: float,
+    height_saturation: float,
+    forward_velocity_saturation: float,
+    progress_unit: float,
+) -> tuple[_CrossingState, torch.Tensor]:
+    """Return a decreasing-progress score for the following foot."""
+    state, height_score, velocity_score, footprint_max, active = (
+        _wooden_bar_step_score_components(
+            env,
+            feet_cfg,
+            sensor_cfg,
+            sole_vertices,
+            band_half_width,
+            height_saturation,
+            forward_velocity_saturation,
+            progress_unit,
+        )
+    )
+    current_progress_score = torch.clamp(
+        (footprint_max + band_half_width) / progress_unit, min=0.0
+    )
+    progress_score = 1.0 - current_progress_score
+    return state, (
+        height_score
+        * velocity_score
+        * progress_score
+        * active.to(height_score.dtype)
+    )
 def stepping_wooden_bar_step_reward(
     env: ManagerBasedRLEnv,
     feet_cfg: SceneEntityCfg,
@@ -1209,7 +1274,7 @@ def stepping_wooden_bar_step_reward(
     progress_unit: float,
 ) -> torch.Tensor:
     """Reward the first foot that enters the virtual band."""
-    state, step_score = _wooden_bar_step_score(
+    state, step_score = _stepping_wooden_bar_step_score(
         env,
         feet_cfg,
         sensor_cfg,
@@ -1242,7 +1307,7 @@ def following_wooden_bar_step_reward(
         raise ValueError(
             "stepping_foot_distance_to_band_edge must be positive."
         )
-    state, step_score = _wooden_bar_step_score(
+    state, step_score = _following_wooden_bar_step_score(
         env,
         feet_cfg,
         sensor_cfg,
