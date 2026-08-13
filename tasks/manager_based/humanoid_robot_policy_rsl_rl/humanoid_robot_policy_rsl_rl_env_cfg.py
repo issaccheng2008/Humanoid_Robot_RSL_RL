@@ -135,7 +135,7 @@ PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
 DEFAULT_STEP_DISTANCE = 0.1
 CROSSING_STEP_DISTANCE = 0.20
 PHASE_2_POST_CROSSING_STEP_DISTANCE = 0.06
-PHASE_3_POST_CROSSING_STEP_DISTANCE = 0.08
+PHASE_3_POST_CROSSING_STEP_DISTANCE = 0.06
 NORMAL_STEP_DEFAULT_PROBABILITY = 0.30
 RANDOM_STEP_DISTANCE_RANGE = (0.02, 0.12)
 CROSSING_TOUCHDOWN_INDEX_RANGE = (3, 10)
@@ -146,7 +146,7 @@ STEP_DISTANCE_TRACKING_REWARD_WEIGHT = 50.0
 EXPECTED_POLICY_OBS_DIM = 49
 CROSSING_STATE_UPDATE_INTERVAL_S = 0.02
 
-step_reward_std_curriculum_end_step=700
+step_reward_std_curriculum_end_step=1
 
 STRIDE_BAR_REWARD_START_ITERATION = 0
 REWARD_STEADY_ITERATION = 1000
@@ -1043,9 +1043,9 @@ class CurriculumCfg:
                     "feet_height_entering_band_reward": 400.0,
                 },
                 "reward_weight_ranges": {
-                    "stepping_wooden_bar_step_reward": (50.0, 25.0),
-                    "following_wooden_bar_step_reward": (100.0, 50.0),
-                    "feet_height_entering_band_reward": (400.0, 400.0),
+                    "stepping_wooden_bar_step_reward": (8.0, 8.0),
+                    "following_wooden_bar_step_reward": (8.0, 8.0),
+                    "feet_height_entering_band_reward": (100.0, 100.0),
                 },
                 "start_step": (
                     STRIDE_BAR_REWARD_START_ITERATION
