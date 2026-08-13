@@ -51,6 +51,7 @@ class _CrossingState:
         self.training_phase = longs(NORMAL_WALKING_PHASE)
         self.step_distance = torch.zeros(env.num_envs, device=env.device)
         self.crossing_command = bools()
+        self.following_step_command_active = bools()
 
         self.touchdown_count = longs()
         self.trigger_touchdown_index = longs()
@@ -273,6 +274,7 @@ def reset_crossing_state(
     state.training_phase[env_ids] = training_phase
     state.step_distance[env_ids] = default_step_distance
     state.crossing_command[env_ids] = False
+    state.following_step_command_active[env_ids] = False
     state.touchdown_count[env_ids] = 0
     state.trigger_touchdown_index[env_ids] = torch.randint(
         trigger_touchdown_range[0],
@@ -374,6 +376,7 @@ def _spawn_crossing(
     state.spawned[env_ids] = True
     state.crossed[env_ids] = False
     state.crossing_command[env_ids] = True
+    state.following_step_command_active[env_ids] = False
     state.step_distance[env_ids] = crossing_step_distance
     state.spawn_time_s[env_ids] = _episode_time_s(env)[env_ids]
     state.spawn_pose_w[env_ids] = pose
@@ -543,11 +546,17 @@ def _update_crossing_state_once(
     state.airborne_seen[valid_touchdown] = False
     state.touchdown_count += torch.sum(valid_touchdown, dim=1).long()
 
-    # Switch the following-foot target on the first valid touchdown after the
-    # crossing step begins. The foot does not need to be fully past the far
-    # edge; that geometry remains exclusive to overall crossing completion.
+    # Give the post-crossing distance to exactly one step: the following foot.
+    # The crossing foot's touchdown starts that command, and the following
+    # foot's touchdown ends it. Far-edge geometry is used only for completion.
     active = update_envs & state.spawned & ~state.crossed
     crossing_touchdown = active & torch.any(valid_touchdown, dim=1)
+    start_following_step = (
+        crossing_touchdown & ~state.following_step_command_active
+    )
+    finish_following_step = (
+        crossing_touchdown & state.following_step_command_active
+    )
     if torch.any(active):
         relative_xy = (
             sole_vertices_w[..., :2]
@@ -565,19 +574,33 @@ def _update_crossing_state_once(
     else:
         completed = torch.zeros_like(active)
 
-    if torch.any(crossing_touchdown):
-        phase_2_crossing_touchdown = crossing_touchdown & (
+    if torch.any(start_following_step):
+        phase_2_start = start_following_step & (
             state.training_phase == VIRTUAL_BAND_PHASE
         )
-        phase_3_crossing_touchdown = crossing_touchdown & (
+        phase_3_start = start_following_step & (
             state.training_phase == PHYSICAL_BAR_PHASE
         )
-        state.step_distance[phase_2_crossing_touchdown] = (
+        state.step_distance[phase_2_start] = (
             phase_2_post_crossing_step_distance
         )
-        state.step_distance[phase_3_crossing_touchdown] = (
+        state.step_distance[phase_3_start] = (
             phase_3_post_crossing_step_distance
         )
+        state.following_step_command_active[start_following_step] = True
+
+    if torch.any(finish_following_step):
+        finish_env_ids = torch.nonzero(
+            finish_following_step, as_tuple=False
+        ).squeeze(1)
+        state.step_distance[finish_env_ids] = _normal_step_sample(
+            env,
+            len(finish_env_ids),
+            default_step_distance,
+            normal_step_default_probability,
+            random_step_distance_range,
+        )
+        state.following_step_command_active[finish_env_ids] = False
 
     if torch.any(completed):
         state.crossed[completed] = True
@@ -643,6 +666,7 @@ def _update_crossing_state_once(
             normal_step_default_probability,
             random_step_distance_range,
         )
+        state.following_step_command_active[normal_env_ids] = False
 
     state.last_control_update_step[update_envs] = step
     return state
