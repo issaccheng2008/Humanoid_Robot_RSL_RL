@@ -1201,8 +1201,13 @@ def following_wooden_bar_step_reward(
     height_saturation: float,
     forward_velocity_saturation: float,
     progress_unit: float,
+    stepping_foot_distance_to_band_edge: float,
 ) -> torch.Tensor:
-    """Reward the second foot that independently enters the virtual band."""
+    """Reward the following foot, scaled by the stepping foot's progress."""
+    if stepping_foot_distance_to_band_edge <= 0.0:
+        raise ValueError(
+            "stepping_foot_distance_to_band_edge must be positive."
+        )
     state, step_score = _wooden_bar_step_score(
         env,
         feet_cfg,
@@ -1213,11 +1218,26 @@ def following_wooden_bar_step_reward(
         forward_velocity_saturation,
         progress_unit,
     )
-    return torch.sum(
+    current_reward = torch.sum(
         step_score
         * state.bar_reward_following_foot.to(step_score.dtype),
         dim=1,
     )
+    _, _, _, footprint_max = _crossing_foot_geometry(
+        env, feet_cfg, sole_vertices
+    )
+    stepping_foot_front = torch.sum(
+        footprint_max
+        * state.bar_reward_stepping_foot.to(footprint_max.dtype),
+        dim=1,
+    )
+    stepping_foot_distance_score = torch.clamp(
+        (stepping_foot_front - band_half_width)
+        / stepping_foot_distance_to_band_edge,
+        min=0.0,
+        max=1.0,
+    )
+    return current_reward * stepping_foot_distance_score
 
 
 def feet_height_entering_band_reward(

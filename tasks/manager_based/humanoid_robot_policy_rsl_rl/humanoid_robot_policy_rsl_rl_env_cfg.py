@@ -130,6 +130,7 @@ PHYSICAL_BAR_POSITION_ERROR_RANGE = (-0.003, 0.003)
 PHYSICAL_BAR_DROP_CLEARANCE = 0.010
 HIDDEN_BAR_DEPTH = 2.0
 FOOT_HEIGHT_SATURATION = 0.03
+STEPPING_FOOT_DISTANCE_TO_BAND_EDGE = 0.19
 PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
 
 DEFAULT_STEP_DISTANCE = 0.1
@@ -945,6 +946,9 @@ class RewardsCfg:
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "forward_velocity_saturation": 0.05,
             "progress_unit": 0.19,
+            "stepping_foot_distance_to_band_edge": (
+                STEPPING_FOOT_DISTANCE_TO_BAND_EDGE
+            ),
             "band_half_width": VIRTUAL_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "feet_cfg": _ordered_feet_cfg(),
