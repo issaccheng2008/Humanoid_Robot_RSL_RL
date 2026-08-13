@@ -543,8 +543,9 @@ def _update_crossing_state_once(
     state.airborne_seen[valid_touchdown] = False
     state.touchdown_count += torch.sum(valid_touchdown, dim=1).long()
 
-    # Complete against the fixed world-frame far edge before considering a
-    # trigger. A completed episode can never trigger another crossing.
+    # Switch the following-foot target as soon as the stepping foot completes
+    # a valid touchdown with its entire sole past the fixed far edge. Crossing
+    # itself remains active until both feet have cleared the obstacle.
     active = update_envs & state.spawned & ~state.crossed
     if torch.any(active):
         relative_xy = (
@@ -554,32 +555,38 @@ def _update_crossing_state_once(
         longitudinal = torch.sum(
             relative_xy * state.forward_w[:, None, None, :], dim=3
         )
-        both_feet_past_far_edge = torch.all(
+        foot_past_far_edge = (
             torch.amin(longitudinal, dim=2)
-            > state.crossing_half_width.unsqueeze(1),
-            dim=1,
+            > state.crossing_half_width.unsqueeze(1)
         )
+        far_side_touchdown = active & torch.any(
+            valid_touchdown & foot_past_far_edge, dim=1
+        )
+        both_feet_past_far_edge = torch.all(foot_past_far_edge, dim=1)
         completed = active & both_feet_past_far_edge
     else:
+        far_side_touchdown = torch.zeros_like(active)
         completed = torch.zeros_like(active)
+
+    if torch.any(far_side_touchdown):
+        phase_2_far_side_touchdown = far_side_touchdown & (
+            state.training_phase == VIRTUAL_BAND_PHASE
+        )
+        phase_3_far_side_touchdown = far_side_touchdown & (
+            state.training_phase == PHYSICAL_BAR_PHASE
+        )
+        state.step_distance[phase_2_far_side_touchdown] = (
+            phase_2_post_crossing_step_distance
+        )
+        state.step_distance[phase_3_far_side_touchdown] = (
+            phase_3_post_crossing_step_distance
+        )
 
     if torch.any(completed):
         state.crossed[completed] = True
         state.crossing_completed[completed] = True
         state.crossing_command[completed] = False
         state.bar_reward_foot_active[completed] = False
-        phase_2_completed = completed & (
-            state.training_phase == VIRTUAL_BAND_PHASE
-        )
-        phase_3_completed = completed & (
-            state.training_phase == PHYSICAL_BAR_PHASE
-        )
-        state.step_distance[phase_2_completed] = (
-            phase_2_post_crossing_step_distance
-        )
-        state.step_distance[phase_3_completed] = (
-            phase_3_post_crossing_step_distance
-        )
 
     frontmost_touchdown = valid_touchdown & (actual_step > 0.0)
     trigger_candidate = (
