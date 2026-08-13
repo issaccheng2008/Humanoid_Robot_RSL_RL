@@ -543,10 +543,11 @@ def _update_crossing_state_once(
     state.airborne_seen[valid_touchdown] = False
     state.touchdown_count += torch.sum(valid_touchdown, dim=1).long()
 
-    # Switch the following-foot target as soon as the stepping foot completes
-    # a valid touchdown with its entire sole past the fixed far edge. Crossing
-    # itself remains active until both feet have cleared the obstacle.
+    # Switch the following-foot target on the first valid touchdown after the
+    # crossing step begins. The foot does not need to be fully past the far
+    # edge; that geometry remains exclusive to overall crossing completion.
     active = update_envs & state.spawned & ~state.crossed
+    crossing_touchdown = active & torch.any(valid_touchdown, dim=1)
     if torch.any(active):
         relative_xy = (
             sole_vertices_w[..., :2]
@@ -559,26 +560,22 @@ def _update_crossing_state_once(
             torch.amin(longitudinal, dim=2)
             > state.crossing_half_width.unsqueeze(1)
         )
-        far_side_touchdown = active & torch.any(
-            valid_touchdown & foot_past_far_edge, dim=1
-        )
         both_feet_past_far_edge = torch.all(foot_past_far_edge, dim=1)
         completed = active & both_feet_past_far_edge
     else:
-        far_side_touchdown = torch.zeros_like(active)
         completed = torch.zeros_like(active)
 
-    if torch.any(far_side_touchdown):
-        phase_2_far_side_touchdown = far_side_touchdown & (
+    if torch.any(crossing_touchdown):
+        phase_2_crossing_touchdown = crossing_touchdown & (
             state.training_phase == VIRTUAL_BAND_PHASE
         )
-        phase_3_far_side_touchdown = far_side_touchdown & (
+        phase_3_crossing_touchdown = crossing_touchdown & (
             state.training_phase == PHYSICAL_BAR_PHASE
         )
-        state.step_distance[phase_2_far_side_touchdown] = (
+        state.step_distance[phase_2_crossing_touchdown] = (
             phase_2_post_crossing_step_distance
         )
-        state.step_distance[phase_3_far_side_touchdown] = (
+        state.step_distance[phase_3_crossing_touchdown] = (
             phase_3_post_crossing_step_distance
         )
 
