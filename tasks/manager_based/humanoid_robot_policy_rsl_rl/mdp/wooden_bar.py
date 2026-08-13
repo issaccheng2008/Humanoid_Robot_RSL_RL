@@ -51,7 +51,7 @@ class _CrossingState:
         self.training_phase = longs(NORMAL_WALKING_PHASE)
         self.step_distance = torch.zeros(env.num_envs, device=env.device)
         self.crossing_command = bools()
-        self.following_step_command_active = bools()
+        self.following_step_command_stage = longs()
 
         self.touchdown_count = longs()
         self.trigger_touchdown_index = longs()
@@ -274,7 +274,7 @@ def reset_crossing_state(
     state.training_phase[env_ids] = training_phase
     state.step_distance[env_ids] = default_step_distance
     state.crossing_command[env_ids] = False
-    state.following_step_command_active[env_ids] = False
+    state.following_step_command_stage[env_ids] = 0
     state.touchdown_count[env_ids] = 0
     state.trigger_touchdown_index[env_ids] = torch.randint(
         trigger_touchdown_range[0],
@@ -376,7 +376,7 @@ def _spawn_crossing(
     state.spawned[env_ids] = True
     state.crossed[env_ids] = False
     state.crossing_command[env_ids] = True
-    state.following_step_command_active[env_ids] = False
+    state.following_step_command_stage[env_ids] = 0
     state.step_distance[env_ids] = crossing_step_distance
     state.spawn_time_s[env_ids] = _episode_time_s(env)[env_ids]
     state.spawn_pose_w[env_ids] = pose
@@ -552,10 +552,10 @@ def _update_crossing_state_once(
     active = update_envs & state.spawned & ~state.crossed
     crossing_touchdown = active & torch.any(valid_touchdown, dim=1)
     start_following_step = (
-        crossing_touchdown & ~state.following_step_command_active
+        crossing_touchdown & (state.following_step_command_stage == 0)
     )
     finish_following_step = (
-        crossing_touchdown & state.following_step_command_active
+        crossing_touchdown & (state.following_step_command_stage == 1)
     )
     if torch.any(active):
         relative_xy = (
@@ -587,7 +587,7 @@ def _update_crossing_state_once(
         state.step_distance[phase_3_start] = (
             phase_3_post_crossing_step_distance
         )
-        state.following_step_command_active[start_following_step] = True
+        state.following_step_command_stage[start_following_step] = 1
 
     if torch.any(finish_following_step):
         finish_env_ids = torch.nonzero(
@@ -600,7 +600,7 @@ def _update_crossing_state_once(
             normal_step_default_probability,
             random_step_distance_range,
         )
-        state.following_step_command_active[finish_env_ids] = False
+        state.following_step_command_stage[finish_env_ids] = 2
 
     if torch.any(completed):
         state.crossed[completed] = True
@@ -666,7 +666,7 @@ def _update_crossing_state_once(
             normal_step_default_probability,
             random_step_distance_range,
         )
-        state.following_step_command_active[normal_env_ids] = False
+        state.following_step_command_stage[normal_env_ids] = 2
 
     state.last_control_update_step[update_envs] = step
     return state
