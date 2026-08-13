@@ -134,7 +134,7 @@ STEPPING_FOOT_DISTANCE_TO_BAND_EDGE = 0.19
 PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
 
 DEFAULT_STEP_DISTANCE = 0.1
-CROSSING_STEP_DISTANCE = 0.24
+CROSSING_STEP_DISTANCE = 0.2
 PHASE_2_POST_CROSSING_STEP_DISTANCE = 0.02
 PHASE_3_POST_CROSSING_STEP_DISTANCE = 0.02
 NORMAL_STEP_DEFAULT_PROBABILITY = 0.30
@@ -1049,7 +1049,7 @@ class CurriculumCfg:
                 "reward_weight_ranges": {
                     "stepping_wooden_bar_step_reward": (15.0, 15.0),
                     "following_wooden_bar_step_reward": (20.0, 15.0),
-                    "feet_height_entering_band_reward": (400.0, 400.0),
+                    "feet_height_entering_band_reward": (200.0, 200.0),
                 },
                 "start_step": (
                     STRIDE_BAR_REWARD_START_ITERATION
