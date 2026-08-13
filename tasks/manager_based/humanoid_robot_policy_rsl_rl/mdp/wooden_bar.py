@@ -90,6 +90,10 @@ class _CrossingState:
         self.bar_reward_foot_active = torch.zeros_like(self.airborne_seen)
         self.bar_reward_stepping_foot = torch.zeros_like(self.airborne_seen)
         self.bar_reward_following_foot = torch.zeros_like(self.airborne_seen)
+        self.stepping_foot_touchdown_distance_to_band_edge = torch.zeros(
+            env.num_envs, device=env.device
+        )
+        self.stepping_foot_touchdown_distance_cached = bools()
         self.last_band_update_step = longs(-1)
 
         self.sole_vertices = None
@@ -300,6 +304,8 @@ def reset_crossing_state(
     state.bar_reward_foot_active[env_ids] = False
     state.bar_reward_stepping_foot[env_ids] = False
     state.bar_reward_following_foot[env_ids] = False
+    state.stepping_foot_touchdown_distance_to_band_edge[env_ids] = 0.0
+    state.stepping_foot_touchdown_distance_cached[env_ids] = False
     state.last_band_update_step[env_ids] = -1
 
 
@@ -384,6 +390,8 @@ def _spawn_crossing(
     state.bar_reward_foot_active[env_ids] = False
     state.bar_reward_stepping_foot[env_ids] = False
     state.bar_reward_following_foot[env_ids] = False
+    state.stepping_foot_touchdown_distance_to_band_edge[env_ids] = 0.0
+    state.stepping_foot_touchdown_distance_cached[env_ids] = False
     state.last_band_update_step[env_ids] = -1
 
 
@@ -1089,6 +1097,25 @@ def _update_foot_band_state(
         state.bar_reward_foot_entered |= new_entry
         state.bar_reward_foot_active |= new_entry
 
+        stepping_foot_touchdown = (
+            active.unsqueeze(1)
+            & state.bar_reward_stepping_foot
+            & state.valid_touchdown_event
+            & ~state.stepping_foot_touchdown_distance_cached.unsqueeze(1)
+        )
+        touchdown_envs = torch.any(stepping_foot_touchdown, dim=1)
+        touchdown_distance = torch.sum(
+            (footprint_max - band_half_width)
+            * stepping_foot_touchdown.to(footprint_max.dtype),
+            dim=1,
+        )
+        state.stepping_foot_touchdown_distance_to_band_edge = torch.where(
+            touchdown_envs,
+            touchdown_distance,
+            state.stepping_foot_touchdown_distance_to_band_edge,
+        )
+        state.stepping_foot_touchdown_distance_cached |= touchdown_envs
+
         whole_foot_past_far_edge = footprint_min > band_half_width
         finished = (
             (state.bar_reward_foot_active & in_contact)
@@ -1223,19 +1250,16 @@ def following_wooden_bar_step_reward(
         * state.bar_reward_following_foot.to(step_score.dtype),
         dim=1,
     )
-    _, _, _, footprint_max = _crossing_foot_geometry(
-        env, feet_cfg, sole_vertices
-    )
-    stepping_foot_front = torch.sum(
-        footprint_max
-        * state.bar_reward_stepping_foot.to(footprint_max.dtype),
-        dim=1,
-    )
     stepping_foot_distance_score = torch.clamp(
-        (stepping_foot_front - band_half_width)
+        state.stepping_foot_touchdown_distance_to_band_edge
         / stepping_foot_distance_to_band_edge,
         min=0.0,
         max=1.0,
+    )
+    stepping_foot_distance_score *= (
+        state.stepping_foot_touchdown_distance_cached.to(
+            stepping_foot_distance_score.dtype
+        )
     )
     return current_reward * stepping_foot_distance_score
 
