@@ -51,6 +51,7 @@ class _CrossingState:
         self.training_phase = longs(NORMAL_WALKING_PHASE)
         self.step_distance = torch.zeros(env.num_envs, device=env.device)
         self.crossing_command = bools()
+        self.following_step_command_stage = longs()
 
         self.touchdown_count = longs()
         self.trigger_touchdown_index = longs()
@@ -273,6 +274,7 @@ def reset_crossing_state(
     state.training_phase[env_ids] = training_phase
     state.step_distance[env_ids] = default_step_distance
     state.crossing_command[env_ids] = False
+    state.following_step_command_stage[env_ids] = 0
     state.touchdown_count[env_ids] = 0
     state.trigger_touchdown_index[env_ids] = torch.randint(
         trigger_touchdown_range[0],
@@ -374,6 +376,7 @@ def _spawn_crossing(
     state.spawned[env_ids] = True
     state.crossed[env_ids] = False
     state.crossing_command[env_ids] = True
+    state.following_step_command_stage[env_ids] = 0
     state.step_distance[env_ids] = crossing_step_distance
     state.spawn_time_s[env_ids] = _episode_time_s(env)[env_ids]
     state.spawn_pose_w[env_ids] = pose
@@ -543,10 +546,17 @@ def _update_crossing_state_once(
     state.airborne_seen[valid_touchdown] = False
     state.touchdown_count += torch.sum(valid_touchdown, dim=1).long()
 
-    # Switch the following-foot target as soon as the stepping foot completes
-    # a valid touchdown with its entire sole past the fixed far edge. Crossing
-    # itself remains active until both feet have cleared the obstacle.
+    # Give the post-crossing distance to exactly one step: the following foot.
+    # The crossing foot's touchdown starts that command, and the following
+    # foot's touchdown ends it. Far-edge geometry is used only for completion.
     active = update_envs & state.spawned & ~state.crossed
+    crossing_touchdown = active & torch.any(valid_touchdown, dim=1)
+    start_following_step = (
+        crossing_touchdown & (state.following_step_command_stage == 0)
+    )
+    finish_following_step = (
+        crossing_touchdown & (state.following_step_command_stage == 1)
+    )
     if torch.any(active):
         relative_xy = (
             sole_vertices_w[..., :2]
@@ -559,28 +569,38 @@ def _update_crossing_state_once(
             torch.amin(longitudinal, dim=2)
             > state.crossing_half_width.unsqueeze(1)
         )
-        far_side_touchdown = active & torch.any(
-            valid_touchdown & foot_past_far_edge, dim=1
-        )
         both_feet_past_far_edge = torch.all(foot_past_far_edge, dim=1)
         completed = active & both_feet_past_far_edge
     else:
-        far_side_touchdown = torch.zeros_like(active)
         completed = torch.zeros_like(active)
 
-    if torch.any(far_side_touchdown):
-        phase_2_far_side_touchdown = far_side_touchdown & (
+    if torch.any(start_following_step):
+        phase_2_start = start_following_step & (
             state.training_phase == VIRTUAL_BAND_PHASE
         )
-        phase_3_far_side_touchdown = far_side_touchdown & (
+        phase_3_start = start_following_step & (
             state.training_phase == PHYSICAL_BAR_PHASE
         )
-        state.step_distance[phase_2_far_side_touchdown] = (
+        state.step_distance[phase_2_start] = (
             phase_2_post_crossing_step_distance
         )
-        state.step_distance[phase_3_far_side_touchdown] = (
+        state.step_distance[phase_3_start] = (
             phase_3_post_crossing_step_distance
         )
+        state.following_step_command_stage[start_following_step] = 1
+
+    if torch.any(finish_following_step):
+        finish_env_ids = torch.nonzero(
+            finish_following_step, as_tuple=False
+        ).squeeze(1)
+        state.step_distance[finish_env_ids] = _normal_step_sample(
+            env,
+            len(finish_env_ids),
+            default_step_distance,
+            normal_step_default_probability,
+            random_step_distance_range,
+        )
+        state.following_step_command_stage[finish_env_ids] = 2
 
     if torch.any(completed):
         state.crossed[completed] = True
@@ -646,6 +666,7 @@ def _update_crossing_state_once(
             normal_step_default_probability,
             random_step_distance_range,
         )
+        state.following_step_command_stage[normal_env_ids] = 2
 
     state.last_control_update_step[update_envs] = step
     return state
