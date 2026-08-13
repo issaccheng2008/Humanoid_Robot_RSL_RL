@@ -1263,6 +1263,8 @@ def _following_wooden_bar_step_score(
         * progress_score
         * active.to(height_score.dtype)
     )
+
+
 def stepping_wooden_bar_step_reward(
     env: ManagerBasedRLEnv,
     feet_cfg: SceneEntityCfg,
