@@ -150,7 +150,7 @@ CROSSING_STATE_UPDATE_INTERVAL_S = 0.02
 step_reward_std_curriculum_end_step=1
 
 STRIDE_BAR_REWARD_START_ITERATION = 0
-REWARD_STEADY_ITERATION = 1000
+REWARD_STEADY_ITERATION = 250
 PPO_STEPS_PER_ITERATION = 24
 # EL05 nominal torque, used only by the copied walking reward term.
 EL05_RATED_TORQUE = 4
@@ -1048,7 +1048,7 @@ class CurriculumCfg:
                 },
                 "reward_weight_ranges": {
                     "stepping_wooden_bar_step_reward": (8.0, 8.0),
-                    "following_wooden_bar_step_reward": (8.0, 8.0),
+                    "following_wooden_bar_step_reward": (12.0, 8.0),
                     "feet_height_entering_band_reward": (100.0, 100.0),
                 },
                 "start_step": (
