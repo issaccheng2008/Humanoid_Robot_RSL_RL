@@ -30,7 +30,7 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     if WOODEN_BAR_TRAINING_PHASE == 1:
         max_iterations = 5000 
     if WOODEN_BAR_TRAINING_PHASE == 2:
-        max_iterations = 3000
+        max_iterations = 10000
     if WOODEN_BAR_TRAINING_PHASE == 3:
         max_iterations = 10000
 
