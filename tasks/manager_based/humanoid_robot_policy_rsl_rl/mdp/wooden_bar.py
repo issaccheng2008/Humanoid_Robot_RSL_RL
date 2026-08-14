@@ -601,6 +601,7 @@ def _update_crossing_state_once(
         update_envs
         & state.spawned
         & (state.following_step_command_stage == 1)
+        & ~start_following_step
     )
     phase_2_stage_1 = stage_1_active & (
         state.training_phase == VIRTUAL_BAND_PHASE
