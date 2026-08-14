@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Touchdown-driven step-distance commands and wooden-bar crossing mechanics."""
+"""Swing-cycle-driven step-distance commands and wooden-bar mechanics."""
 
 from __future__ import annotations
 
@@ -36,6 +36,62 @@ def _control_step(env: ManagerBasedRLEnv) -> int:
     return int(env.common_step_counter)
 
 
+def _single_swing_foot(
+    in_contact: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return which environments have one swing foot and that foot's index."""
+    if in_contact.ndim != 2 or in_contact.shape[1] != 2:
+        raise ValueError("Swing-foot tracking requires exactly two feet.")
+    swing_mask = ~in_contact
+    has_one_swing_foot = torch.sum(swing_mask, dim=1) == 1
+    swing_foot_index = torch.argmax(swing_mask.long(), dim=1)
+    return has_one_swing_foot, swing_foot_index
+
+
+def _swing_cycle_touchdown_events(
+    in_contact: torch.Tensor,
+    tracked_swing_foot_index: torch.Tensor,
+    update_envs: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Finish tracked swing cycles and arm the next unambiguous swing foot."""
+    has_one_swing_foot, current_swing_foot_index = _single_swing_foot(
+        in_contact
+    )
+    if tracked_swing_foot_index.shape != in_contact.shape[:1]:
+        raise ValueError(
+            "tracked_swing_foot_index must have one entry per environment."
+        )
+    if update_envs.shape != in_contact.shape[:1]:
+        raise ValueError("update_envs must have one entry per environment.")
+
+    next_swing_foot_index = tracked_swing_foot_index.clone()
+    has_tracked_swing = next_swing_foot_index >= 0
+    tracked_index = torch.clamp(next_swing_foot_index, min=0)
+    tracked_swing_touched_down = torch.gather(
+        in_contact, 1, tracked_index.unsqueeze(1)
+    ).squeeze(1)
+    touchdown_envs = (
+        update_envs & has_tracked_swing & tracked_swing_touched_down
+    )
+
+    touchdown_event = torch.zeros_like(in_contact)
+    touchdown_event[
+        touchdown_envs, next_swing_foot_index[touchdown_envs]
+    ] = True
+    next_swing_foot_index[touchdown_envs] = -1
+
+    # A gait may transfer support without a sampled double-support frame. Once
+    # the tracked foot lands, immediately arm the other foot if it is already
+    # the only foot off the ground.
+    start_swing = (
+        update_envs
+        & has_one_swing_foot
+        & (next_swing_foot_index < 0)
+    )
+    next_swing_foot_index[start_swing] = current_swing_foot_index[start_swing]
+    return touchdown_event, next_swing_foot_index
+
+
 class _CrossingState:
     """Per-environment state shared by commands, rewards, and terminations."""
 
@@ -57,19 +113,17 @@ class _CrossingState:
 
         self.touchdown_count = longs()
         self.trigger_touchdown_index = longs()
-        self.airborne_seen = torch.zeros(
+        self.swing_foot_index = longs(-1)
+        self.touchdown_event = torch.zeros(
             (env.num_envs, 2), dtype=torch.bool, device=env.device
         )
-        self.valid_touchdown_event = torch.zeros_like(self.airborne_seen)
         self.touchdown_actual_step = torch.zeros(
             (env.num_envs, 2), device=env.device
         )
         self.touchdown_target_step = torch.zeros_like(
             self.touchdown_actual_step
         )
-        self.touchdown_reward_eligible = torch.zeros_like(
-            self.airborne_seen
-        )
+        self.touchdown_reward_eligible = torch.zeros_like(self.touchdown_event)
         self.step_distance_reward_paid_step = longs(-1)
         self.last_control_update_step = longs(-1)
 
@@ -88,11 +142,11 @@ class _CrossingState:
         self.movement_reference_pose_w = self.spawn_pose_w.clone()
         self.movement_reference_set = bools()
 
-        self.first_entry_event = torch.zeros_like(self.airborne_seen)
-        self.bar_reward_foot_entered = torch.zeros_like(self.airborne_seen)
-        self.bar_reward_foot_active = torch.zeros_like(self.airborne_seen)
-        self.bar_reward_stepping_foot = torch.zeros_like(self.airborne_seen)
-        self.bar_reward_following_foot = torch.zeros_like(self.airborne_seen)
+        self.first_entry_event = torch.zeros_like(self.touchdown_event)
+        self.bar_reward_foot_entered = torch.zeros_like(self.touchdown_event)
+        self.bar_reward_foot_active = torch.zeros_like(self.touchdown_event)
+        self.bar_reward_stepping_foot = torch.zeros_like(self.touchdown_event)
+        self.bar_reward_following_foot = torch.zeros_like(self.touchdown_event)
         self.stepping_foot_touchdown_distance_to_band_edge = torch.zeros(
             env.num_envs, device=env.device
         )
@@ -286,8 +340,8 @@ def reset_crossing_state(
         (len(env_ids),),
         device=env.device,
     )
-    state.airborne_seen[env_ids] = False
-    state.valid_touchdown_event[env_ids] = False
+    state.swing_foot_index[env_ids] = -1
+    state.touchdown_event[env_ids] = False
     state.touchdown_actual_step[env_ids] = 0.0
     state.touchdown_target_step[env_ids] = default_step_distance
     state.touchdown_reward_eligible[env_ids] = False
@@ -442,7 +496,6 @@ def _update_crossing_state_once(
     phase_3_post_crossing_step_distance: float,
     normal_step_default_probability: float,
     random_step_distance_range: tuple[float, float],
-    minimum_air_time_s: float,
 ) -> _CrossingState:
     """Update touchdown, command, spawn, and completion state exactly once."""
     if training_phase not in (
@@ -481,9 +534,6 @@ def _update_crossing_state_once(
         raise ValueError(
             "random_step_distance_range must be ordered and positive."
         )
-    if minimum_air_time_s < 0.0:
-        raise ValueError("minimum_air_time_s must be non-negative.")
-
     state = _get_state(env)
     step = _control_step(env)
     update_envs = state.last_control_update_step != step
@@ -513,65 +563,45 @@ def _update_crossing_state_once(
     in_contact = (
         contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids] > 0.0
     )
-    first_contact = contact_sensor.compute_first_contact(env.step_dt)[
-        :, sensor_cfg.body_ids
-    ].bool()
-    last_air_time = contact_sensor.data.last_air_time[:, sensor_cfg.body_ids]
-    if in_contact.shape != state.airborne_seen.shape:
+    if in_contact.shape != state.touchdown_event.shape:
         raise ValueError(
             "feet_cfg and sensor_cfg must resolve the same two ordered feet."
         )
 
-    other_in_contact = torch.flip(in_contact, dims=(1,))
-    other_first_contact = torch.flip(first_contact, dims=(1,))
-    valid_touchdown = (
-        update_envs.unsqueeze(1)
-        & first_contact
-        & state.airborne_seen
-        & (last_air_time >= minimum_air_time_s)
-        & other_in_contact
-        & ~other_first_contact
+    touchdown_event, next_swing_foot_index = (
+        _swing_cycle_touchdown_events(
+            in_contact, state.swing_foot_index, update_envs
+        )
     )
+    state.swing_foot_index[update_envs] = next_swing_foot_index[update_envs]
     crossing_before_update = state.crossing_command.clone()
 
-    # Detect cached crossing/following-foot touchdowns before the general
-    # bookkeeping below can clear airborne_seen. The role-specific events
-    # deliberately omit the general filter's other-foot contact conditions.
     foot_indices = torch.arange(2, device=env.device).unsqueeze(0)
-    role_touchdown = (
-        update_envs.unsqueeze(1)
-        & first_contact
-        & state.airborne_seen
-        & (last_air_time >= minimum_air_time_s)
-    )
     crossing_foot_touchdown = torch.any(
-        role_touchdown
+        touchdown_event
         & (foot_indices == state.crossing_foot_index.unsqueeze(1)),
         dim=1,
     )
     following_foot_touchdown = torch.any(
-        role_touchdown
+        touchdown_event
         & (foot_indices == state.following_foot_index.unsqueeze(1)),
         dim=1,
     )
 
-    state.valid_touchdown_event[update_envs] = False
+    state.touchdown_event[update_envs] = False
     state.touchdown_reward_eligible[update_envs] = False
-    state.valid_touchdown_event |= valid_touchdown
+    state.touchdown_event |= touchdown_event
     state.touchdown_actual_step = torch.where(
-        valid_touchdown, actual_step, state.touchdown_actual_step
+        touchdown_event, actual_step, state.touchdown_actual_step
     )
     current_targets = state.step_distance.unsqueeze(1).expand(-1, 2)
     state.touchdown_target_step = torch.where(
-        valid_touchdown, current_targets, state.touchdown_target_step
+        touchdown_event, current_targets, state.touchdown_target_step
     )
     state.touchdown_reward_eligible |= (
-        valid_touchdown & ~crossing_before_update.unsqueeze(1)
+        touchdown_event & ~crossing_before_update.unsqueeze(1)
     )
-
-    state.airborne_seen[update_envs] |= ~in_contact[update_envs]
-    state.airborne_seen[valid_touchdown] = False
-    state.touchdown_count += torch.sum(valid_touchdown, dim=1).long()
+    state.touchdown_count += torch.sum(touchdown_event, dim=1).long()
 
     # Give the post-crossing distance to exactly one step: the cached
     # following foot.
@@ -654,7 +684,7 @@ def _update_crossing_state_once(
         state.crossing_command[completed] = False
         state.bar_reward_foot_active[completed] = False
 
-    frontmost_touchdown = valid_touchdown & (actual_step > 0.0)
+    frontmost_touchdown = touchdown_event & (actual_step > 0.0)
     trigger_candidate = (
         update_envs
         & (state.training_phase != NORMAL_WALKING_PHASE)
@@ -696,7 +726,7 @@ def _update_crossing_state_once(
 
     normal_touchdown = (
         update_envs
-        & torch.any(valid_touchdown, dim=1)
+        & torch.any(touchdown_event, dim=1)
         & ~state.crossing_command
         & (~state.spawned | (state.following_step_command_stage == 2))
         & ~finish_following_step
@@ -741,10 +771,11 @@ def update_crossing_state(
     phase_3_post_crossing_step_distance: float,
     normal_step_default_probability: float,
     random_step_distance_range: tuple[float, float],
-    minimum_air_time_s: float,
+    minimum_air_time_s: float | None = None,
 ):
     """Interval-event wrapper for the shared once-per-step state update."""
-    del env_ids
+    # Kept as an ignored keyword so previously exported YAML configs still load.
+    del env_ids, minimum_air_time_s
     _update_crossing_state_once(
         env,
         feet_cfg,
@@ -765,7 +796,6 @@ def update_crossing_state(
         phase_3_post_crossing_step_distance,
         normal_step_default_probability,
         random_step_distance_range,
-        minimum_air_time_s,
     )
 
 
@@ -849,9 +879,7 @@ class ObstacleAwareVelocityCommand(UniformVelocityCommand):
             ]
             > 0.0
         )
-        swing_mask = ~in_contact
-        has_one_swing_foot = torch.sum(swing_mask, dim=1) == 1
-        stepping_foot = torch.argmax(swing_mask.long(), dim=1)
+        has_one_swing_foot, stepping_foot = _single_swing_foot(in_contact)
         support_foot = 1 - stepping_foot
 
         support_front = torch.gather(
@@ -1034,9 +1062,11 @@ def step_distance_tracking_reward(
     phase_3_post_crossing_step_distance: float,
     normal_step_default_probability: float,
     random_step_distance_range: tuple[float, float],
-    minimum_air_time_s: float,
+    minimum_air_time_s: float | None = None,
 ) -> torch.Tensor:
-    """Score a valid touchdown once using its cached signed step distance."""
+    """Score a completed swing cycle using its cached signed step distance."""
+    # Kept as an ignored keyword so previously exported YAML configs still load.
+    del minimum_air_time_s
     if gaussian_std <= 0.0:
         raise ValueError("gaussian_std must be positive.")
     state = _update_crossing_state_once(
@@ -1059,7 +1089,6 @@ def step_distance_tracking_reward(
         phase_3_post_crossing_step_distance,
         normal_step_default_probability,
         random_step_distance_range,
-        minimum_air_time_s,
     )
     error = (
         state.touchdown_actual_step - state.touchdown_target_step
@@ -1176,7 +1205,7 @@ def _update_foot_band_state(
         stepping_foot_touchdown = (
             active.unsqueeze(1)
             & state.bar_reward_stepping_foot
-            & state.valid_touchdown_event
+            & state.touchdown_event
             & ~state.stepping_foot_touchdown_distance_cached.unsqueeze(1)
         )
         touchdown_envs = torch.any(stepping_foot_touchdown, dim=1)
@@ -1460,9 +1489,11 @@ def wooden_bar_moved(
     phase_3_post_crossing_step_distance: float,
     normal_step_default_probability: float,
     random_step_distance_range: tuple[float, float],
-    minimum_air_time_s: float,
+    minimum_air_time_s: float | None = None,
 ) -> torch.Tensor:
     """Terminate Phase 3 when the settled physical bar is disturbed."""
+    # Kept as an ignored keyword so previously exported YAML configs still load.
+    del minimum_air_time_s
     state = _update_crossing_state_once(
         env,
         feet_cfg,
@@ -1483,7 +1514,6 @@ def wooden_bar_moved(
         phase_3_post_crossing_step_distance,
         normal_step_default_probability,
         random_step_distance_range,
-        minimum_air_time_s,
     )
     bar_pose_w = env.scene[physical_bar_name].data.root_state_w[:, :7]
     physical = (
