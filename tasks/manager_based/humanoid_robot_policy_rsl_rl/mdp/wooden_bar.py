@@ -534,6 +534,27 @@ def _update_crossing_state_once(
     )
     crossing_before_update = state.crossing_command.clone()
 
+    # Detect cached crossing/following-foot touchdowns before the general
+    # bookkeeping below can clear airborne_seen. The role-specific events
+    # deliberately omit the general filter's other-foot contact conditions.
+    foot_indices = torch.arange(2, device=env.device).unsqueeze(0)
+    role_touchdown = (
+        update_envs.unsqueeze(1)
+        & first_contact
+        & state.airborne_seen
+        & (last_air_time >= minimum_air_time_s)
+    )
+    crossing_foot_touchdown = torch.any(
+        role_touchdown
+        & (foot_indices == state.crossing_foot_index.unsqueeze(1)),
+        dim=1,
+    )
+    following_foot_touchdown = torch.any(
+        role_touchdown
+        & (foot_indices == state.following_foot_index.unsqueeze(1)),
+        dim=1,
+    )
+
     state.valid_touchdown_event[update_envs] = False
     state.touchdown_reward_eligible[update_envs] = False
     state.valid_touchdown_event |= valid_touchdown
@@ -553,27 +574,7 @@ def _update_crossing_state_once(
     state.touchdown_count += torch.sum(valid_touchdown, dim=1).long()
 
     # Give the post-crossing distance to exactly one step: the cached
-    # following foot. These role-specific events deliberately omit the
-    # general touchdown filter's other-foot contact conditions so a genuine
-    # crossing/following-foot touchdown cannot be rejected.
-    foot_indices = torch.arange(2, device=env.device).unsqueeze(0)
-    role_touchdown = (
-        update_envs.unsqueeze(1)
-        & first_contact
-        & state.airborne_seen
-        & (last_air_time >= minimum_air_time_s)
-    )
-    crossing_foot_touchdown = torch.any(
-        role_touchdown
-        & (foot_indices == state.crossing_foot_index.unsqueeze(1)),
-        dim=1,
-    )
-    following_foot_touchdown = torch.any(
-        role_touchdown
-        & (foot_indices == state.following_foot_index.unsqueeze(1)),
-        dim=1,
-    )
-
+    # following foot.
     stage_0_active = (
         update_envs
         & state.spawned
