@@ -122,10 +122,10 @@ WOODEN_BAR_LENGTH = 0.35
 WOODEN_BAR_WIDTH = 0.01
 WOODEN_BAR_HEIGHT = 0.02
 PHYSICAL_BAR_HALF_WIDTH = 0.5 * WOODEN_BAR_WIDTH
-VIRTUAL_BAND_WIDTH = 0.015
+VIRTUAL_BAND_WIDTH = 0.03
 VIRTUAL_BAND_HALF_WIDTH = 0.5 * VIRTUAL_BAND_WIDTH
 VIRTUAL_BAND_NEAR_EDGE_OFFSET = 0.005
-PHYSICAL_BAR_CENTER_DISTANCE = 0.010
+PHYSICAL_BAR_CENTER_DISTANCE = 0.030
 PHYSICAL_BAR_POSITION_ERROR_RANGE = (-0.003, 0.003)
 PHYSICAL_BAR_DROP_CLEARANCE = 0.010
 HIDDEN_BAR_DEPTH = 2.0
@@ -134,7 +134,7 @@ STEPPING_FOOT_DISTANCE_TO_BAND_EDGE = 0.19
 PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
 
 DEFAULT_STEP_DISTANCE = 0.1
-CROSSING_STEP_DISTANCE = 0.2
+CROSSING_STEP_DISTANCE = 0.24
 PHASE_2_POST_CROSSING_STEP_DISTANCE = 0.02
 PHASE_3_POST_CROSSING_STEP_DISTANCE = 0.02
 NORMAL_STEP_DEFAULT_PROBABILITY = 0.30
@@ -930,7 +930,7 @@ class RewardsCfg:
         weight=1.5 if WOODEN_BAR_TRAINING_PHASE == 2 else 0.0,
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
-            "forward_velocity_saturation": 0.05,
+            "forward_velocity_saturation": 0.15,
             "progress_unit": 0.19,
             "band_half_width": VIRTUAL_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
@@ -944,7 +944,7 @@ class RewardsCfg:
         weight=3.0 if WOODEN_BAR_TRAINING_PHASE == 2 else 0.0,
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
-            "forward_velocity_saturation": 0.05,
+            "forward_velocity_saturation": 0.2,
             "progress_unit": 0.19,
             "stepping_foot_distance_to_band_edge": (
                 STEPPING_FOOT_DISTANCE_TO_BAND_EDGE
@@ -1048,8 +1048,8 @@ class CurriculumCfg:
                 },
                 "reward_weight_ranges": {
                     "stepping_wooden_bar_step_reward": (15.0, 15.0),
-                    "following_wooden_bar_step_reward": (20.0, 15.0),
-                    "feet_height_entering_band_reward": (200.0, 200.0),
+                    "following_wooden_bar_step_reward": (30.0, 18.0),
+                    "feet_height_entering_band_reward": (400.0, 400.0),
                 },
                 "start_step": (
                     STRIDE_BAR_REWARD_START_ITERATION

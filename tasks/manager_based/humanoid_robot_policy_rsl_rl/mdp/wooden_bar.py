@@ -1275,7 +1275,7 @@ def _following_wooden_bar_step_score(
         )
     )
     current_progress_score = torch.clamp(
-        (footprint_max + band_half_width) / progress_unit, min=0.0
+        (footprint_max + band_half_width) / progress_unit, min=0.0, max=1.0
     )
     progress_score = 1.0 - current_progress_score
     return state, (
