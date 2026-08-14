@@ -628,6 +628,7 @@ def _update_crossing_state_once(
             normal_step_default_probability,
             random_step_distance_range,
         )
+        state.crossing_command[finish_env_ids] = False
         state.following_step_command_stage[finish_env_ids] = 2
 
     active = update_envs & state.spawned & ~state.crossed
