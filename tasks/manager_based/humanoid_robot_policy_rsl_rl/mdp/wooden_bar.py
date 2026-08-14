@@ -52,6 +52,8 @@ class _CrossingState:
         self.step_distance = torch.zeros(env.num_envs, device=env.device)
         self.crossing_command = bools()
         self.following_step_command_stage = longs()
+        self.crossing_foot_index = longs(-1)
+        self.following_foot_index = longs(-1)
 
         self.touchdown_count = longs()
         self.trigger_touchdown_index = longs()
@@ -275,6 +277,8 @@ def reset_crossing_state(
     state.step_distance[env_ids] = default_step_distance
     state.crossing_command[env_ids] = False
     state.following_step_command_stage[env_ids] = 0
+    state.crossing_foot_index[env_ids] = -1
+    state.following_foot_index[env_ids] = -1
     state.touchdown_count[env_ids] = 0
     state.trigger_touchdown_index[env_ids] = torch.randint(
         trigger_touchdown_range[0],
@@ -377,6 +381,8 @@ def _spawn_crossing(
     state.crossed[env_ids] = False
     state.crossing_command[env_ids] = True
     state.following_step_command_stage[env_ids] = 0
+    state.following_foot_index[env_ids] = landing_foot
+    state.crossing_foot_index[env_ids] = 1 - landing_foot
     state.step_distance[env_ids] = crossing_step_distance
     state.spawn_time_s[env_ids] = _episode_time_s(env)[env_ids]
     state.spawn_pose_w[env_ids] = pose
@@ -546,17 +552,83 @@ def _update_crossing_state_once(
     state.airborne_seen[valid_touchdown] = False
     state.touchdown_count += torch.sum(valid_touchdown, dim=1).long()
 
-    # Give the post-crossing distance to exactly one step: the following foot.
-    # The crossing foot's touchdown starts that command, and the following
-    # foot's touchdown ends it. Far-edge geometry is used only for completion.
+    # Give the post-crossing distance to exactly one step: the cached
+    # following foot. These role-specific events deliberately omit the
+    # general touchdown filter's other-foot contact conditions so a genuine
+    # crossing/following-foot touchdown cannot be rejected.
+    foot_indices = torch.arange(2, device=env.device).unsqueeze(0)
+    role_touchdown = (
+        update_envs.unsqueeze(1)
+        & first_contact
+        & state.airborne_seen
+        & (last_air_time >= minimum_air_time_s)
+    )
+    crossing_foot_touchdown = torch.any(
+        role_touchdown
+        & (foot_indices == state.crossing_foot_index.unsqueeze(1)),
+        dim=1,
+    )
+    following_foot_touchdown = torch.any(
+        role_touchdown
+        & (foot_indices == state.following_foot_index.unsqueeze(1)),
+        dim=1,
+    )
+
+    stage_0_active = (
+        update_envs
+        & state.spawned
+        & (state.following_step_command_stage == 0)
+    )
+    state.step_distance[stage_0_active] = crossing_step_distance
+    start_following_step = stage_0_active & crossing_foot_touchdown
+    if torch.any(start_following_step):
+        phase_2_start = start_following_step & (
+            state.training_phase == VIRTUAL_BAND_PHASE
+        )
+        phase_3_start = start_following_step & (
+            state.training_phase == PHYSICAL_BAR_PHASE
+        )
+        state.step_distance[phase_2_start] = (
+            phase_2_post_crossing_step_distance
+        )
+        state.step_distance[phase_3_start] = (
+            phase_3_post_crossing_step_distance
+        )
+        state.following_step_command_stage[start_following_step] = 1
+
+    stage_1_active = (
+        update_envs
+        & state.spawned
+        & (state.following_step_command_stage == 1)
+    )
+    phase_2_stage_1 = stage_1_active & (
+        state.training_phase == VIRTUAL_BAND_PHASE
+    )
+    phase_3_stage_1 = stage_1_active & (
+        state.training_phase == PHYSICAL_BAR_PHASE
+    )
+    state.step_distance[phase_2_stage_1] = (
+        phase_2_post_crossing_step_distance
+    )
+    state.step_distance[phase_3_stage_1] = (
+        phase_3_post_crossing_step_distance
+    )
+
+    finish_following_step = stage_1_active & following_foot_touchdown
+    if torch.any(finish_following_step):
+        finish_env_ids = torch.nonzero(
+            finish_following_step, as_tuple=False
+        ).squeeze(1)
+        state.step_distance[finish_env_ids] = _normal_step_sample(
+            env,
+            len(finish_env_ids),
+            default_step_distance,
+            normal_step_default_probability,
+            random_step_distance_range,
+        )
+        state.following_step_command_stage[finish_env_ids] = 2
+
     active = update_envs & state.spawned & ~state.crossed
-    crossing_touchdown = active & torch.any(valid_touchdown, dim=1)
-    start_following_step = (
-        crossing_touchdown & (state.following_step_command_stage == 0)
-    )
-    finish_following_step = (
-        crossing_touchdown & (state.following_step_command_stage == 1)
-    )
     if torch.any(active):
         relative_xy = (
             sole_vertices_w[..., :2]
@@ -573,34 +645,6 @@ def _update_crossing_state_once(
         completed = active & both_feet_past_far_edge
     else:
         completed = torch.zeros_like(active)
-
-    if torch.any(start_following_step):
-        phase_2_start = start_following_step & (
-            state.training_phase == VIRTUAL_BAND_PHASE
-        )
-        phase_3_start = start_following_step & (
-            state.training_phase == PHYSICAL_BAR_PHASE
-        )
-        state.step_distance[phase_2_start] = (
-            phase_2_post_crossing_step_distance
-        )
-        state.step_distance[phase_3_start] = (
-            phase_3_post_crossing_step_distance
-        )
-        state.following_step_command_stage[start_following_step] = 1
-
-    if torch.any(finish_following_step):
-        finish_env_ids = torch.nonzero(
-            finish_following_step, as_tuple=False
-        ).squeeze(1)
-        state.step_distance[finish_env_ids] = _normal_step_sample(
-            env,
-            len(finish_env_ids),
-            default_step_distance,
-            normal_step_default_probability,
-            random_step_distance_range,
-        )
-        state.following_step_command_stage[finish_env_ids] = 2
 
     if torch.any(completed):
         state.crossed[completed] = True
@@ -652,6 +696,8 @@ def _update_crossing_state_once(
         update_envs
         & torch.any(valid_touchdown, dim=1)
         & ~state.crossing_command
+        & (~state.spawned | (state.following_step_command_stage == 2))
+        & ~finish_following_step
         & ~completed
         & ~trigger_candidate
     )
