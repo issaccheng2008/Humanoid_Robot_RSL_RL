@@ -119,22 +119,22 @@ MIN_BASE_HEIGHT = 0.20
 MAX_BASE_TILT = math.radians(65.0)
 
 WOODEN_BAR_LENGTH = 0.35
-WOODEN_BAR_WIDTH = 0.01
-WOODEN_BAR_HEIGHT = 0.02
+WOODEN_BAR_WIDTH = 0.02
+WOODEN_BAR_HEIGHT = 0.01
 PHYSICAL_BAR_HALF_WIDTH = 0.5 * WOODEN_BAR_WIDTH
 VIRTUAL_BAND_WIDTH = 0.03
 VIRTUAL_BAND_HALF_WIDTH = 0.5 * VIRTUAL_BAND_WIDTH
 VIRTUAL_BAND_NEAR_EDGE_OFFSET = 0.005
-PHYSICAL_BAR_CENTER_DISTANCE = 0.030
+PHYSICAL_BAR_CENTER_DISTANCE = 0.020
 PHYSICAL_BAR_POSITION_ERROR_RANGE = (-0.003, 0.003)
 PHYSICAL_BAR_DROP_CLEARANCE = 0.010
 HIDDEN_BAR_DEPTH = 2.0
 FOOT_HEIGHT_SATURATION = 0.03
-STEPPING_FOOT_DISTANCE_TO_BAND_EDGE = 0.19
+STEPPING_FOOT_DISTANCE_TO_BAND_EDGE = 0.21
 PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
 
 DEFAULT_STEP_DISTANCE = 0.1
-CROSSING_STEP_DISTANCE = 0.24
+CROSSING_STEP_DISTANCE = 0.22
 PHASE_2_POST_CROSSING_STEP_DISTANCE = 0.02
 PHASE_3_POST_CROSSING_STEP_DISTANCE = 0.02
 NORMAL_STEP_DEFAULT_PROBABILITY = 0.30
@@ -931,7 +931,7 @@ class RewardsCfg:
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "forward_velocity_saturation": 0.15,
-            "progress_unit": 0.19,
+            "progress_unit": 0.21,
             "band_half_width": VIRTUAL_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "feet_cfg": _ordered_feet_cfg(),
@@ -945,7 +945,7 @@ class RewardsCfg:
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "forward_velocity_saturation": 0.2,
-            "progress_unit": 0.19,
+            "progress_unit": 0.21,
             "stepping_foot_distance_to_band_edge": (
                 STEPPING_FOOT_DISTANCE_TO_BAND_EDGE
             ),
@@ -1048,7 +1048,7 @@ class CurriculumCfg:
                 },
                 "reward_weight_ranges": {
                     "stepping_wooden_bar_step_reward": (15.0, 15.0),
-                    "following_wooden_bar_step_reward": (30.0, 18.0),
+                    "following_wooden_bar_step_reward": (24.0, 15.0),
                     "feet_height_entering_band_reward": (400.0, 400.0),
                 },
                 "start_step": (
