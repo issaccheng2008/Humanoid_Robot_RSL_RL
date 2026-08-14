@@ -143,6 +143,7 @@ CROSSING_TOUCHDOWN_INDEX_RANGE = (3, 10)
 STEP_DISTANCE_GAUSSIAN_INITIAL_STD = 0.015
 STEP_DISTANCE_GAUSSIAN_FINAL_STD = 0.002
 STEP_DISTANCE_TRACKING_REWARD_WEIGHT = 50.0
+PHYSICAL_BAR_CROSSING_COMPLETION_REWARD_WEIGHT = 100.0
 EXPECTED_POLICY_OBS_DIM = 49
 CROSSING_STATE_UPDATE_INTERVAL_S = 0.02
 
@@ -767,6 +768,16 @@ class RewardsCfg:
             "gaussian_std": STEP_DISTANCE_GAUSSIAN_INITIAL_STD,
             **_crossing_state_update_params(),
         },
+    )
+
+    physical_bar_crossing_completion_reward = (
+        RewTerm(
+            func=mdp.physical_bar_crossing_completion_reward,
+            weight=PHYSICAL_BAR_CROSSING_COMPLETION_REWARD_WEIGHT,
+            params=_crossing_state_update_params(),
+        )
+        if WOODEN_BAR_TRAINING_PHASE == 3
+        else None
     )
 
     # -------------------------------------------------------------------------
