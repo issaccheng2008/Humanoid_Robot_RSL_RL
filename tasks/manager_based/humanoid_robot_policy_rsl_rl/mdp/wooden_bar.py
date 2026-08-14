@@ -387,12 +387,10 @@ def _spawn_crossing(
     physical_bar_drop_clearance: float,
     crossing_step_distance: float,
 ):
-    """Fix the virtual band or physical bar pose at a touchdown event."""
+    """Fix the obstacle ahead of both feet at a completed swing cycle."""
     state = _get_state(env)
     robot = env.scene[feet_cfg.name]
-    landing_front = torch.gather(
-        sole_front_x[env_ids], 1, landing_foot.unsqueeze(1)
-    ).squeeze(1)
+    placement_front = torch.amax(sole_front_x[env_ids], dim=1)
     phase = state.training_phase[env_ids]
     virtual = phase == VIRTUAL_BAND_PHASE
     physical = phase == PHYSICAL_BAR_PHASE
@@ -410,7 +408,7 @@ def _spawn_crossing(
 
     pose = torch.zeros(len(env_ids), 7, device=env.device)
     pose[:, :2] = robot.data.root_pos_w[env_ids, :2] + (
-        landing_front + forward_offset
+        placement_front + forward_offset
     ).unsqueeze(1) * forward_w[env_ids]
     pose[:, 2] = env.scene.env_origins[env_ids, 2]
     pose[physical, 2] += (
@@ -443,8 +441,8 @@ def _spawn_crossing(
     state.forward_w[env_ids] = forward_w[env_ids]
     state.crossing_half_width[env_ids] = torch.where(
         virtual,
-        torch.full_like(landing_front, virtual_band_half_width),
-        torch.full_like(landing_front, physical_bar_half_width),
+        torch.full_like(placement_front, virtual_band_half_width),
+        torch.full_like(placement_front, physical_bar_half_width),
     )
     state.movement_reference_pose_w[env_ids] = pose
     state.movement_reference_set[env_ids] = False
@@ -684,25 +682,21 @@ def _update_crossing_state_once(
         state.crossing_command[completed] = False
         state.bar_reward_foot_active[completed] = False
 
-    frontmost_touchdown = touchdown_event & (actual_step > 0.0)
+    completed_swing = torch.any(touchdown_event, dim=1)
     trigger_candidate = (
         update_envs
         & (state.training_phase != NORMAL_WALKING_PHASE)
         & ~state.spawned
         & ~state.crossing_completed
         & (state.touchdown_count >= state.trigger_touchdown_index)
-        & torch.any(frontmost_touchdown, dim=1)
+        & completed_swing
     )
     if torch.any(trigger_candidate):
         trigger_env_ids = torch.nonzero(
             trigger_candidate, as_tuple=False
         ).squeeze(1)
         landing_foot = torch.argmax(
-            torch.where(
-                frontmost_touchdown[trigger_env_ids],
-                sole_front_x[trigger_env_ids],
-                torch.full_like(sole_front_x[trigger_env_ids], -torch.inf),
-            ),
+            touchdown_event[trigger_env_ids].long(),
             dim=1,
         )
         _spawn_crossing(
