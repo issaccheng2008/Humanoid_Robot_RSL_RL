@@ -110,6 +110,7 @@ class _CrossingState:
         self.following_step_command_stage = longs()
         self.crossing_foot_index = longs(-1)
         self.following_foot_index = longs(-1)
+        self.following_foot_touchdown_event = bools()
 
         self.touchdown_count = longs()
         self.trigger_touchdown_index = longs()
@@ -333,6 +334,7 @@ def reset_crossing_state(
     state.following_step_command_stage[env_ids] = 0
     state.crossing_foot_index[env_ids] = -1
     state.following_foot_index[env_ids] = -1
+    state.following_foot_touchdown_event[env_ids] = False
     state.touchdown_count[env_ids] = 0
     state.trigger_touchdown_index[env_ids] = torch.randint(
         trigger_touchdown_range[0],
@@ -538,6 +540,8 @@ def _update_crossing_state_once(
     if not torch.any(update_envs):
         return state
 
+    state.following_foot_touchdown_event[update_envs] = False
+
     # Reset events initialize the phase per environment. This assignment keeps
     # newly constructed environments safe before their first reset callback.
     uninitialized = update_envs & ~state.initialized
@@ -646,6 +650,7 @@ def _update_crossing_state_once(
 
     finish_following_step = stage_1_active & following_foot_touchdown
     if torch.any(finish_following_step):
+        state.following_foot_touchdown_event[finish_following_step] = True
         finish_env_ids = torch.nonzero(
             finish_following_step, as_tuple=False
         ).squeeze(1)
@@ -1033,6 +1038,57 @@ def step_distance_command(
 def crossing_command(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Return zero for normal walking and one during the crossing action."""
     return _get_state(env).crossing_command.float().unsqueeze(1)
+
+
+def physical_bar_crossing_completion_reward(
+    env: ManagerBasedRLEnv,
+    feet_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    training_phase: int,
+    physical_bar_name: str,
+    bar_height: float,
+    physical_bar_half_width: float,
+    virtual_band_half_width: float,
+    virtual_band_near_edge_offset: float,
+    physical_bar_center_distance: float,
+    physical_bar_position_error_range: tuple[float, float],
+    physical_bar_drop_clearance: float,
+    default_step_distance: float,
+    crossing_step_distance: float,
+    phase_2_post_crossing_step_distance: float,
+    phase_3_post_crossing_step_distance: float,
+    normal_step_default_probability: float,
+    random_step_distance_range: tuple[float, float],
+    minimum_air_time_s: float | None = None,
+) -> torch.Tensor:
+    """Reward the one Phase 3 frame when the following foot touches down."""
+    del minimum_air_time_s
+    state = _update_crossing_state_once(
+        env,
+        feet_cfg,
+        sensor_cfg,
+        sole_vertices,
+        training_phase,
+        physical_bar_name,
+        bar_height,
+        physical_bar_half_width,
+        virtual_band_half_width,
+        virtual_band_near_edge_offset,
+        physical_bar_center_distance,
+        physical_bar_position_error_range,
+        physical_bar_drop_clearance,
+        default_step_distance,
+        crossing_step_distance,
+        phase_2_post_crossing_step_distance,
+        phase_3_post_crossing_step_distance,
+        normal_step_default_probability,
+        random_step_distance_range,
+    )
+    return (
+        (state.training_phase == PHYSICAL_BAR_PHASE)
+        & state.following_foot_touchdown_event
+    ).float()
 
 
 def step_distance_tracking_reward(
