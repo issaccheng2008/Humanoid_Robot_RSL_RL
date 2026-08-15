@@ -122,15 +122,15 @@ WOODEN_BAR_LENGTH = 0.35
 WOODEN_BAR_WIDTH = 0.02
 WOODEN_BAR_HEIGHT = 0.01
 PHYSICAL_BAR_HALF_WIDTH = 0.5 * WOODEN_BAR_WIDTH
-VIRTUAL_BAND_WIDTH = 0.05
+VIRTUAL_BAND_WIDTH = 0.04
 VIRTUAL_BAND_HALF_WIDTH = 0.5 * VIRTUAL_BAND_WIDTH
 VIRTUAL_BAND_NEAR_EDGE_OFFSET = 0.005
-PHYSICAL_BAR_CENTER_DISTANCE = 0.035
+PHYSICAL_BAR_CENTER_DISTANCE = 0.03
 PHYSICAL_BAR_POSITION_ERROR_RANGE = (-0.003, 0.003)
 PHYSICAL_BAR_DROP_CLEARANCE = 0.010
 HIDDEN_BAR_DEPTH = 2.0
 FOOT_HEIGHT_SATURATION = 0.03
-STEPPING_FOOT_DISTANCE_TO_BAND_EDGE = 0.23
+STEPPING_FOOT_DISTANCE_TO_BAND_EDGE = 0.22
 PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
 
 DEFAULT_STEP_DISTANCE = 0.1
@@ -149,8 +149,8 @@ CROSSING_STATE_UPDATE_INTERVAL_S = 0.02
 
 step_reward_std_curriculum_end_step=1
 
-STRIDE_BAR_REWARD_START_ITERATION = 0
-REWARD_STEADY_ITERATION = 1500
+STRIDE_BAR_REWARD_START_ITERATION = 2000
+REWARD_STEADY_ITERATION = 3000
 PPO_STEPS_PER_ITERATION = 24
 # EL05 nominal torque, used only by the copied walking reward term.
 EL05_RATED_TORQUE = 4
@@ -940,7 +940,7 @@ class RewardsCfg:
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "forward_velocity_saturation": 0.15,
-            "progress_unit": 0.23,
+            "progress_unit": 0.22,
             "band_half_width": VIRTUAL_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "feet_cfg": _ordered_feet_cfg(),
@@ -954,7 +954,7 @@ class RewardsCfg:
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "forward_velocity_saturation": 0.2,
-            "progress_unit": 0.23,
+            "progress_unit": 0.22,
             "stepping_foot_distance_to_band_edge": (
                 STEPPING_FOOT_DISTANCE_TO_BAND_EDGE
             ),
@@ -1051,13 +1051,13 @@ class CurriculumCfg:
             func=mdp.wooden_bar_reward_weight_curriculum,
             params={
                 "pre_start_reward_weights": {
-                    "stepping_wooden_bar_step_reward": 1.5,
-                    "following_wooden_bar_step_reward": 3.0,
+                    "stepping_wooden_bar_step_reward": 15,
+                    "following_wooden_bar_step_reward": 20,
                     "feet_height_entering_band_reward": 400.0,
                 },
                 "reward_weight_ranges": {
-                    "stepping_wooden_bar_step_reward": (18.0, 18.0),
-                    "following_wooden_bar_step_reward": (30.0, 18.0),
+                    "stepping_wooden_bar_step_reward": (15.0, 15.0),
+                    "following_wooden_bar_step_reward": (20.0, 25.0),
                     "feet_height_entering_band_reward": (400.0, 400.0),
                 },
                 "start_step": (
