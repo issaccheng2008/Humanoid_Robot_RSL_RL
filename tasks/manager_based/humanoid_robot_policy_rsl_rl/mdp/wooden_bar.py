@@ -30,6 +30,7 @@ NORMAL_WALKING_PHASE = 1
 VIRTUAL_BAND_PHASE = 2
 COLLISIONLESS_BAR_PHASE = 3
 PHYSICAL_BAR_PHASE = 4
+MIXED_COMMAND_PHASE = 5
 
 
 def _control_step(env: ManagerBasedRLEnv) -> int:
@@ -114,6 +115,12 @@ class _CrossingState:
         self.following_foot_touchdown_event = bools()
         self.collisionless_bar_contact_event = bools()
         self.collisionless_bar_contacted = bools()
+
+        self.phase_5_no_bar_episode = bools()
+        self.phase_5_stop_command = bools()
+        self.phase_5_stop_time_s = torch.zeros(
+            env.num_envs, device=env.device
+        )
 
         self.touchdown_count = longs()
         self.trigger_touchdown_index = longs()
@@ -343,9 +350,9 @@ def configure_collisionless_bar_collisions(
     collisionless_bar_name: str,
     rigid_body_names: Sequence[str],
 ):
-    """Filter the Phase 3 bar against four named robot rigid bodies once."""
+    """Filter the collisionless bar for Phase 3 and Phase 5 once."""
     del env_ids
-    if training_phase != COLLISIONLESS_BAR_PHASE:
+    if training_phase not in (COLLISIONLESS_BAR_PHASE, MIXED_COMMAND_PHASE):
         return
 
     from pxr import Usd, UsdPhysics
@@ -410,15 +417,19 @@ def reset_crossing_state(
     training_phase: int,
     default_step_distance: float,
     trigger_touchdown_range: tuple[int, int],
+    phase_5_bar_episode_probability: float,
+    phase_5_no_bar_stop_probability: float,
+    phase_5_stop_time_range_s: tuple[float, float],
 ):
-    """Reset selected environments and hide both wooden-bar variants."""
+    """Reset crossing state and sample each Phase 5 episode type."""
     if training_phase not in (
         NORMAL_WALKING_PHASE,
         VIRTUAL_BAND_PHASE,
         COLLISIONLESS_BAR_PHASE,
         PHYSICAL_BAR_PHASE,
+        MIXED_COMMAND_PHASE,
     ):
-        raise ValueError("training_phase must be 1, 2, 3, or 4.")
+        raise ValueError("training_phase must be 1, 2, 3, 4, or 5.")
     if default_step_distance <= 0.0:
         raise ValueError("default_step_distance must be positive.")
     if (
@@ -430,6 +441,21 @@ def reset_crossing_state(
         )
     if hidden_depth <= 0.0:
         raise ValueError("hidden_depth must be positive.")
+    if not 0.0 <= phase_5_bar_episode_probability <= 1.0:
+        raise ValueError(
+            "phase_5_bar_episode_probability must be in [0, 1]."
+        )
+    if not 0.0 <= phase_5_no_bar_stop_probability <= 1.0:
+        raise ValueError(
+            "phase_5_no_bar_stop_probability must be in [0, 1]."
+        )
+    if (
+        phase_5_stop_time_range_s[0] < 0.0
+        or phase_5_stop_time_range_s[1] < phase_5_stop_time_range_s[0]
+    ):
+        raise ValueError(
+            "phase_5_stop_time_range_s must be ordered and non-negative."
+        )
 
     env_ids = _as_env_ids(env, env_ids)
     if len(env_ids) == 0:
@@ -443,7 +469,36 @@ def reset_crossing_state(
     )
 
     state.initialized[env_ids] = True
-    state.training_phase[env_ids] = training_phase
+    if training_phase == MIXED_COMMAND_PHASE:
+        bar_episode = (
+            torch.rand(len(env_ids), device=env.device)
+            < phase_5_bar_episode_probability
+        )
+        no_bar_episode = ~bar_episode
+        stop_command = no_bar_episode & (
+            torch.rand(len(env_ids), device=env.device)
+            < phase_5_no_bar_stop_probability
+        )
+        effective_phase = torch.where(
+            bar_episode,
+            torch.full_like(env_ids, COLLISIONLESS_BAR_PHASE),
+            torch.full_like(env_ids, NORMAL_WALKING_PHASE),
+        )
+        stop_time_s = torch.empty(
+            len(env_ids), device=env.device
+        ).uniform_(*phase_5_stop_time_range_s)
+    else:
+        no_bar_episode = torch.zeros(
+            len(env_ids), dtype=torch.bool, device=env.device
+        )
+        stop_command = torch.zeros_like(no_bar_episode)
+        effective_phase = torch.full_like(env_ids, training_phase)
+        stop_time_s = torch.zeros(len(env_ids), device=env.device)
+
+    state.training_phase[env_ids] = effective_phase
+    state.phase_5_no_bar_episode[env_ids] = no_bar_episode
+    state.phase_5_stop_command[env_ids] = stop_command
+    state.phase_5_stop_time_s[env_ids] = stop_time_s
     state.step_distance[env_ids] = default_step_distance
     state.crossing_command[env_ids] = False
     state.following_step_command_stage[env_ids] = 0
@@ -632,8 +687,9 @@ def _update_crossing_state_once(
         VIRTUAL_BAND_PHASE,
         COLLISIONLESS_BAR_PHASE,
         PHYSICAL_BAR_PHASE,
+        MIXED_COMMAND_PHASE,
     ):
-        raise ValueError("training_phase must be 1, 2, 3, or 4.")
+        raise ValueError("training_phase must be 1, 2, 3, 4, or 5.")
     if not 0.0 <= normal_step_default_probability <= 1.0:
         raise ValueError("normal_step_default_probability must be in [0, 1].")
     if min(
@@ -679,7 +735,11 @@ def _update_crossing_state_once(
     # newly constructed environments safe before their first reset callback.
     uninitialized = update_envs & ~state.initialized
     state.initialized[uninitialized] = True
-    state.training_phase[uninitialized] = training_phase
+    state.training_phase[uninitialized] = (
+        NORMAL_WALKING_PHASE
+        if training_phase == MIXED_COMMAND_PHASE
+        else training_phase
+    )
     state.step_distance[uninitialized] = default_step_distance
 
     sole_vertices_w = _sole_geometry_w(env, feet_cfg, sole_vertices)
@@ -992,9 +1052,19 @@ class ObstacleAwareVelocityCommand(UniformVelocityCommand):
             *self.cfg.ranges.lin_vel_x
         )
         self.vel_command_b[env_ids, 1] = 0.0
-        self.vel_command_b[env_ids, 2] = random_values.uniform_(
+        sampled_ang_vel_z = random_values.uniform_(
             *self.cfg.ranges.ang_vel_z
         )
+        if self.cfg.phase_5_enabled:
+            state = _get_state(self._env)
+            no_bar_episode = state.phase_5_no_bar_episode[env_ids]
+            self.vel_command_b[env_ids, 2] = torch.where(
+                no_bar_episode,
+                sampled_ang_vel_z,
+                torch.zeros_like(sampled_ang_vel_z),
+            )
+        else:
+            self.vel_command_b[env_ids, 2] = sampled_ang_vel_z
         self.is_standing_env[env_ids] = False
 
         if self.cfg.heading_command:
@@ -1009,6 +1079,22 @@ class ObstacleAwareVelocityCommand(UniformVelocityCommand):
     def _update_command(self):
         super()._update_command()
         state = _get_state(self._env)
+
+        if self.cfg.phase_5_enabled:
+            bar_episode = state.initialized & ~state.phase_5_no_bar_episode
+            self.is_standing_env[bar_episode] = False
+            self.vel_command_b[bar_episode, 0] = self.cfg.ranges.lin_vel_x[0]
+            self.vel_command_b[bar_episode, 1] = 0.0
+            self.vel_command_b[bar_episode, 2] = 0.0
+
+            stop_active = (
+                state.phase_5_no_bar_episode
+                & state.phase_5_stop_command
+                & (_episode_time_s(self._env) >= state.phase_5_stop_time_s)
+            )
+            self.is_standing_env[stop_active] = True
+            self.vel_command_b[stop_active] = 0.0
+
         active = state.crossing_command
         self.is_standing_env[active] = False
         self.vel_command_b[active, 0] = self.cfg.ranges.lin_vel_x[0]
@@ -1137,6 +1223,7 @@ class ObstacleAwareVelocityCommandCfg(UniformVelocityCommandCfg):
     ] = MISSING
     virtual_band_length: float = MISSING
     virtual_band_height: float = MISSING
+    phase_5_enabled: bool = False
 
     # The landing target is a short vertical plane at the commanded sole-front
     # position. Keeping it 1.5 cm tall avoids obscuring the foot.
@@ -1851,6 +1938,41 @@ def step_distance_gaussian_curriculum(
     return {
         "step_distance_gaussian_progress": progress,
         "step_distance_gaussian_std": gaussian_std,
+    }
+
+
+def phase_5_ang_vel_z_curriculum(
+    env: ManagerBasedRLEnv,
+    env_ids: Sequence[int],
+    command_name: str,
+    initial_range: tuple[float, float],
+    final_range: tuple[float, float],
+    start_step: int,
+    end_step: int,
+) -> dict[str, float]:
+    """Linearly widen Phase 5 yaw-rate commands over training."""
+    del env_ids
+    if start_step < 0 or end_step <= start_step:
+        raise ValueError("Angular-velocity curriculum step range is invalid.")
+    if initial_range[1] < initial_range[0]:
+        raise ValueError("initial_range must be ordered.")
+    if final_range[1] < final_range[0]:
+        raise ValueError("final_range must be ordered.")
+
+    step = _control_step(env)
+    progress = min(
+        max((step - start_step) / (end_step - start_step), 0.0), 1.0
+    )
+    ang_vel_z_range = (
+        initial_range[0] + progress * (final_range[0] - initial_range[0]),
+        initial_range[1] + progress * (final_range[1] - initial_range[1]),
+    )
+    command_term = env.command_manager.get_term(command_name)
+    command_term.cfg.ranges.ang_vel_z = ang_vel_z_range
+    return {
+        "phase_5_ang_vel_z_progress": progress,
+        "phase_5_ang_vel_z_min": ang_vel_z_range[0],
+        "phase_5_ang_vel_z_max": ang_vel_z_range[1],
     }
 
 
