@@ -122,19 +122,19 @@ WOODEN_BAR_LENGTH = 0.35
 WOODEN_BAR_WIDTH = 0.02
 WOODEN_BAR_HEIGHT = 0.01
 PHYSICAL_BAR_HALF_WIDTH = 0.5 * WOODEN_BAR_WIDTH
-VIRTUAL_BAND_WIDTH = 0.03
+VIRTUAL_BAND_WIDTH = 0.05
 VIRTUAL_BAND_HALF_WIDTH = 0.5 * VIRTUAL_BAND_WIDTH
 VIRTUAL_BAND_NEAR_EDGE_OFFSET = 0.005
-PHYSICAL_BAR_CENTER_DISTANCE = 0.025
+PHYSICAL_BAR_CENTER_DISTANCE = 0.035
 PHYSICAL_BAR_POSITION_ERROR_RANGE = (-0.003, 0.003)
 PHYSICAL_BAR_DROP_CLEARANCE = 0.010
 HIDDEN_BAR_DEPTH = 2.0
 FOOT_HEIGHT_SATURATION = 0.03
-STEPPING_FOOT_DISTANCE_TO_BAND_EDGE = 0.21
+STEPPING_FOOT_DISTANCE_TO_BAND_EDGE = 0.23
 PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
 
 DEFAULT_STEP_DISTANCE = 0.1
-CROSSING_STEP_DISTANCE = 0.22
+CROSSING_STEP_DISTANCE = 0.25
 PHASE_2_POST_CROSSING_STEP_DISTANCE = 0.02
 PHASE_3_POST_CROSSING_STEP_DISTANCE = 0.02
 NORMAL_STEP_DEFAULT_PROBABILITY = 0.30
@@ -790,11 +790,11 @@ class RewardsCfg:
         weight=-200.0,
         params={
             "term_keys": ["bad_orientation", "low_base_height"]
-            + (
-                ["wooden_bar_moved"]
-                if WOODEN_BAR_TRAINING_PHASE == 3
-                else []
-            ),
+            # + (
+            #     ["wooden_bar_moved"]
+            #     if WOODEN_BAR_TRAINING_PHASE == 3
+            #     else []
+            # ),
         },
     )
 
@@ -940,7 +940,7 @@ class RewardsCfg:
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "forward_velocity_saturation": 0.15,
-            "progress_unit": 0.21,
+            "progress_unit": 0.23,
             "band_half_width": VIRTUAL_BAND_HALF_WIDTH,
             "sole_vertices": FOOT_SOLE_VERTICES,
             "feet_cfg": _ordered_feet_cfg(),
@@ -954,7 +954,7 @@ class RewardsCfg:
         params={
             "height_saturation": FOOT_HEIGHT_SATURATION,
             "forward_velocity_saturation": 0.2,
-            "progress_unit": 0.21,
+            "progress_unit": 0.23,
             "stepping_foot_distance_to_band_edge": (
                 STEPPING_FOOT_DISTANCE_TO_BAND_EDGE
             ),

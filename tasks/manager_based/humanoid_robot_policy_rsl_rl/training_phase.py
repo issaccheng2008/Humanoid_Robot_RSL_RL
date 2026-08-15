@@ -6,7 +6,7 @@
 """Single switch for the independently resumed wooden-bar training phases."""
 
 # Set this manually to 1, 2, or 3 before starting the corresponding run.
-WOODEN_BAR_TRAINING_PHASE = 3
+WOODEN_BAR_TRAINING_PHASE = 2
 
 if WOODEN_BAR_TRAINING_PHASE not in (1, 2, 3):
     raise ValueError(
