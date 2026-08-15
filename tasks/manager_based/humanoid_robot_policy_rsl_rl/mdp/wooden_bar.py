@@ -341,8 +341,9 @@ def configure_collisionless_bar_collisions(
     training_phase: int,
     robot_name: str,
     physical_bar_name: str,
+    foot_body_names: Sequence[str],
 ):
-    """Filter only robot/bar pairs in Phase 3; ground collision remains on."""
+    """Filter only the configured foot/bar pairs in Phase 3."""
     del env_ids
     if training_phase != COLLISIONLESS_BAR_PHASE:
         return
@@ -361,15 +362,21 @@ def configure_collisionless_bar_collisions(
                 "for Phase 3 collision filtering."
             )
 
-        rigid_body_paths = [
-            prim.GetPath()
+        foot_rigid_body_paths = {
+            prim.GetName(): prim.GetPath()
             for prim in Usd.PrimRange(robot_prim)
-            if prim.HasAPI(UsdPhysics.RigidBodyAPI)
-        ]
-        if not rigid_body_paths:
+            if prim.GetName() in foot_body_names
+            and prim.HasAPI(UsdPhysics.RigidBodyAPI)
+        }
+        missing_foot_bodies = set(foot_body_names) - foot_rigid_body_paths.keys()
+        if missing_foot_bodies:
             raise RuntimeError(
-                f"No robot rigid bodies found below {robot_prim.GetPath()}."
+                "Could not resolve the configured foot rigid bodies below "
+                f"{robot_prim.GetPath()}: {sorted(missing_foot_bodies)}."
             )
+        rigid_body_paths = [
+            foot_rigid_body_paths[name] for name in foot_body_names
+        ]
         filtered_pairs = UsdPhysics.FilteredPairsAPI.Apply(bar_prim)
         filtered_pairs.CreateFilteredPairsRel().SetTargets(rigid_body_paths)
 
