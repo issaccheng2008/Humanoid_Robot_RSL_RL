@@ -10,7 +10,7 @@
 # 3: robot-collisionless bar with geometric contact penalty
 # 4: physical movable bar
 # Set this manually before starting the corresponding independently resumed run.
-WOODEN_BAR_TRAINING_PHASE = 2
+WOODEN_BAR_TRAINING_PHASE = 3
 
 if WOODEN_BAR_TRAINING_PHASE not in (1, 2, 3, 4):
     raise ValueError(
