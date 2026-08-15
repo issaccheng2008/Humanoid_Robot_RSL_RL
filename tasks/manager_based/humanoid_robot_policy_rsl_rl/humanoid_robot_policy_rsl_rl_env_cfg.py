@@ -114,6 +114,13 @@ FOOT_BODY_NAMES = [
     "r_ankle_roll_link",
 ]
 
+COLLISIONLESS_BAR_FILTER_BODY_NAMES = [
+    "l_ankle_roll_link",
+    "r_ankle_roll_link",
+    "l_ankle_pitch_link",
+    "r_ankle_pitch_link",
+]
+
 TARGET_BASE_HEIGHT = 0.32
 MIN_BASE_HEIGHT = 0.20
 MAX_BASE_TILT = math.radians(65.0)
@@ -133,6 +140,7 @@ HIDDEN_BAR_DEPTH = 2.0
 FOOT_HEIGHT_SATURATION = 0.03
 STEPPING_FOOT_DISTANCE_TO_BAND_EDGE = 0.22
 PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
+COLLISIONLESS_WOODEN_BAR_NAME = "collisionless_wooden_bar"
 
 DEFAULT_STEP_DISTANCE = 0.1
 CROSSING_STEP_DISTANCE = 0.25
@@ -235,6 +243,7 @@ def _crossing_state_update_params() -> dict:
         "sensor_cfg": _ordered_feet_sensor_cfg(),
         "sole_vertices": FOOT_SOLE_VERTICES,
         "training_phase": WOODEN_BAR_TRAINING_PHASE,
+        "collisionless_bar_name": COLLISIONLESS_WOODEN_BAR_NAME,
         "physical_bar_name": PHYSICAL_WOODEN_BAR_NAME,
         "bar_height": WOODEN_BAR_HEIGHT,
         "physical_bar_half_width": PHYSICAL_BAR_HALF_WIDTH,
@@ -271,11 +280,14 @@ def _make_wooden_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
         spawn=sim_utils.CuboidCfg(
             size=(WOODEN_BAR_WIDTH, WOODEN_BAR_LENGTH, height),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                kinematic_enabled=False,
                 disable_gravity=False,
                 linear_damping=0.05,
                 angular_damping=0.05,
             ),
-            collision_props=sim_utils.CollisionPropertiesCfg(),
+            collision_props=sim_utils.CollisionPropertiesCfg(
+                collision_enabled=True,
+            ),
             mass_props=sim_utils.MassPropertiesCfg(density=500.0),
             physics_material=sim_utils.RigidBodyMaterialCfg(
                 friction_combine_mode="average",
@@ -300,6 +312,10 @@ def _make_wooden_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
 @configclass
 class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
     """Scene configuration for rough-terrain walking with forward and turning commands."""
+
+    # Pre-startup USD collision filtering requires independently authored
+    # physics schemas rather than replicated physics prims.
+    replicate_physics: bool = WOODEN_BAR_TRAINING_PHASE != 3
 
     # Randomly rough ground used to improve locomotion robustness.
     terrain = TerrainImporterCfg(
@@ -355,7 +371,14 @@ class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
         force_threshold=1.0,
     )
 
-    # The physical bar remains hidden in Phases 1 and 2.
+    # The Phase 3 bar is dynamic and collides with everything except the four
+    # explicitly filtered robot rigid-body links.
+    collisionless_wooden_bar = _make_wooden_bar_cfg(
+        "CollisionlessWoodenBar",
+        WOODEN_BAR_HEIGHT,
+    )
+
+    # The Phase 4 physical bar remains hidden in all other phases.
     wooden_bar = _make_wooden_bar_cfg(
         "WoodenBar",
         WOODEN_BAR_HEIGHT,
@@ -528,14 +551,19 @@ class EventCfg:
     This first version is conservative for debugging.
     """
 
-    configure_collisionless_bar_collisions = EventTerm(
-        func=mdp.configure_collisionless_bar_collisions,
-        mode="startup",
-        params={
-            "training_phase": WOODEN_BAR_TRAINING_PHASE,
-            "robot_name": "robot",
-            "physical_bar_name": PHYSICAL_WOODEN_BAR_NAME,
-        },
+    configure_collisionless_bar_collisions = (
+        EventTerm(
+            func=mdp.configure_collisionless_bar_collisions,
+            mode="prestartup",
+            params={
+                "training_phase": WOODEN_BAR_TRAINING_PHASE,
+                "robot_name": "robot",
+                "collisionless_bar_name": COLLISIONLESS_WOODEN_BAR_NAME,
+                "rigid_body_names": COLLISIONLESS_BAR_FILTER_BODY_NAMES,
+            },
+        )
+        if WOODEN_BAR_TRAINING_PHASE == 3
+        else None
     )
 
     reset_base = EventTerm(
@@ -572,6 +600,7 @@ class EventCfg:
         func=mdp.reset_crossing_state,
         mode="reset",
         params={
+            "collisionless_bar_name": COLLISIONLESS_WOODEN_BAR_NAME,
             "physical_bar_name": PHYSICAL_WOODEN_BAR_NAME,
             "hidden_depth": HIDDEN_BAR_DEPTH,
             "training_phase": WOODEN_BAR_TRAINING_PHASE,
