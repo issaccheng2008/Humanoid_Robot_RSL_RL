@@ -20,7 +20,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.sensors import ContactSensor
 from isaaclab.utils import configclass
-from isaaclab.utils.math import quat_apply, yaw_quat
+from isaaclab.utils.math import quat_apply, quat_apply_inverse, yaw_quat
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -28,7 +28,8 @@ if TYPE_CHECKING:
 
 NORMAL_WALKING_PHASE = 1
 VIRTUAL_BAND_PHASE = 2
-PHYSICAL_BAR_PHASE = 3
+COLLISIONLESS_BAR_PHASE = 3
+PHYSICAL_BAR_PHASE = 4
 
 
 def _control_step(env: ManagerBasedRLEnv) -> int:
@@ -111,6 +112,8 @@ class _CrossingState:
         self.crossing_foot_index = longs(-1)
         self.following_foot_index = longs(-1)
         self.following_foot_touchdown_event = bools()
+        self.collisionless_bar_contact_event = bools()
+        self.collisionless_bar_contacted = bools()
 
         self.touchdown_count = longs()
         self.trigger_touchdown_index = longs()
@@ -274,6 +277,103 @@ def _crossing_foot_geometry(
     return sole_vertices_w, state.forward_w, footprint_min, footprint_max
 
 
+def _sole_overlaps_bar(
+    sole_vertices_w: torch.Tensor,
+    bar_pose_w: torch.Tensor,
+    bar_half_extents: tuple[float, float, float],
+) -> torch.Tensor:
+    """Return exact 2-D sole-polygon overlap plus vertical bar overlap."""
+    num_envs, num_feet, num_vertices = sole_vertices_w.shape[:3]
+    relative_w = sole_vertices_w - bar_pose_w[:, None, None, :3]
+    bar_quat_w = bar_pose_w[:, None, None, 3:7].expand(
+        -1, num_feet, num_vertices, -1
+    )
+    vertices_b = quat_apply_inverse(
+        bar_quat_w.reshape(-1, 4), relative_w.reshape(-1, 3)
+    ).reshape(num_envs, num_feet, num_vertices, 3)
+
+    half_width, half_length, half_height = bar_half_extents
+    rectangle_xy = torch.tensor(
+        (
+            (-half_width, -half_length),
+            (-half_width, half_length),
+            (half_width, half_length),
+            (half_width, -half_length),
+        ),
+        dtype=vertices_b.dtype,
+        device=vertices_b.device,
+    )
+
+    sole_xy = vertices_b[..., :2]
+    edge_xy = torch.roll(sole_xy, shifts=-1, dims=2) - sole_xy
+    edge_normals = torch.stack((-edge_xy[..., 1], edge_xy[..., 0]), dim=-1)
+    rectangle_axes = torch.tensor(
+        ((1.0, 0.0), (0.0, 1.0)),
+        dtype=vertices_b.dtype,
+        device=vertices_b.device,
+    ).expand(num_envs, num_feet, -1, -1)
+    axes = torch.cat((rectangle_axes, edge_normals), dim=2)
+
+    sole_projection = torch.einsum("efva,efka->efkv", sole_xy, axes)
+    rectangle_projection = torch.einsum(
+        "ra,efka->efkr", rectangle_xy, axes
+    )
+    separated = (
+        torch.amax(sole_projection, dim=3)
+        < torch.amin(rectangle_projection, dim=3)
+    ) | (
+        torch.amax(rectangle_projection, dim=3)
+        < torch.amin(sole_projection, dim=3)
+    )
+    footprint_overlap = ~torch.any(separated, dim=2)
+
+    sole_min_z = torch.amin(vertices_b[..., 2], dim=2)
+    sole_max_z = torch.amax(vertices_b[..., 2], dim=2)
+    vertical_overlap = (sole_min_z <= half_height) & (
+        sole_max_z >= -half_height
+    )
+    return footprint_overlap & vertical_overlap
+
+
+def configure_collisionless_bar_collisions(
+    env: ManagerBasedRLEnv,
+    env_ids: Sequence[int] | None,
+    training_phase: int,
+    robot_name: str,
+    physical_bar_name: str,
+):
+    """Filter only robot/bar pairs in Phase 3; ground collision remains on."""
+    del env_ids
+    if training_phase != COLLISIONLESS_BAR_PHASE:
+        return
+
+    from pxr import Usd, UsdPhysics
+
+    stage = env.scene.stage
+    robot_leaf = env.scene[robot_name].cfg.prim_path.rsplit("/", 1)[-1]
+    bar_leaf = env.scene[physical_bar_name].cfg.prim_path.rsplit("/", 1)[-1]
+    for env_prim_path in env.scene.env_prim_paths:
+        robot_prim = stage.GetPrimAtPath(f"{env_prim_path}/{robot_leaf}")
+        bar_prim = stage.GetPrimAtPath(f"{env_prim_path}/{bar_leaf}")
+        if not robot_prim.IsValid() or not bar_prim.IsValid():
+            raise RuntimeError(
+                "Could not resolve the robot and wooden-bar prims needed "
+                "for Phase 3 collision filtering."
+            )
+
+        rigid_body_paths = [
+            prim.GetPath()
+            for prim in Usd.PrimRange(robot_prim)
+            if prim.HasAPI(UsdPhysics.RigidBodyAPI)
+        ]
+        if not rigid_body_paths:
+            raise RuntimeError(
+                f"No robot rigid bodies found below {robot_prim.GetPath()}."
+            )
+        filtered_pairs = UsdPhysics.FilteredPairsAPI.Apply(bar_prim)
+        filtered_pairs.CreateFilteredPairsRel().SetTargets(rigid_body_paths)
+
+
 def _hide_physical_bar(
     env: ManagerBasedRLEnv,
     env_ids: torch.Tensor,
@@ -304,9 +404,10 @@ def reset_crossing_state(
     if training_phase not in (
         NORMAL_WALKING_PHASE,
         VIRTUAL_BAND_PHASE,
+        COLLISIONLESS_BAR_PHASE,
         PHYSICAL_BAR_PHASE,
     ):
-        raise ValueError("training_phase must be 1, 2, or 3.")
+        raise ValueError("training_phase must be 1, 2, 3, or 4.")
     if default_step_distance <= 0.0:
         raise ValueError("default_step_distance must be positive.")
     if (
@@ -335,6 +436,8 @@ def reset_crossing_state(
     state.crossing_foot_index[env_ids] = -1
     state.following_foot_index[env_ids] = -1
     state.following_foot_touchdown_event[env_ids] = False
+    state.collisionless_bar_contact_event[env_ids] = False
+    state.collisionless_bar_contacted[env_ids] = False
     state.touchdown_count[env_ids] = 0
     state.trigger_touchdown_index[env_ids] = torch.randint(
         trigger_touchdown_range[0],
@@ -395,7 +498,9 @@ def _spawn_crossing(
     placement_front = torch.amax(sole_front_x[env_ids], dim=1)
     phase = state.training_phase[env_ids]
     virtual = phase == VIRTUAL_BAND_PHASE
-    physical = phase == PHYSICAL_BAR_PHASE
+    bar_phase = (phase == COLLISIONLESS_BAR_PHASE) | (
+        phase == PHYSICAL_BAR_PHASE
+    )
 
     forward_offset = torch.empty(len(env_ids), device=env.device)
     forward_offset[virtual] = (
@@ -404,8 +509,8 @@ def _spawn_crossing(
     placement_error = torch.empty(len(env_ids), device=env.device).uniform_(
         *physical_bar_position_error_range
     )
-    forward_offset[physical] = (
-        physical_bar_center_distance + placement_error[physical]
+    forward_offset[bar_phase] = (
+        physical_bar_center_distance + placement_error[bar_phase]
     )
 
     pose = torch.zeros(len(env_ids), 7, device=env.device)
@@ -413,22 +518,22 @@ def _spawn_crossing(
         placement_front + forward_offset
     ).unsqueeze(1) * forward_w[env_ids]
     pose[:, 2] = env.scene.env_origins[env_ids, 2]
-    pose[physical, 2] += (
+    pose[bar_phase, 2] += (
         0.5 * bar_height + physical_bar_drop_clearance
     )
     pose[:, 3:7] = robot_yaw_quat_w[env_ids]
 
-    if torch.any(physical):
-        physical_env_ids = env_ids[physical]
+    if torch.any(bar_phase):
+        bar_env_ids = env_ids[bar_phase]
         velocity = torch.zeros(
-            len(physical_env_ids), 6, device=env.device
+            len(bar_env_ids), 6, device=env.device
         )
         bar = env.scene[physical_bar_name]
         bar.write_root_pose_to_sim(
-            pose[physical], env_ids=physical_env_ids
+            pose[bar_phase], env_ids=bar_env_ids
         )
         bar.write_root_velocity_to_sim(
-            velocity, env_ids=physical_env_ids
+            velocity, env_ids=bar_env_ids
         )
 
     state.spawned[env_ids] = True
@@ -485,6 +590,7 @@ def _update_crossing_state_once(
     physical_bar_name: str,
     bar_height: float,
     physical_bar_half_width: float,
+    physical_bar_half_length: float,
     virtual_band_half_width: float,
     virtual_band_near_edge_offset: float,
     physical_bar_center_distance: float,
@@ -494,6 +600,7 @@ def _update_crossing_state_once(
     crossing_step_distance: float,
     phase_2_post_crossing_step_distance: float,
     phase_3_post_crossing_step_distance: float,
+    phase_4_post_crossing_step_distance: float,
     normal_step_default_probability: float,
     random_step_distance_range: tuple[float, float],
 ) -> _CrossingState:
@@ -501,9 +608,10 @@ def _update_crossing_state_once(
     if training_phase not in (
         NORMAL_WALKING_PHASE,
         VIRTUAL_BAND_PHASE,
+        COLLISIONLESS_BAR_PHASE,
         PHYSICAL_BAR_PHASE,
     ):
-        raise ValueError("training_phase must be 1, 2, or 3.")
+        raise ValueError("training_phase must be 1, 2, 3, or 4.")
     if not 0.0 <= normal_step_default_probability <= 1.0:
         raise ValueError("normal_step_default_probability must be in [0, 1].")
     if min(
@@ -511,8 +619,10 @@ def _update_crossing_state_once(
         crossing_step_distance,
         phase_2_post_crossing_step_distance,
         phase_3_post_crossing_step_distance,
+        phase_4_post_crossing_step_distance,
         bar_height,
         physical_bar_half_width,
+        physical_bar_half_length,
         virtual_band_half_width,
     ) <= 0.0:
         raise ValueError("Configured distances, widths, and height must be positive.")
@@ -541,6 +651,7 @@ def _update_crossing_state_once(
         return state
 
     state.following_foot_touchdown_event[update_envs] = False
+    state.collisionless_bar_contact_event[update_envs] = False
 
     # Reset events initialize the phase per environment. This assignment keeps
     # newly constructed environments safe before their first reset callback.
@@ -569,6 +680,30 @@ def _update_crossing_state_once(
         raise ValueError(
             "feet_cfg and sensor_cfg must resolve the same two ordered feet."
         )
+
+    collisionless_active = (
+        update_envs
+        & state.spawned
+        & ~state.crossed
+        & ~state.collisionless_bar_contacted
+        & (state.training_phase == COLLISIONLESS_BAR_PHASE)
+    )
+    if torch.any(collisionless_active):
+        bar_pose_w = env.scene[physical_bar_name].data.root_state_w[:, :7]
+        foot_overlaps_bar = _sole_overlaps_bar(
+            sole_vertices_w,
+            bar_pose_w,
+            (
+                physical_bar_half_width,
+                physical_bar_half_length,
+                0.5 * bar_height,
+            ),
+        )
+        new_contact = collisionless_active & torch.any(
+            foot_overlaps_bar, dim=1
+        )
+        state.collisionless_bar_contact_event[new_contact] = True
+        state.collisionless_bar_contacted[new_contact] = True
 
     touchdown_event, next_swing_foot_index = (
         _swing_cycle_touchdown_events(
@@ -619,6 +754,9 @@ def _update_crossing_state_once(
             state.training_phase == VIRTUAL_BAND_PHASE
         )
         phase_3_start = start_following_step & (
+            state.training_phase == COLLISIONLESS_BAR_PHASE
+        )
+        phase_4_start = start_following_step & (
             state.training_phase == PHYSICAL_BAR_PHASE
         )
         state.step_distance[phase_2_start] = (
@@ -626,6 +764,9 @@ def _update_crossing_state_once(
         )
         state.step_distance[phase_3_start] = (
             phase_3_post_crossing_step_distance
+        )
+        state.step_distance[phase_4_start] = (
+            phase_4_post_crossing_step_distance
         )
         state.following_step_command_stage[start_following_step] = 1
 
@@ -639,6 +780,9 @@ def _update_crossing_state_once(
         state.training_phase == VIRTUAL_BAND_PHASE
     )
     phase_3_stage_1 = stage_1_active & (
+        state.training_phase == COLLISIONLESS_BAR_PHASE
+    )
+    phase_4_stage_1 = stage_1_active & (
         state.training_phase == PHYSICAL_BAR_PHASE
     )
     state.step_distance[phase_2_stage_1] = (
@@ -646,6 +790,9 @@ def _update_crossing_state_once(
     )
     state.step_distance[phase_3_stage_1] = (
         phase_3_post_crossing_step_distance
+    )
+    state.step_distance[phase_4_stage_1] = (
+        phase_4_post_crossing_step_distance
     )
 
     finish_following_step = stage_1_active & following_foot_touchdown
@@ -760,6 +907,7 @@ def update_crossing_state(
     physical_bar_name: str,
     bar_height: float,
     physical_bar_half_width: float,
+    physical_bar_half_length: float,
     virtual_band_half_width: float,
     virtual_band_near_edge_offset: float,
     physical_bar_center_distance: float,
@@ -769,6 +917,7 @@ def update_crossing_state(
     crossing_step_distance: float,
     phase_2_post_crossing_step_distance: float,
     phase_3_post_crossing_step_distance: float,
+    phase_4_post_crossing_step_distance: float,
     normal_step_default_probability: float,
     random_step_distance_range: tuple[float, float],
     minimum_air_time_s: float | None = None,
@@ -785,6 +934,7 @@ def update_crossing_state(
         physical_bar_name,
         bar_height,
         physical_bar_half_width,
+        physical_bar_half_length,
         virtual_band_half_width,
         virtual_band_near_edge_offset,
         physical_bar_center_distance,
@@ -794,6 +944,7 @@ def update_crossing_state(
         crossing_step_distance,
         phase_2_post_crossing_step_distance,
         phase_3_post_crossing_step_distance,
+        phase_4_post_crossing_step_distance,
         normal_step_default_probability,
         random_step_distance_range,
     )
@@ -1050,6 +1201,7 @@ def physical_bar_crossing_completion_reward(
     physical_bar_name: str,
     bar_height: float,
     physical_bar_half_width: float,
+    physical_bar_half_length: float,
     virtual_band_half_width: float,
     virtual_band_near_edge_offset: float,
     physical_bar_center_distance: float,
@@ -1059,11 +1211,12 @@ def physical_bar_crossing_completion_reward(
     crossing_step_distance: float,
     phase_2_post_crossing_step_distance: float,
     phase_3_post_crossing_step_distance: float,
+    phase_4_post_crossing_step_distance: float,
     normal_step_default_probability: float,
     random_step_distance_range: tuple[float, float],
     minimum_air_time_s: float | None = None,
 ) -> torch.Tensor:
-    """Reward the one Phase 3 frame when the following foot touches down."""
+    """Reward a successful Phase 3/4 following-foot touchdown once."""
     del minimum_air_time_s
     state = _update_crossing_state_once(
         env,
@@ -1074,6 +1227,7 @@ def physical_bar_crossing_completion_reward(
         physical_bar_name,
         bar_height,
         physical_bar_half_width,
+        physical_bar_half_length,
         virtual_band_half_width,
         virtual_band_near_edge_offset,
         physical_bar_center_distance,
@@ -1083,12 +1237,29 @@ def physical_bar_crossing_completion_reward(
         crossing_step_distance,
         phase_2_post_crossing_step_distance,
         phase_3_post_crossing_step_distance,
+        phase_4_post_crossing_step_distance,
         normal_step_default_probability,
         random_step_distance_range,
     )
+    bar_phase = (state.training_phase == COLLISIONLESS_BAR_PHASE) | (
+        state.training_phase == PHYSICAL_BAR_PHASE
+    )
+    disqualified = (
+        state.training_phase == COLLISIONLESS_BAR_PHASE
+    ) & state.collisionless_bar_contacted
     return (
-        (state.training_phase == PHYSICAL_BAR_PHASE)
+        bar_phase
+        & ~disqualified
         & state.following_foot_touchdown_event
+    ).float()
+
+
+def collisionless_bar_contact_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalize only the first Phase 3 foot/bar contact frame per episode."""
+    state = _get_state(env)
+    return (
+        (state.training_phase == COLLISIONLESS_BAR_PHASE)
+        & state.collisionless_bar_contact_event
     ).float()
 
 
@@ -1102,6 +1273,7 @@ def step_distance_tracking_reward(
     physical_bar_name: str,
     bar_height: float,
     physical_bar_half_width: float,
+    physical_bar_half_length: float,
     virtual_band_half_width: float,
     virtual_band_near_edge_offset: float,
     physical_bar_center_distance: float,
@@ -1111,6 +1283,7 @@ def step_distance_tracking_reward(
     crossing_step_distance: float,
     phase_2_post_crossing_step_distance: float,
     phase_3_post_crossing_step_distance: float,
+    phase_4_post_crossing_step_distance: float,
     normal_step_default_probability: float,
     random_step_distance_range: tuple[float, float],
     minimum_air_time_s: float | None = None,
@@ -1129,6 +1302,7 @@ def step_distance_tracking_reward(
         physical_bar_name,
         bar_height,
         physical_bar_half_width,
+        physical_bar_half_length,
         virtual_band_half_width,
         virtual_band_near_edge_offset,
         physical_bar_center_distance,
@@ -1138,6 +1312,7 @@ def step_distance_tracking_reward(
         crossing_step_distance,
         phase_2_post_crossing_step_distance,
         phase_3_post_crossing_step_distance,
+        phase_4_post_crossing_step_distance,
         normal_step_default_probability,
         random_step_distance_range,
     )
@@ -1529,6 +1704,7 @@ def wooden_bar_moved(
     physical_bar_name: str,
     bar_height: float,
     physical_bar_half_width: float,
+    physical_bar_half_length: float,
     virtual_band_half_width: float,
     virtual_band_near_edge_offset: float,
     physical_bar_center_distance: float,
@@ -1538,11 +1714,12 @@ def wooden_bar_moved(
     crossing_step_distance: float,
     phase_2_post_crossing_step_distance: float,
     phase_3_post_crossing_step_distance: float,
+    phase_4_post_crossing_step_distance: float,
     normal_step_default_probability: float,
     random_step_distance_range: tuple[float, float],
     minimum_air_time_s: float | None = None,
 ) -> torch.Tensor:
-    """Terminate Phase 3 when the settled physical bar is disturbed."""
+    """Terminate Phase 4 when the settled physical bar is disturbed."""
     # Kept as an ignored keyword so previously exported YAML configs still load.
     del minimum_air_time_s
     state = _update_crossing_state_once(
@@ -1554,6 +1731,7 @@ def wooden_bar_moved(
         physical_bar_name,
         bar_height,
         physical_bar_half_width,
+        physical_bar_half_length,
         virtual_band_half_width,
         virtual_band_near_edge_offset,
         physical_bar_center_distance,
@@ -1563,6 +1741,7 @@ def wooden_bar_moved(
         crossing_step_distance,
         phase_2_post_crossing_step_distance,
         phase_3_post_crossing_step_distance,
+        phase_4_post_crossing_step_distance,
         normal_step_default_probability,
         random_step_distance_range,
     )
@@ -1706,3 +1885,4 @@ def policy_observation_shape_check(
             f"but the configured shape is {group_shape}."
         )
     return {"policy_observation_dim": float(actual_dim)}
+

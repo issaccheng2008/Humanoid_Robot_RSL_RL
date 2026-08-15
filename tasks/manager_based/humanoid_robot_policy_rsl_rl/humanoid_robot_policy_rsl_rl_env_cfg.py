@@ -122,6 +122,7 @@ WOODEN_BAR_LENGTH = 0.35
 WOODEN_BAR_WIDTH = 0.02
 WOODEN_BAR_HEIGHT = 0.01
 PHYSICAL_BAR_HALF_WIDTH = 0.5 * WOODEN_BAR_WIDTH
+PHYSICAL_BAR_HALF_LENGTH = 0.5 * WOODEN_BAR_LENGTH
 VIRTUAL_BAND_WIDTH = 0.04
 VIRTUAL_BAND_HALF_WIDTH = 0.5 * VIRTUAL_BAND_WIDTH
 VIRTUAL_BAND_NEAR_EDGE_OFFSET = 0.005
@@ -137,6 +138,7 @@ DEFAULT_STEP_DISTANCE = 0.1
 CROSSING_STEP_DISTANCE = 0.25
 PHASE_2_POST_CROSSING_STEP_DISTANCE = 0.02
 PHASE_3_POST_CROSSING_STEP_DISTANCE = 0.02
+PHASE_4_POST_CROSSING_STEP_DISTANCE = 0.02
 NORMAL_STEP_DEFAULT_PROBABILITY = 0.30
 RANDOM_STEP_DISTANCE_RANGE = (0.02, 0.12)
 CROSSING_TOUCHDOWN_INDEX_RANGE = (3, 10)
@@ -236,6 +238,7 @@ def _crossing_state_update_params() -> dict:
         "physical_bar_name": PHYSICAL_WOODEN_BAR_NAME,
         "bar_height": WOODEN_BAR_HEIGHT,
         "physical_bar_half_width": PHYSICAL_BAR_HALF_WIDTH,
+        "physical_bar_half_length": PHYSICAL_BAR_HALF_LENGTH,
         "virtual_band_half_width": VIRTUAL_BAND_HALF_WIDTH,
         "virtual_band_near_edge_offset": VIRTUAL_BAND_NEAR_EDGE_OFFSET,
         "physical_bar_center_distance": PHYSICAL_BAR_CENTER_DISTANCE,
@@ -250,6 +253,9 @@ def _crossing_state_update_params() -> dict:
         ),
         "phase_3_post_crossing_step_distance": (
             PHASE_3_POST_CROSSING_STEP_DISTANCE
+        ),
+        "phase_4_post_crossing_step_distance": (
+            PHASE_4_POST_CROSSING_STEP_DISTANCE
         ),
         "normal_step_default_probability": (
             NORMAL_STEP_DEFAULT_PROBABILITY
@@ -522,6 +528,16 @@ class EventCfg:
     This first version is conservative for debugging.
     """
 
+    configure_collisionless_bar_collisions = EventTerm(
+        func=mdp.configure_collisionless_bar_collisions,
+        mode="startup",
+        params={
+            "training_phase": WOODEN_BAR_TRAINING_PHASE,
+            "robot_name": "robot",
+            "physical_bar_name": PHYSICAL_WOODEN_BAR_NAME,
+        },
+    )
+
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
@@ -760,7 +776,7 @@ class RewardsCfg:
 
     # Calculated once at a valid swing-foot touchdown. The function returns
     # zero while crossing_command is active, although the term remains present
-    # and checkpoint-compatible in all three phases.
+    # and checkpoint-compatible in all four phases.
     step_distance_tracking_reward = RewTerm(
         func=mdp.step_distance_tracking_reward,
         weight=STEP_DISTANCE_TRACKING_REWARD_WEIGHT,
@@ -775,6 +791,15 @@ class RewardsCfg:
             func=mdp.physical_bar_crossing_completion_reward,
             weight=PHYSICAL_BAR_CROSSING_COMPLETION_REWARD_WEIGHT,
             params=_crossing_state_update_params(),
+        )
+        if WOODEN_BAR_TRAINING_PHASE in (3, 4)
+        else None
+    )
+
+    collisionless_bar_contact_penalty = (
+        RewTerm(
+            func=mdp.collisionless_bar_contact_penalty,
+            weight=-100.0,
         )
         if WOODEN_BAR_TRAINING_PHASE == 3
         else None
@@ -792,7 +817,7 @@ class RewardsCfg:
             "term_keys": ["bad_orientation", "low_base_height"]
             # + (
             #     ["wooden_bar_moved"]
-            #     if WOODEN_BAR_TRAINING_PHASE == 3
+            #     if WOODEN_BAR_TRAINING_PHASE == 4
             #     else []
             # ),
         },
@@ -805,7 +830,7 @@ class RewardsCfg:
             weight=-50.0,
             params={"term_keys": "wooden_bar_moved"},
         )
-        if WOODEN_BAR_TRAINING_PHASE == 3
+        if WOODEN_BAR_TRAINING_PHASE == 4
         else None
     )
 
@@ -1014,7 +1039,7 @@ class TerminationsCfg:
                 **_crossing_state_update_params(),
             },
         )
-        if WOODEN_BAR_TRAINING_PHASE == 3
+        if WOODEN_BAR_TRAINING_PHASE == 4
         else None
     )
 
@@ -1170,3 +1195,4 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
         # Camera position and target relative to the robot root.
         self.viewer.eye = (2.0, 2.0, 1.2)
         self.viewer.lookat = (0.0, 0.0, 0.0)
+
