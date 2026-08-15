@@ -535,7 +535,6 @@ class EventCfg:
             "training_phase": WOODEN_BAR_TRAINING_PHASE,
             "robot_name": "robot",
             "physical_bar_name": PHYSICAL_WOODEN_BAR_NAME,
-            "foot_body_names": FOOT_BODY_NAMES,
         },
     )
 
