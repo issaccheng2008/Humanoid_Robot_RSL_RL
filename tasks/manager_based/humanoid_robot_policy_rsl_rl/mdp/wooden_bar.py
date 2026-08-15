@@ -340,9 +340,10 @@ def configure_collisionless_bar_collisions(
     env_ids: Sequence[int] | None,
     training_phase: int,
     robot_name: str,
-    physical_bar_name: str,
+    collisionless_bar_name: str,
+    rigid_body_names: Sequence[str],
 ):
-    """Filter only robot/bar pairs in Phase 3; ground collision remains on."""
+    """Filter the Phase 3 bar against four named robot rigid bodies once."""
     del env_ids
     if training_phase != COLLISIONLESS_BAR_PHASE:
         return
@@ -351,7 +352,9 @@ def configure_collisionless_bar_collisions(
 
     stage = env.scene.stage
     robot_leaf = env.scene[robot_name].cfg.prim_path.rsplit("/", 1)[-1]
-    bar_leaf = env.scene[physical_bar_name].cfg.prim_path.rsplit("/", 1)[-1]
+    bar_leaf = env.scene[collisionless_bar_name].cfg.prim_path.rsplit(
+        "/", 1
+    )[-1]
     for env_prim_path in env.scene.env_prim_paths:
         robot_prim = stage.GetPrimAtPath(f"{env_prim_path}/{robot_leaf}")
         bar_prim = stage.GetPrimAtPath(f"{env_prim_path}/{bar_leaf}")
@@ -361,23 +364,30 @@ def configure_collisionless_bar_collisions(
                 "for Phase 3 collision filtering."
             )
 
-        rigid_body_paths = [
-            prim.GetPath()
-            for prim in Usd.PrimRange(robot_prim)
-            if prim.HasAPI(UsdPhysics.RigidBodyAPI)
-        ]
-        if not rigid_body_paths:
-            raise RuntimeError(
-                f"No robot rigid bodies found below {robot_prim.GetPath()}."
-            )
+        rigid_body_paths = []
+        for rigid_body_name in rigid_body_names:
+            matches = [
+                prim
+                for prim in Usd.PrimRange(robot_prim)
+                if prim.GetName() == rigid_body_name
+                and prim.HasAPI(UsdPhysics.RigidBodyAPI)
+            ]
+            if len(matches) != 1:
+                raise RuntimeError(
+                    "Expected exactly one robot rigid-body prim named "
+                    f"{rigid_body_name!r} below {robot_prim.GetPath()}, "
+                    f"but found {len(matches)}."
+                )
+            rigid_body_paths.append(matches[0].GetPath())
+
         filtered_pairs = UsdPhysics.FilteredPairsAPI.Apply(bar_prim)
         filtered_pairs.CreateFilteredPairsRel().SetTargets(rigid_body_paths)
 
 
-def _hide_physical_bar(
+def _hide_bar(
     env: ManagerBasedRLEnv,
     env_ids: torch.Tensor,
-    physical_bar_name: str,
+    bar_name: str,
     hidden_depth: float,
 ) -> torch.Tensor:
     pose = torch.zeros(len(env_ids), 7, device=env.device)
@@ -385,7 +395,7 @@ def _hide_physical_bar(
     pose[:, 2] -= hidden_depth
     pose[:, 3] = 1.0
     velocity = torch.zeros(len(env_ids), 6, device=env.device)
-    bar = env.scene[physical_bar_name]
+    bar = env.scene[bar_name]
     bar.write_root_pose_to_sim(pose, env_ids=env_ids)
     bar.write_root_velocity_to_sim(velocity, env_ids=env_ids)
     return pose
@@ -394,13 +404,14 @@ def _hide_physical_bar(
 def reset_crossing_state(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int] | None,
+    collisionless_bar_name: str,
     physical_bar_name: str,
     hidden_depth: float,
     training_phase: int,
     default_step_distance: float,
     trigger_touchdown_range: tuple[int, int],
 ):
-    """Reset only the selected environments and hide their physical bars."""
+    """Reset selected environments and hide both wooden-bar variants."""
     if training_phase not in (
         NORMAL_WALKING_PHASE,
         VIRTUAL_BAND_PHASE,
@@ -424,7 +435,10 @@ def reset_crossing_state(
     if len(env_ids) == 0:
         return
     state = _get_state(env)
-    hidden_pose = _hide_physical_bar(
+    hidden_pose = _hide_bar(
+        env, env_ids, collisionless_bar_name, hidden_depth
+    )
+    _hide_bar(
         env, env_ids, physical_bar_name, hidden_depth
     )
 
@@ -482,6 +496,7 @@ def _spawn_crossing(
     sole_front_x: torch.Tensor,
     forward_w: torch.Tensor,
     robot_yaw_quat_w: torch.Tensor,
+    collisionless_bar_name: str,
     physical_bar_name: str,
     bar_height: float,
     physical_bar_half_width: float,
@@ -523,18 +538,24 @@ def _spawn_crossing(
     )
     pose[:, 3:7] = robot_yaw_quat_w[env_ids]
 
-    if torch.any(bar_phase):
-        bar_env_ids = env_ids[bar_phase]
-        velocity = torch.zeros(
-            len(bar_env_ids), 6, device=env.device
-        )
-        bar = env.scene[physical_bar_name]
-        bar.write_root_pose_to_sim(
-            pose[bar_phase], env_ids=bar_env_ids
-        )
-        bar.write_root_velocity_to_sim(
-            velocity, env_ids=bar_env_ids
-        )
+    collisionless = phase == COLLISIONLESS_BAR_PHASE
+    physical = phase == PHYSICAL_BAR_PHASE
+    for phase_mask, bar_name in (
+        (collisionless, collisionless_bar_name),
+        (physical, physical_bar_name),
+    ):
+        if torch.any(phase_mask):
+            bar_env_ids = env_ids[phase_mask]
+            velocity = torch.zeros(
+                len(bar_env_ids), 6, device=env.device
+            )
+            bar = env.scene[bar_name]
+            bar.write_root_pose_to_sim(
+                pose[phase_mask], env_ids=bar_env_ids
+            )
+            bar.write_root_velocity_to_sim(
+                velocity, env_ids=bar_env_ids
+            )
 
     state.spawned[env_ids] = True
     state.crossed[env_ids] = False
@@ -587,6 +608,7 @@ def _update_crossing_state_once(
     sensor_cfg: SceneEntityCfg,
     sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
     training_phase: int,
+    collisionless_bar_name: str,
     physical_bar_name: str,
     bar_height: float,
     physical_bar_half_width: float,
@@ -689,7 +711,9 @@ def _update_crossing_state_once(
         & (state.training_phase == COLLISIONLESS_BAR_PHASE)
     )
     if torch.any(collisionless_active):
-        bar_pose_w = env.scene[physical_bar_name].data.root_state_w[:, :7]
+        bar_pose_w = env.scene[
+            collisionless_bar_name
+        ].data.root_state_w[:, :7]
         foot_overlaps_bar = _sole_overlaps_bar(
             sole_vertices_w,
             bar_pose_w,
@@ -860,6 +884,7 @@ def _update_crossing_state_once(
             sole_front_x,
             forward_w,
             robot_yaw_quat_w,
+            collisionless_bar_name,
             physical_bar_name,
             bar_height,
             physical_bar_half_width,
@@ -904,6 +929,7 @@ def update_crossing_state(
     sensor_cfg: SceneEntityCfg,
     sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
     training_phase: int,
+    collisionless_bar_name: str,
     physical_bar_name: str,
     bar_height: float,
     physical_bar_half_width: float,
@@ -931,6 +957,7 @@ def update_crossing_state(
         sensor_cfg,
         sole_vertices,
         training_phase,
+        collisionless_bar_name,
         physical_bar_name,
         bar_height,
         physical_bar_half_width,
@@ -1198,6 +1225,7 @@ def physical_bar_crossing_completion_reward(
     sensor_cfg: SceneEntityCfg,
     sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
     training_phase: int,
+    collisionless_bar_name: str,
     physical_bar_name: str,
     bar_height: float,
     physical_bar_half_width: float,
@@ -1224,6 +1252,7 @@ def physical_bar_crossing_completion_reward(
         sensor_cfg,
         sole_vertices,
         training_phase,
+        collisionless_bar_name,
         physical_bar_name,
         bar_height,
         physical_bar_half_width,
@@ -1270,6 +1299,7 @@ def step_distance_tracking_reward(
     sensor_cfg: SceneEntityCfg,
     sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
     training_phase: int,
+    collisionless_bar_name: str,
     physical_bar_name: str,
     bar_height: float,
     physical_bar_half_width: float,
@@ -1299,6 +1329,7 @@ def step_distance_tracking_reward(
         sensor_cfg,
         sole_vertices,
         training_phase,
+        collisionless_bar_name,
         physical_bar_name,
         bar_height,
         physical_bar_half_width,
@@ -1701,6 +1732,7 @@ def wooden_bar_moved(
     sensor_cfg: SceneEntityCfg,
     sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
     training_phase: int,
+    collisionless_bar_name: str,
     physical_bar_name: str,
     bar_height: float,
     physical_bar_half_width: float,
@@ -1728,6 +1760,7 @@ def wooden_bar_moved(
         sensor_cfg,
         sole_vertices,
         training_phase,
+        collisionless_bar_name,
         physical_bar_name,
         bar_height,
         physical_bar_half_width,
