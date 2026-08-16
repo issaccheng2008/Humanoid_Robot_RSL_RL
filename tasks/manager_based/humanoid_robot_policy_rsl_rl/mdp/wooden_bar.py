@@ -121,6 +121,7 @@ class _CrossingState:
         self.phase_5_stop_time_s = torch.zeros(
             env.num_envs, device=env.device
         )
+        self.phase_5_stop_step_reward_paid = bools()
 
         self.touchdown_count = longs()
         self.trigger_touchdown_index = longs()
@@ -499,6 +500,7 @@ def reset_crossing_state(
     state.phase_5_no_bar_episode[env_ids] = no_bar_episode
     state.phase_5_stop_command[env_ids] = stop_command
     state.phase_5_stop_time_s[env_ids] = stop_time_s
+    state.phase_5_stop_step_reward_paid[env_ids] = False
     state.step_distance[env_ids] = default_step_distance
     state.crossing_command[env_ids] = False
     state.following_step_command_stage[env_ids] = 0
@@ -1444,17 +1446,25 @@ def step_distance_tracking_reward(
         state.touchdown_actual_step - state.touchdown_target_step
     ) / gaussian_std
     scores = torch.exp(-0.5 * torch.square(error))
+    stop_active = (
+        state.phase_5_no_bar_episode
+        & state.phase_5_stop_command
+        & (_episode_time_s(env) >= state.phase_5_stop_time_s)
+    )
     eligible = (
         state.touchdown_reward_eligible
         & ~state.crossing_command.unsqueeze(1)
         & (
             state.step_distance_reward_paid_step != _control_step(env)
         ).unsqueeze(1)
+        & (
+            ~stop_active | ~state.phase_5_stop_step_reward_paid
+        ).unsqueeze(1)
     )
     reward = torch.sum(scores * eligible.to(scores.dtype), dim=1)
-    state.step_distance_reward_paid_step[torch.any(eligible, dim=1)] = (
-        _control_step(env)
-    )
+    rewarded_envs = torch.any(eligible, dim=1)
+    state.step_distance_reward_paid_step[rewarded_envs] = _control_step(env)
+    state.phase_5_stop_step_reward_paid |= stop_active & rewarded_envs
     return reward
 
 
