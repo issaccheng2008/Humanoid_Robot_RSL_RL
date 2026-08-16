@@ -147,6 +147,15 @@ CROSSING_STEP_DISTANCE = 0.25
 PHASE_2_POST_CROSSING_STEP_DISTANCE = 0.02
 PHASE_3_POST_CROSSING_STEP_DISTANCE = 0.05
 PHASE_4_POST_CROSSING_STEP_DISTANCE = 0.05
+
+# Phase 5 mixes Phase 3 obstacle episodes with command-diversity episodes.
+PHASE_5_BAR_EPISODE_PROBABILITY = 0.50
+PHASE_5_NO_BAR_STOP_PROBABILITY = 0.20
+PHASE_5_STOP_TIME_RANGE_S = (0.0, 5.0)
+PHASE_5_INITIAL_ANG_VEL_Z_RANGE = (-0.5, 0.5)
+PHASE_5_FINAL_ANG_VEL_Z_RANGE = (-1.5, 1.5)
+PHASE_5_ANG_VEL_Z_CURRICULUM_ITERATIONS = 2000
+
 NORMAL_STEP_DEFAULT_PROBABILITY = 0.30
 RANDOM_STEP_DISTANCE_RANGE = (0.02, 0.12)
 CROSSING_TOUCHDOWN_INDEX_RANGE = (3, 10)
@@ -315,7 +324,7 @@ class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
 
     # Pre-startup USD collision filtering requires independently authored
     # physics schemas rather than replicated physics prims.
-    replicate_physics: bool = WOODEN_BAR_TRAINING_PHASE != 3
+    replicate_physics: bool = WOODEN_BAR_TRAINING_PHASE not in (3, 5)
 
     # Randomly rough ground used to improve locomotion robustness.
     terrain = TerrainImporterCfg(
@@ -425,9 +434,14 @@ class CommandsCfg:
         virtual_band_height=FOOT_HEIGHT_SATURATION,
 
         debug_vis=True,
+        phase_5_enabled=WOODEN_BAR_TRAINING_PHASE == 5,
         ranges=mdp.ObstacleAwareVelocityCommandCfg.Ranges(
             lin_vel_x=(0.4, 0.4),
-            ang_vel_z=(0.0, 0.0),
+            ang_vel_z=(
+                PHASE_5_INITIAL_ANG_VEL_Z_RANGE
+                if WOODEN_BAR_TRAINING_PHASE == 5
+                else (0.0, 0.0)
+            ),
             heading=(-math.pi, math.pi),
         ),
     )
@@ -562,7 +576,7 @@ class EventCfg:
                 "rigid_body_names": COLLISIONLESS_BAR_FILTER_BODY_NAMES,
             },
         )
-        if WOODEN_BAR_TRAINING_PHASE == 3
+        if WOODEN_BAR_TRAINING_PHASE in (3, 5)
         else None
     )
 
@@ -606,6 +620,13 @@ class EventCfg:
             "training_phase": WOODEN_BAR_TRAINING_PHASE,
             "default_step_distance": DEFAULT_STEP_DISTANCE,
             "trigger_touchdown_range": CROSSING_TOUCHDOWN_INDEX_RANGE,
+            "phase_5_bar_episode_probability": (
+                PHASE_5_BAR_EPISODE_PROBABILITY
+            ),
+            "phase_5_no_bar_stop_probability": (
+                PHASE_5_NO_BAR_STOP_PROBABILITY
+            ),
+            "phase_5_stop_time_range_s": PHASE_5_STOP_TIME_RANGE_S,
         },
     )
 
@@ -821,7 +842,7 @@ class RewardsCfg:
             weight=PHYSICAL_BAR_CROSSING_COMPLETION_REWARD_WEIGHT,
             params=_crossing_state_update_params(),
         )
-        if WOODEN_BAR_TRAINING_PHASE in (3, 4)
+        if WOODEN_BAR_TRAINING_PHASE in (3, 4, 5)
         else None
     )
 
@@ -830,7 +851,7 @@ class RewardsCfg:
             func=mdp.collisionless_bar_contact_penalty,
             weight=-100.0,
         )
-        if WOODEN_BAR_TRAINING_PHASE == 3
+        if WOODEN_BAR_TRAINING_PHASE in (3, 5)
         else None
     )
 
@@ -1098,6 +1119,24 @@ class CurriculumCfg:
             "start_step": 0,
             "end_step": step_reward_std_curriculum_end_step*PPO_STEPS_PER_ITERATION,
         },
+    )
+
+    phase_5_ang_vel_z = (
+        CurrTerm(
+            func=mdp.phase_5_ang_vel_z_curriculum,
+            params={
+                "command_name": "base_velocity",
+                "initial_range": PHASE_5_INITIAL_ANG_VEL_Z_RANGE,
+                "final_range": PHASE_5_FINAL_ANG_VEL_Z_RANGE,
+                "start_step": 0,
+                "end_step": (
+                    PHASE_5_ANG_VEL_Z_CURRICULUM_ITERATIONS
+                    * PPO_STEPS_PER_ITERATION
+                ),
+            },
+        )
+        if WOODEN_BAR_TRAINING_PHASE == 5
+        else None
     )
 
     wooden_bar_reward_weights = (

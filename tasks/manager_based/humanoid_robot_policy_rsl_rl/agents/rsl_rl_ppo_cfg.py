@@ -35,6 +35,8 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         max_iterations = 10000
     if WOODEN_BAR_TRAINING_PHASE == 4:
         max_iterations = 10000
+    if WOODEN_BAR_TRAINING_PHASE == 5:
+        max_iterations = 10000
 
     save_interval = 50
     experiment_name = "humanoid_robot_rsl_rl_rough"
