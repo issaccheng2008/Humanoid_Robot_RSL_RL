@@ -1969,8 +1969,8 @@ def phase_5_ang_vel_z_curriculum(
         max((step - start_step) / (end_step - start_step), 0.0), 1.0
     )
     ang_vel_z_range = (
-        initial_range[0] + progress * (final_range[0] - initial_range[0]),
-        initial_range[1] + progress * (final_range[1] - initial_range[1]),
+        initial_range[0] * (final_range[0] / initial_range[0]) ** progress,
+        initial_range[1] * (final_range[1] / initial_range[1]) ** progress,
     )
     command_term = env.command_manager.get_term(command_name)
     command_term.cfg.ranges.ang_vel_z = ang_vel_z_range
