@@ -978,6 +978,11 @@ def _update_crossing_state_once(
         )
         state.following_step_command_stage[normal_env_ids] = 2
 
+    # Phase 5 no-bar episodes use one fixed target instead of the normal
+    # per-touchdown step-distance sampling.
+    phase_5_no_bar = update_envs & state.phase_5_no_bar_episode
+    state.step_distance[phase_5_no_bar] = default_step_distance
+
     state.last_control_update_step[update_envs] = step
     return state
 
