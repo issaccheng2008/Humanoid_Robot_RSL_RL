@@ -1099,6 +1099,7 @@ class ObstacleAwareVelocityCommand(UniformVelocityCommand):
             )
             self.is_standing_env[stop_active] = True
             self.vel_command_b[stop_active] = 0.0
+            state.step_distance[stop_active] = 0.0
 
         active = state.crossing_command
         self.is_standing_env[active] = False
