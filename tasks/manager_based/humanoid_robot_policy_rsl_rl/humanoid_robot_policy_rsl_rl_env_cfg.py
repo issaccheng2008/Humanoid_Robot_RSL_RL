@@ -150,7 +150,7 @@ PHASE_4_POST_CROSSING_STEP_DISTANCE = 0.05
 
 # Phase 5 mixes Phase 3 obstacle episodes with command-diversity episodes.
 PHASE_5_BAR_EPISODE_PROBABILITY = 0.50
-PHASE_5_NO_BAR_STOP_PROBABILITY = 0.30
+PHASE_5_NO_BAR_STOP_PROBABILITY = 0.10
 PHASE_5_STOP_TIME_RANGE_S = (0.0, 5.0)
 PHASE_5_INITIAL_ANG_VEL_Z_RANGE = (-0.5, 0.5)
 PHASE_5_FINAL_ANG_VEL_Z_RANGE = (-1.5, 1.5)
@@ -734,7 +734,7 @@ class RewardsCfg:
     # with forward locomotion.
     track_ang_vel_z_exp = RewTerm(
         func=mdp.track_ang_vel_z_world_exp,
-        weight=3,
+        weight=4,
         params={
             "command_name": "base_velocity",
             "std": 0.3,
@@ -769,7 +769,7 @@ class RewardsCfg:
     # with a custom ground-filtered reward.
     feet_slide = RewTerm(
         func=mdp.feet_slide,
-        weight=-0.35,
+        weight=-3,
         params={
             "sensor_cfg": SceneEntityCfg(
                 "contact_forces",
