@@ -126,6 +126,9 @@ class _CrossingState:
         self.touchdown_count = longs()
         self.trigger_touchdown_index = longs()
         self.swing_foot_index = longs(-1)
+        self.step_distance_reward_airborne_seen = torch.zeros(
+            (env.num_envs, 2), dtype=torch.bool, device=env.device
+        )
         self.touchdown_event = torch.zeros(
             (env.num_envs, 2), dtype=torch.bool, device=env.device
         )
@@ -517,6 +520,7 @@ def reset_crossing_state(
         device=env.device,
     )
     state.swing_foot_index[env_ids] = -1
+    state.step_distance_reward_airborne_seen[env_ids] = False
     state.touchdown_event[env_ids] = False
     state.touchdown_actual_step[env_ids] = 0.0
     state.touchdown_target_step[env_ids] = default_step_distance
@@ -682,6 +686,7 @@ def _update_crossing_state_once(
     phase_4_post_crossing_step_distance: float,
     normal_step_default_probability: float,
     random_step_distance_range: tuple[float, float],
+    minimum_air_time_s: float = 0.04,
 ) -> _CrossingState:
     """Update touchdown, command, spawn, and completion state exactly once."""
     if training_phase not in (
@@ -694,6 +699,8 @@ def _update_crossing_state_once(
         raise ValueError("training_phase must be 1, 2, 3, 4, or 5.")
     if not 0.0 <= normal_step_default_probability <= 1.0:
         raise ValueError("normal_step_default_probability must be in [0, 1].")
+    if minimum_air_time_s < 0.0:
+        raise ValueError("minimum_air_time_s must be non-negative.")
     if min(
         default_step_distance,
         crossing_step_distance,
@@ -765,6 +772,43 @@ def _update_crossing_state_once(
             "feet_cfg and sensor_cfg must resolve the same two ordered feet."
         )
 
+    # Restore the old first-contact gate only for the step-distance reward.
+    # Obstacle spawning, touchdown_count, and crossing logic continue to use
+    # the independent swing-cycle detector below.
+    first_contact = contact_sensor.compute_first_contact(env.step_dt)[
+        :, sensor_cfg.body_ids
+    ].bool()
+    last_air_time = contact_sensor.data.last_air_time[:, sensor_cfg.body_ids]
+    other_in_contact = torch.flip(in_contact, dims=(1,))
+    other_first_contact = torch.flip(first_contact, dims=(1,))
+    valid_reward_touchdown = (
+        update_envs.unsqueeze(1)
+        & first_contact
+        & state.step_distance_reward_airborne_seen
+        & (last_air_time >= minimum_air_time_s)
+        & other_in_contact
+        & ~other_first_contact
+    )
+    crossing_before_update = state.crossing_command.clone()
+
+    state.touchdown_reward_eligible[update_envs] = False
+    state.touchdown_actual_step = torch.where(
+        valid_reward_touchdown, actual_step, state.touchdown_actual_step
+    )
+    current_targets = state.step_distance.unsqueeze(1).expand(-1, 2)
+    state.touchdown_target_step = torch.where(
+        valid_reward_touchdown,
+        current_targets,
+        state.touchdown_target_step,
+    )
+    state.touchdown_reward_eligible |= (
+        valid_reward_touchdown & ~crossing_before_update.unsqueeze(1)
+    )
+    state.step_distance_reward_airborne_seen[update_envs] |= (
+        ~in_contact[update_envs]
+    )
+    state.step_distance_reward_airborne_seen[valid_reward_touchdown] = False
+
     collisionless_active = (
         update_envs
         & state.spawned
@@ -797,7 +841,6 @@ def _update_crossing_state_once(
         )
     )
     state.swing_foot_index[update_envs] = next_swing_foot_index[update_envs]
-    crossing_before_update = state.crossing_command.clone()
 
     foot_indices = torch.arange(2, device=env.device).unsqueeze(0)
     crossing_foot_touchdown = torch.any(
@@ -812,18 +855,7 @@ def _update_crossing_state_once(
     )
 
     state.touchdown_event[update_envs] = False
-    state.touchdown_reward_eligible[update_envs] = False
     state.touchdown_event |= touchdown_event
-    state.touchdown_actual_step = torch.where(
-        touchdown_event, actual_step, state.touchdown_actual_step
-    )
-    current_targets = state.step_distance.unsqueeze(1).expand(-1, 2)
-    state.touchdown_target_step = torch.where(
-        touchdown_event, current_targets, state.touchdown_target_step
-    )
-    state.touchdown_reward_eligible |= (
-        touchdown_event & ~crossing_before_update.unsqueeze(1)
-    )
     state.touchdown_count += torch.sum(touchdown_event, dim=1).long()
 
     # Give the post-crossing distance to exactly one step: the cached
@@ -1016,8 +1048,10 @@ def update_crossing_state(
     minimum_air_time_s: float | None = None,
 ):
     """Interval-event wrapper for the shared once-per-step state update."""
-    # Kept as an ignored keyword so previously exported YAML configs still load.
-    del env_ids, minimum_air_time_s
+    del env_ids
+    reward_minimum_air_time_s = (
+        0.04 if minimum_air_time_s is None else minimum_air_time_s
+    )
     _update_crossing_state_once(
         env,
         feet_cfg,
@@ -1041,6 +1075,7 @@ def update_crossing_state(
         phase_4_post_crossing_step_distance,
         normal_step_default_probability,
         random_step_distance_range,
+        reward_minimum_air_time_s,
     )
 
 
@@ -1413,9 +1448,10 @@ def step_distance_tracking_reward(
     random_step_distance_range: tuple[float, float],
     minimum_air_time_s: float | None = None,
 ) -> torch.Tensor:
-    """Score a completed swing cycle using its cached signed step distance."""
-    # Kept as an ignored keyword so previously exported YAML configs still load.
-    del minimum_air_time_s
+    """Score an old-style valid touchdown using its cached step distance."""
+    reward_minimum_air_time_s = (
+        0.04 if minimum_air_time_s is None else minimum_air_time_s
+    )
     if gaussian_std <= 0.0:
         raise ValueError("gaussian_std must be positive.")
     state = _update_crossing_state_once(
@@ -1441,6 +1477,7 @@ def step_distance_tracking_reward(
         phase_4_post_crossing_step_distance,
         normal_step_default_probability,
         random_step_distance_range,
+        reward_minimum_air_time_s,
     )
     error = (
         state.touchdown_actual_step - state.touchdown_target_step
