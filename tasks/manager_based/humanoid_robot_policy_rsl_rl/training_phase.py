@@ -12,7 +12,7 @@
 # 5: Phase 3 obstacle episodes mixed with turning/no-bar/stop episodes
 # Resume Phase 5 from a Phase 3 checkpoint.
 # Set this manually before starting the corresponding independently resumed run.
-WOODEN_BAR_TRAINING_PHASE = 5
+WOODEN_BAR_TRAINING_PHASE = 1
 
 if WOODEN_BAR_TRAINING_PHASE not in (1, 2, 3, 4, 5):
     raise ValueError(
