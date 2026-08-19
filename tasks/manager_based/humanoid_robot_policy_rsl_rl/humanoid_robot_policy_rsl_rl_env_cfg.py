@@ -166,7 +166,7 @@ PHYSICAL_BAR_CROSSING_COMPLETION_REWARD_WEIGHT = 100.0
 EXPECTED_POLICY_OBS_DIM = 49
 CROSSING_STATE_UPDATE_INTERVAL_S = 0.02
 
-step_reward_std_curriculum_end_step=750
+step_reward_std_curriculum_end_step=1500
 
 STRIDE_BAR_REWARD_START_ITERATION = 2000
 REWARD_STEADY_ITERATION = 3000
@@ -734,7 +734,7 @@ class RewardsCfg:
     # with forward locomotion.
     track_ang_vel_z_exp = RewTerm(
         func=mdp.track_ang_vel_z_world_exp,
-        weight=4,
+        weight=3,
         params={
             "command_name": "base_velocity",
             "std": 0.3,
