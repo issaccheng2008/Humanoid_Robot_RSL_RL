@@ -16,6 +16,36 @@ from ..mdp.symmetry import compute_symmetric_states
 from ..training_phase import WOODEN_BAR_TRAINING_PHASE
 
 
+# Each entry is (phase-local PPO iteration, entropy_coef). Iteration 0 is
+# required. Add later changes in ascending order, for example:
+#
+#     2: ((0, 0.008), (1000, 0.001), (2500, 0.0005))
+#
+# A phase-local iteration counts completed PPO updates in that phase. The
+# counter is restored only when resuming a checkpoint from the same phase.
+ENTROPY_COEF_SCHEDULES: dict[int, tuple[tuple[int, float], ...]] = {
+    1: ((0, 0.008),),
+    2: ((0, 0.008),),
+    3: ((0, 0.008),),
+    4: ((0, 0.008),),
+    5: ((0, 0.008),),
+}
+ENTROPY_COEF_SCHEDULE = ENTROPY_COEF_SCHEDULES[
+    WOODEN_BAR_TRAINING_PHASE
+]
+
+
+@configclass
+class EntropyScheduledPpoAlgorithmCfg(RslRlPpoAlgorithmCfg):
+    """PPO configuration with a phase-local piecewise entropy schedule."""
+
+    class_name: str = (
+        f"{__package__}.entropy_schedule:EntropyScheduledPPO"
+    )
+    training_phase: int = WOODEN_BAR_TRAINING_PHASE
+    entropy_schedule: tuple[tuple[int, float], ...] = ENTROPY_COEF_SCHEDULE
+
+
 @configclass
 class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     """RSL-RL PPO configuration for the custom humanoid."""
@@ -54,11 +84,11 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         activation="elu",
     )
 
-    algorithm = RslRlPpoAlgorithmCfg(
+    algorithm = EntropyScheduledPpoAlgorithmCfg(
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
         clip_param=0.2,
-        entropy_coef=0.008,
+        entropy_coef=ENTROPY_COEF_SCHEDULE[0][1],
         num_learning_epochs=5,
         num_mini_batches=4,
         learning_rate=1.0e-3,
