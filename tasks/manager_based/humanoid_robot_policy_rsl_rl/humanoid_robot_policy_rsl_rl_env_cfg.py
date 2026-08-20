@@ -161,6 +161,11 @@ RANDOM_STEP_DISTANCE_RANGE = (0.02, 0.12)
 CROSSING_TOUCHDOWN_INDEX_RANGE = (3, 10)
 STEP_DISTANCE_GAUSSIAN_INITIAL_STD = 0.015
 STEP_DISTANCE_GAUSSIAN_FINAL_STD = 0.002
+STEP_DISTANCE_GAUSSIAN_START_STD = (
+    STEP_DISTANCE_GAUSSIAN_INITIAL_STD
+    if WOODEN_BAR_TRAINING_PHASE == 1
+    else STEP_DISTANCE_GAUSSIAN_FINAL_STD
+)
 STEP_DISTANCE_TRACKING_REWARD_WEIGHT = 50.0
 PHYSICAL_BAR_CROSSING_COMPLETION_REWARD_WEIGHT = 100.0
 EXPECTED_POLICY_OBS_DIM = 49
@@ -831,7 +836,7 @@ class RewardsCfg:
         func=mdp.step_distance_tracking_reward,
         weight=STEP_DISTANCE_TRACKING_REWARD_WEIGHT,
         params={
-            "gaussian_std": STEP_DISTANCE_GAUSSIAN_INITIAL_STD,
+            "gaussian_std": STEP_DISTANCE_GAUSSIAN_START_STD,
             **_crossing_state_update_params(),
         },
     )
@@ -1114,7 +1119,7 @@ class CurriculumCfg:
         func=mdp.step_distance_gaussian_curriculum,
         params={
             "reward_term_name": "step_distance_tracking_reward",
-            "initial_std": STEP_DISTANCE_GAUSSIAN_INITIAL_STD,
+            "initial_std": STEP_DISTANCE_GAUSSIAN_START_STD,
             "final_std": STEP_DISTANCE_GAUSSIAN_FINAL_STD,
             "start_step": 0,
             "end_step": step_reward_std_curriculum_end_step*PPO_STEPS_PER_ITERATION,
