@@ -737,7 +737,7 @@ class RewardsCfg:
     # with forward locomotion.
     track_ang_vel_z_exp = RewTerm(
         func=mdp.track_ang_vel_z_world_exp,
-        weight=4,
+        weight=3.0 if WOODEN_BAR_TRAINING_PHASE == 1 else 4.0,
         params={
             "command_name": "base_velocity",
             "std": 0.3,
