@@ -143,7 +143,7 @@ PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
 COLLISIONLESS_WOODEN_BAR_NAME = "collisionless_wooden_bar"
 
 DEFAULT_STEP_DISTANCE = 0.08
-CROSSING_STEP_DISTANCE = 0.25
+CROSSING_STEP_DISTANCE = 0.23
 PHASE_2_POST_CROSSING_STEP_DISTANCE = 0.02
 PHASE_3_POST_CROSSING_STEP_DISTANCE = 0.05
 PHASE_4_POST_CROSSING_STEP_DISTANCE = 0.05
@@ -173,8 +173,6 @@ CROSSING_STATE_UPDATE_INTERVAL_S = 0.02
 
 step_reward_std_curriculum_end_step=1500
 
-STRIDE_BAR_REWARD_START_ITERATION = 2000
-REWARD_STEADY_ITERATION = 3000
 PPO_STEPS_PER_ITERATION = 24
 # EL05 nominal torque, used only by the copied walking reward term.
 EL05_RATED_TORQUE = 4
@@ -739,7 +737,7 @@ class RewardsCfg:
     # with forward locomotion.
     track_ang_vel_z_exp = RewTerm(
         func=mdp.track_ang_vel_z_world_exp,
-        weight=3,
+        weight=4,
         params={
             "command_name": "base_velocity",
             "std": 0.3,
@@ -1155,15 +1153,15 @@ class CurriculumCfg:
                 },
                 "reward_weight_ranges": {
                     "stepping_wooden_bar_step_reward": (15.0, 15.0),
-                    "following_wooden_bar_step_reward": (20.0, 25.0),
+                    "following_wooden_bar_step_reward": (24.0, 15.0),
                     "feet_height_entering_band_reward": (400.0, 400.0),
                 },
                 "start_step": (
-                    STRIDE_BAR_REWARD_START_ITERATION
+                    0
                     * PPO_STEPS_PER_ITERATION
                 ),
                 "end_step": (
-                    REWARD_STEADY_ITERATION
+                    6000
                     * PPO_STEPS_PER_ITERATION
                 ),
             },

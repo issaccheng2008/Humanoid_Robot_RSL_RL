@@ -25,7 +25,7 @@ from ..training_phase import WOODEN_BAR_TRAINING_PHASE
 # counter is restored only when resuming a checkpoint from the same phase.
 ENTROPY_COEF_SCHEDULES: dict[int, tuple[tuple[int, float], ...]] = {
     1: ((0, 0.008),),
-    2: ((0, 0.008),),
+    2: ((0, 0.008),(7000, 0.002)),
     3: ((0, 0.008),),
     4: ((0, 0.008),),
     5: ((0, 0.008),),
