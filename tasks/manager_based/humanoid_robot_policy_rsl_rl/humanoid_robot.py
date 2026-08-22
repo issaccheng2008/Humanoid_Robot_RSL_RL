@@ -18,7 +18,7 @@ from isaaclab.assets.articulation import ArticulationCfg
 
 # TODO: Replace this with the USD generated from your URDF, not the URDF itself.
 # Example: "/home/tt/Humanoid_Robot_Policy/assets/humanoid.usd"
-HUMANOID_USD_PATH = f"/home/tt/Desktop/Humanoid_Robot/Humanoid_Robot/Humanoid_Robot.usd"
+HUMANOID_USD_PATH = f"/home/tt/Desktop/v3.1/urdf/v3.1/v3.1.usd"
 
 
 HUMANOID_ROBOT_CFG = ArticulationCfg(
