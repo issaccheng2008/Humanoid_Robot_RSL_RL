@@ -354,9 +354,9 @@ def configure_collisionless_bar_collisions(
     collisionless_bar_name: str,
     rigid_body_names: Sequence[str],
 ):
-    """Filter the collisionless bar for Phase 3 and Phase 5 once."""
+    """Filter the collisionless bar for Phase 3 once."""
     del env_ids
-    if training_phase not in (COLLISIONLESS_BAR_PHASE, MIXED_COMMAND_PHASE):
+    if training_phase != COLLISIONLESS_BAR_PHASE:
         return
 
     from pxr import Usd, UsdPhysics
@@ -485,7 +485,7 @@ def reset_crossing_state(
         )
         effective_phase = torch.where(
             bar_episode,
-            torch.full_like(env_ids, COLLISIONLESS_BAR_PHASE),
+            torch.full_like(env_ids, PHYSICAL_BAR_PHASE),
             torch.full_like(env_ids, NORMAL_WALKING_PHASE),
         )
         stop_time_s = torch.empty(
