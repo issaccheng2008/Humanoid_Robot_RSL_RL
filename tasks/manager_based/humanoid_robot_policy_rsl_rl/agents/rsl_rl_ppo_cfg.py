@@ -28,7 +28,7 @@ ENTROPY_COEF_SCHEDULES: dict[int, tuple[tuple[int, float], ...]] = {
     2: ((0, 0.008),),
     3: ((0, 0.008),),
     4: ((0, 0.002),),
-    5: ((0, 0.002),),
+    5: ((0, 0.002),(5000, 0.0005)),
 }
 ENTROPY_COEF_SCHEDULE = ENTROPY_COEF_SCHEDULES[
     WOODEN_BAR_TRAINING_PHASE
