@@ -148,7 +148,7 @@ PHASE_2_POST_CROSSING_STEP_DISTANCE = 0.02
 PHASE_3_POST_CROSSING_STEP_DISTANCE = 0.02
 PHASE_4_POST_CROSSING_STEP_DISTANCE = 0.02
 
-# Phase 5 mixes Phase 3 obstacle episodes with command-diversity episodes.
+# Phase 5 mixes Phase 4 obstacle episodes with command-diversity episodes.
 PHASE_5_BAR_EPISODE_PROBABILITY = 0.50
 PHASE_5_NO_BAR_STOP_PROBABILITY = 0.10
 PHASE_5_STOP_TIME_RANGE_S = (0.0, 5.0)
@@ -325,9 +325,9 @@ def _make_wooden_bar_cfg(prim_name: str, height: float) -> RigidObjectCfg:
 class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
     """Scene configuration for rough-terrain walking with forward and turning commands."""
 
-    # Pre-startup USD collision filtering requires independently authored
-    # physics schemas rather than replicated physics prims.
-    replicate_physics: bool = WOODEN_BAR_TRAINING_PHASE not in (3, 5)
+    # Phase 3's pre-startup USD collision filtering requires independently
+    # authored physics schemas rather than replicated physics prims.
+    replicate_physics: bool = WOODEN_BAR_TRAINING_PHASE != 3
 
     # Randomly rough ground used to improve locomotion robustness.
     terrain = TerrainImporterCfg(
@@ -390,7 +390,7 @@ class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
         WOODEN_BAR_HEIGHT,
     )
 
-    # The Phase 4 physical bar remains hidden in all other phases.
+    # The Phase 4 physical bar is also used by Phase 5 bar episodes.
     wooden_bar = _make_wooden_bar_cfg(
         "WoodenBar",
         WOODEN_BAR_HEIGHT,
@@ -579,7 +579,7 @@ class EventCfg:
                 "rigid_body_names": COLLISIONLESS_BAR_FILTER_BODY_NAMES,
             },
         )
-        if WOODEN_BAR_TRAINING_PHASE in (3, 5)
+        if WOODEN_BAR_TRAINING_PHASE == 3
         else None
     )
 
@@ -854,7 +854,7 @@ class RewardsCfg:
             func=mdp.collisionless_bar_contact_penalty,
             weight=-100.0,
         )
-        if WOODEN_BAR_TRAINING_PHASE in (3, 5)
+        if WOODEN_BAR_TRAINING_PHASE == 3
         else None
     )
 
@@ -883,7 +883,7 @@ class RewardsCfg:
             weight=-50.0,
             params={"term_keys": "wooden_bar_moved"},
         )
-        if WOODEN_BAR_TRAINING_PHASE == 4
+        if WOODEN_BAR_TRAINING_PHASE in (4, 5)
         else None
     )
 
@@ -1092,7 +1092,7 @@ class TerminationsCfg:
                 **_crossing_state_update_params(),
             },
         )
-        if WOODEN_BAR_TRAINING_PHASE == 4
+        if WOODEN_BAR_TRAINING_PHASE in (4, 5)
         else None
     )
 
