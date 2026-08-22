@@ -9,8 +9,8 @@
 # 2: virtual band
 # 3: robot-collisionless bar with geometric contact penalty
 # 4: physical movable bar
-# 5: Phase 3 obstacle episodes mixed with turning/no-bar/stop episodes
-# Resume Phase 5 from a Phase 3 checkpoint.
+# 5: Phase 4 obstacle episodes mixed with turning/no-bar/stop episodes
+# Resume Phase 5 from a Phase 4 checkpoint.
 # Set this manually before starting the corresponding independently resumed run.
 WOODEN_BAR_TRAINING_PHASE = 5
 
