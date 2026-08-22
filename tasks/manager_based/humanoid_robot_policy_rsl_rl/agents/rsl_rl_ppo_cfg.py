@@ -25,10 +25,10 @@ from ..training_phase import WOODEN_BAR_TRAINING_PHASE
 # counter is restored only when resuming a checkpoint from the same phase.
 ENTROPY_COEF_SCHEDULES: dict[int, tuple[tuple[int, float], ...]] = {
     1: ((0, 0.008),),
-    2: ((0, 0.008),(7000, 0.002)),
+    2: ((0, 0.008),),
     3: ((0, 0.008),),
-    4: ((0, 0.008),),
-    5: ((0, 0.008),),
+    4: ((0, 0.002),),
+    5: ((0, 0.002),),
 }
 ENTROPY_COEF_SCHEDULE = ENTROPY_COEF_SCHEDULES[
     WOODEN_BAR_TRAINING_PHASE
@@ -64,7 +64,7 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     if WOODEN_BAR_TRAINING_PHASE == 3:
         max_iterations = 10000
     if WOODEN_BAR_TRAINING_PHASE == 4:
-        max_iterations = 10000
+        max_iterations = 5000
     if WOODEN_BAR_TRAINING_PHASE == 5:
         max_iterations = 10000
 
