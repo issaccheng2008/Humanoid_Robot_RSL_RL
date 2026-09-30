@@ -30,6 +30,11 @@ one-second probability check leaves that command unchanged. Stops are sampled
 once per episode, so later command checks cannot restart a stopped robot.
 The Play task also uses the Phase 6 ranges, schedule, and 10-second duration.
 
+The inherited command timer uses finite bounds `(1.0e9, 1.0e9)` because Isaac
+Lab samples it with PyTorch's `uniform_()`. It cannot expire during a 10-second
+episode. The one-second command changes and seven-second stops use episode
+steps independently of this timer.
+
 ## Resume training
 
 Use your usual Isaac Lab RSL-RL training command and the same task

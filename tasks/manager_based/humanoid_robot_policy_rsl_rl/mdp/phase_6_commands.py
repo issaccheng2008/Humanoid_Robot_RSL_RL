@@ -51,8 +51,8 @@ class Phase6VelocityCommand(UniformVelocityCommand):
         return super().reset(self._env_ids(env_ids))
 
     def _update_metrics(self):
-        # The inherited metric divides by the command timer, which is infinite
-        # here. Normalize by episode length to retain useful tracking errors.
+        # The inherited metric divides by the very long command timer.
+        # Normalize by episode length to retain useful tracking errors.
         episode_steps = self._env.max_episode_length
         self.metrics["error_vel_xy"] += torch.norm(
             self.vel_command_b[:, :2] - self.robot.data.root_lin_vel_b[:, :2], dim=-1
@@ -109,7 +109,9 @@ class Phase6VelocityCommandCfg(UniformVelocityCommandCfg):
     """Phase 6 defaults; the base timer is unused between episode resets."""
 
     class_type: type = Phase6VelocityCommand
-    resampling_time_range: tuple[float, float] = (math.inf, math.inf)
+    # Isaac Lab samples this timer using Tensor.uniform_, which requires finite
+    # bounds. Keep it longer than an episode; episode steps drive actual updates.
+    resampling_time_range: tuple[float, float] = (1.0e9, 1.0e9)
     command_update_interval_s: float = 1.0
     yaw_change_probability: float = 0.20
     speed_change_probability: float = 0.10
