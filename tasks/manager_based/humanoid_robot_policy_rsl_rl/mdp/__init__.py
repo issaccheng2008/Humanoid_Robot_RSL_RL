@@ -21,3 +21,6 @@ from .keyboard_command import *  # noqa: F401, F403
 
 # Wooden-bar commands, observations, events, rewards, terminations, and curriculum.
 from .wooden_bar import *  # noqa: F401, F403
+
+# Obstacle-free commands for independently resumed Phase 6 training.
+from .phase_6_commands import *  # noqa: F401, F403
