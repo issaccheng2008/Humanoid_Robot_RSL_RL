@@ -29,6 +29,8 @@ ENTROPY_COEF_SCHEDULES: dict[int, tuple[tuple[int, float], ...]] = {
     3: ((0, 0.008),),
     4: ((0, 0.002),),
     5: ((0, 0.002),(5000, 0.0005)),
+    # Continue with the final Phase 5 exploration level when fine-tuning.
+    6: ((0, 0.0005),),
 }
 ENTROPY_COEF_SCHEDULE = ENTROPY_COEF_SCHEDULES[
     WOODEN_BAR_TRAINING_PHASE
@@ -66,6 +68,8 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     if WOODEN_BAR_TRAINING_PHASE == 4:
         max_iterations = 5000
     if WOODEN_BAR_TRAINING_PHASE == 5:
+        max_iterations = 10000
+    if WOODEN_BAR_TRAINING_PHASE == 6:
         max_iterations = 10000
 
     save_interval = 50

@@ -156,6 +156,12 @@ PHASE_5_INITIAL_ANG_VEL_Z_RANGE = (-0.5, 0.5)
 PHASE_5_FINAL_ANG_VEL_Z_RANGE = (-1.5, 1.5)
 PHASE_5_ANG_VEL_Z_CURRICULUM_ITERATIONS = 4000
 
+# Phase 6 resumes a completed Phase 5 policy for obstacle-free locomotion.
+PHASE_6_LIN_VEL_X_RANGE = (0.05, 0.4)
+PHASE_6_ANG_VEL_Z_RANGE = (-1.0, 1.0)
+PHASE_6_REFERENCE_SPEED = 0.4
+PHASE_6_EPISODE_LENGTH_S = 10.0
+
 NORMAL_STEP_DEFAULT_PROBABILITY = 0.30
 RANDOM_STEP_DISTANCE_RANGE = (0.02, 0.12)
 CROSSING_TOUCHDOWN_INDEX_RANGE = (3, 10)
@@ -1227,6 +1233,56 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
         # Update the simulated IMU at every physics step: 0.005 s = 200 Hz.
         self.scene.imu.update_period = self.sim.dt
 
+        if WOODEN_BAR_TRAINING_PHASE == 6:
+            self._configure_phase_6()
+
+    def _configure_phase_6(self):
+        """Isolate Phase 6 settings so phases 1–5 retain their existing behavior."""
+        self.episode_length_s = PHASE_6_EPISODE_LENGTH_S
+
+        # No hidden rigid bars, reset/spawn events, band markers, or bar state.
+        self.scene.collisionless_wooden_bar = None
+        self.scene.wooden_bar = None
+        self.events.configure_collisionless_bar_collisions = None
+        self.events.reset_crossing_state = None
+        self.events.update_crossing_state = None
+        self.terminations.wooden_bar_moved = None
+        for name in (
+            "step_distance_tracking_reward",
+            "physical_bar_crossing_completion_reward",
+            "collisionless_bar_contact_penalty",
+            "wooden_bar_moved_penalty",
+            "stepping_wooden_bar_step_reward",
+            "following_wooden_bar_step_reward",
+            "feet_height_entering_band_reward",
+        ):
+            setattr(self.rewards, name, None)
+        self.curriculum.step_distance_gaussian = None
+        self.curriculum.phase_5_ang_vel_z = None
+        self.curriculum.wooden_bar_reward_weights = None
+
+        self.commands.base_velocity = mdp.Phase6VelocityCommandCfg(
+            asset_name="robot",
+            rel_standing_envs=0.0,
+            rel_heading_envs=0.0,
+            heading_command=False,
+            debug_vis=True,
+            ranges=mdp.Phase6VelocityCommandCfg.Ranges(
+                lin_vel_x=PHASE_6_LIN_VEL_X_RANGE,
+                lin_vel_y=(0.0, 0.0),
+                ang_vel_z=PHASE_6_ANG_VEL_Z_RANGE,
+            ),
+        )
+
+        # Preserve all 49 observation values and their order for Phase 5 weights.
+        self.observations.policy.step_distance.func = mdp.phase_6_step_distance_command
+        self.observations.policy.step_distance.params = {
+            "command_name": "base_velocity",
+            "reference_step_distance": DEFAULT_STEP_DISTANCE,
+            "reference_speed": PHASE_6_REFERENCE_SPEED,
+        }
+        self.observations.policy.crossing_command.func = mdp.phase_6_crossing_command
+
 
 ##
 # Play / visualization configuration
@@ -1241,15 +1297,17 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
 
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
-        self.episode_length_s = 5.0
+        if WOODEN_BAR_TRAINING_PHASE != 6:
+            self.episode_length_s = 5.0
 
         # Keyboard controls the base_velocity command.
         # self.commands.base_velocity.class_type = (
         #     mdp.KeyboardVelocityCommand
         # )
 
-        self.commands.base_velocity.ranges.lin_vel_x = (0.4, 0.4)
-        self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
+        if WOODEN_BAR_TRAINING_PHASE != 6:
+            self.commands.base_velocity.ranges.lin_vel_x = (0.4, 0.4)
+            self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
         self.commands.base_velocity.ranges.heading = None
 
         self.commands.base_velocity.heading_command = False

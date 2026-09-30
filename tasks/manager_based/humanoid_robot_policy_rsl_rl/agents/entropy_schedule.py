@@ -87,9 +87,9 @@ class EntropyScheduledPPO(PPO):
         entropy_schedule: Sequence[Sequence[Real]],
         **kwargs,
     ):
-        if training_phase not in (1, 2, 3, 4, 5):
+        if training_phase not in (1, 2, 3, 4, 5, 6):
             raise ValueError(
-                "training_phase must be 1, 2, 3, 4, or 5, but received "
+                "training_phase must be 1, 2, 3, 4, 5, or 6, but received "
                 f"{training_phase}."
             )
         self.training_phase = int(training_phase)
