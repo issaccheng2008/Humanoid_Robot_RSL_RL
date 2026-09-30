@@ -22,6 +22,8 @@ except ImportError:
 
     class Tensor(np.ndarray):
         def uniform_(self, low, high):
+            if not math.isfinite(low) or not math.isfinite(high):
+                raise RuntimeError("uniform_ bounds must be finite")
             self[:] = low if low == high else rng.uniform(low, high, self.shape)
             return self
 
@@ -74,7 +76,8 @@ class UniformVelocityCommandStub:
         self.metrics = {name: torch.zeros(self.num_envs) for name in ("error_vel_xy", "error_vel_yaw")}
 
     def _resample(self, env_ids):
-        self.time_left[env_ids] = self.cfg.resampling_time_range[0]
+        # Match Isaac Lab's timer sampling, including uniform_ bound checks.
+        self.time_left[env_ids] = self.time_left[env_ids].uniform_(*self.cfg.resampling_time_range)
         self._resample_command(env_ids)
         self.command_counter[env_ids] += 1
 
@@ -144,7 +147,7 @@ def setUpModule():
 class Phase6CommandTests(unittest.TestCase):
     def make_command(self, size=8, **overrides):
         cfg = Node(
-            asset_name="robot", resampling_time_range=(math.inf, math.inf),
+            asset_name="robot", resampling_time_range=commands.Phase6VelocityCommandCfg.resampling_time_range,
             command_update_interval_s=1.0, yaw_change_probability=0.2,
             speed_change_probability=0.1, stop_probability=0.3, stop_time_s=7.0,
             ranges=Node(lin_vel_x=(0.05, 0.4), ang_vel_z=(-1.0, 1.0)),
@@ -174,6 +177,17 @@ class Phase6CommandTests(unittest.TestCase):
         arrays_equal(values[:, 1], 0)
         arrays_equal(commands.phase_6_crossing_command(env), np.zeros((20000, 1)))
         self.assertFalse(hasattr(env, "_wooden_bar_state"))
+
+    def test_reset_uses_finite_timer_beyond_episode_duration(self):
+        command, env = self.make_command()
+        low, high = command.cfg.resampling_time_range
+        self.assertTrue(math.isfinite(low) and math.isfinite(high))
+        self.assertGreater(low, env.max_episode_length * env.step_dt)
+        arrays_equal(command.time_left, low)
+
+    def test_base_timer_sampler_rejects_infinite_bounds(self):
+        with self.assertRaisesRegex(RuntimeError, "bounds|finite"):
+            self.make_command(resampling_time_range=(math.inf, math.inf))
 
     def test_one_second_boundary_and_no_double_update(self):
         command, env = self.make_command(stop_probability=0, yaw_change_probability=1, speed_change_probability=1)
