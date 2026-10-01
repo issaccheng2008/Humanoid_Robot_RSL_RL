@@ -1,0 +1,25 @@
+test_sole_extents_match_v32_collision_mesh_in_foot_frame (test_v32_sole_geometry.SoleGeometryTests.test_sole_extents_match_v32_collision_mesh_in_foot_frame) ... FAIL
+
+======================================================================
+FAIL: test_sole_extents_match_v32_collision_mesh_in_foot_frame (test_v32_sole_geometry.SoleGeometryTests.test_sole_extents_match_v32_collision_mesh_in_foot_frame)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "F:\RobotProject\cross_stick\tests\test_v32_sole_geometry.py", line 23, in test_sole_extents_match_v32_collision_mesh_in_foot_frame
+    np.testing.assert_allclose(configured.min(axis=0),bottom.min(axis=0),atol=1e-6,rtol=0)
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\numpy\testing\_private\utils.py", line 1718, in assert_allclose
+    assert_array_compare(compare, actual, desired, err_msg=str(err_msg),
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\numpy\testing\_private\utils.py", line 926, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=0, atol=1e-06
+
+Mismatched elements: 2 / 3 (66.7%)
+Max absolute difference among violations: 0.01099995
+Max relative difference among violations: 0.10670524
+ ACTUAL: array([-0.114087, -0.038163, -0.04379 ])
+ DESIRED: array([-0.103087, -0.038129, -0.04379 ])
+
+----------------------------------------------------------------------
+Ran 1 test in 2.832s
+
+FAILED (failures=1)

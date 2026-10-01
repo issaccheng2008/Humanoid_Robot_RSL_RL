@@ -84,6 +84,7 @@ class EntropyScheduledPPO(PPO):
         self,
         *args,
         training_phase: int,
+        training_stage: str = "legacy",
         entropy_schedule: Sequence[Sequence[Real]],
         **kwargs,
     ):
@@ -93,6 +94,7 @@ class EntropyScheduledPPO(PPO):
                 f"{training_phase}."
             )
         self.training_phase = int(training_phase)
+        self.training_stage = training_stage
         self.entropy_schedule = _validate_entropy_schedule(entropy_schedule)
         self.entropy_schedule_iteration = 0
 
@@ -118,6 +120,7 @@ class EntropyScheduledPPO(PPO):
         saved_dict = super().save()
         saved_dict[_CHECKPOINT_KEY] = {
             "training_phase": self.training_phase,
+            "training_stage": self.training_stage,
             "phase_iteration": self.entropy_schedule_iteration,
         }
         return saved_dict
@@ -129,7 +132,9 @@ class EntropyScheduledPPO(PPO):
 
         if (
             isinstance(schedule_state, dict)
+            and load_iteration
             and schedule_state.get("training_phase") == self.training_phase
+            and schedule_state.get("training_stage", "legacy") == self.training_stage
         ):
             phase_iteration = int(
                 schedule_state.get("phase_iteration", 0)

@@ -34,13 +34,16 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import ContactSensorCfg, ImuCfg
 import isaaclab.terrains as terrain_gen
 from isaaclab.terrains import TerrainGeneratorCfg, TerrainImporterCfg
-from isaaclab.utils import configclass
-from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
+from isaaclab.utils.configclass import configclass
+try:
+    from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
+except ImportError:
+    from isaaclab.utils.noise import UniformNoiseCfg as Unoise
 
 from . import mdp
 
 from .humanoid_robot import HUMANOID_ROBOT_CFG
-from .training_phase import WOODEN_BAR_TRAINING_PHASE
+from .training_phase import WOODEN_BAR_TRAINING_PHASE, STOP_BEFORE_CROSSING
 
 SMALL_RANDOM_ROUGH_TERRAIN_CFG = TerrainGeneratorCfg(
     # Size of each generated terrain patch.
@@ -149,10 +152,10 @@ PHASE_3_POST_CROSSING_STEP_DISTANCE = 0.02
 PHASE_4_POST_CROSSING_STEP_DISTANCE = 0.02
 
 # Phase 5 mixes Phase 4 obstacle episodes with command-diversity episodes.
-PHASE_5_BAR_EPISODE_PROBABILITY = 0.50
+PHASE_5_BAR_EPISODE_PROBABILITY = 0.80
 PHASE_5_NO_BAR_STOP_PROBABILITY = 0.10
 PHASE_5_STOP_TIME_RANGE_S = (0.0, 5.0)
-PHASE_5_INITIAL_ANG_VEL_Z_RANGE = (-0.5, 0.5)
+PHASE_5_INITIAL_ANG_VEL_Z_RANGE = (-1.5, 1.5)
 PHASE_5_FINAL_ANG_VEL_Z_RANGE = (-1.5, 1.5)
 PHASE_5_ANG_VEL_Z_CURRICULUM_ITERATIONS = 4000
 
@@ -178,51 +181,52 @@ PPO_STEPS_PER_ITERATION = 24
 EL05_RATED_TORQUE = 4
 
 # Convex perimeters of the physical lowest sole surfaces, measured from the
-# supplied ankle-roll STL meshes. Order matches FOOT_BODY_NAMES: left, right.
+# v3.2 USD collision meshes in each ankle-roll frame (front/rear trimmed).
+# Order matches FOOT_BODY_NAMES: left, right. See tests/test_v32_sole_geometry.py.
 FOOT_SOLE_VERTICES = (
     (
-        (-0.113911822, 0.028337635, -0.043790001),
-        (-0.114087179, -0.027662093, -0.043790001),
-        (-0.113337964, -0.031491291, -0.043790001),
-        (-0.111180402, -0.034742296, -0.043790001),
-        (-0.107942976, -0.036920171, -0.043790001),
-        (-0.104118548, -0.037693355, -0.043790001),
-        (0.045880727, -0.038163058, -0.043790001),
-        (0.049709924, -0.037413843, -0.043790001),
-        (0.052960925, -0.035256285, -0.043790001),
-        (0.055138804, -0.032018855, -0.043790001),
-        (0.055911988, -0.028194424, -0.043790001),
-        (0.056087345, 0.027805304, -0.043790001),
-        (0.055338129, 0.031634502, -0.043790001),
-        (0.053180564, 0.034885507, -0.043790001),
-        (0.049943142, 0.037063383, -0.043790001),
-        (0.046118710, 0.037836567, -0.043790001),
-        (-0.103880562, 0.038306270, -0.043790001),
-        (-0.107709758, 0.037557054, -0.043790001),
-        (-0.110960759, 0.035399497, -0.043790001),
-        (-0.113138638, 0.032162067, -0.043790001),
+        (-0.103087232, -0.027696537, -0.043790001),
+        (-0.102338016, -0.031525739, -0.043790001),
+        (-0.100180455, -0.034776740, -0.043790001),
+        (-0.096943028, -0.036954619, -0.043790001),
+        (-0.093118601, -0.037727799, -0.043790001),
+        (0.034880780, -0.038128614, -0.043790001),
+        (0.038709980, -0.037379399, -0.043790001),
+        (0.041960981, -0.035221837, -0.043790001),
+        (0.044138860, -0.031984411, -0.043790001),
+        (0.044912044, -0.028159978, -0.043790001),
+        (0.045087397, 0.027839748, -0.043790001),
+        (0.044338182, 0.031668946, -0.043790001),
+        (0.042180620, 0.034919951, -0.043790001),
+        (0.038943194, 0.037097827, -0.043790001),
+        (0.035118762, 0.037871011, -0.043790001),
+        (-0.092880614, 0.038271826, -0.043790001),
+        (-0.096709818, 0.037522607, -0.043790001),
+        (-0.099960819, 0.035365049, -0.043790001),
+        (-0.102138698, 0.032127623, -0.043790001),
+        (-0.102911875, 0.028303189, -0.043790001),
     ),
     (
-        (0.045730848, 0.038124181, -0.043790001),
-        (-0.104268424, 0.037654478, -0.043790001),
-        (-0.108092859, 0.036881294, -0.043790001),
-        (-0.111330278, 0.034703419, -0.043790001),
-        (-0.113487840, 0.031452414, -0.043790001),
-        (-0.114237063, 0.027623216, -0.043790001),
-        (-0.114061706, -0.028376512, -0.043790001),
-        (-0.113288522, -0.032200944, -0.043790001),
-        (-0.111110643, -0.035438374, -0.043790001),
-        (-0.107859641, -0.037595931, -0.043790001),
-        (-0.104030438, -0.038345147, -0.043790001),
-        (0.045968831, -0.037875444, -0.043790001),
-        (0.049793262, -0.037102260, -0.043790001),
-        (0.053030688, -0.034924384, -0.043790001),
-        (0.055188250, -0.031673379, -0.043790001),
-        (0.055937465, -0.027844181, -0.043790001),
-        (0.055762108, 0.028155547, -0.043790001),
-        (0.054988924, 0.031979978, -0.043790001),
-        (0.052811045, 0.035217408, -0.043790001),
-        (0.049560048, 0.037374966, -0.043790001),
+        (-0.103087112, 0.027658129, -0.043790001),
+        (-0.102911755, -0.028341597, -0.043790001),
+        (-0.102138571, -0.032166030, -0.043790001),
+        (-0.099960692, -0.035403457, -0.043790001),
+        (-0.096709691, -0.037561014, -0.043790001),
+        (-0.092880495, -0.038310234, -0.043790001),
+        (0.035118882, -0.037909418, -0.043790001),
+        (0.038943317, -0.037136234, -0.043790001),
+        (0.042180739, -0.034958359, -0.043790001),
+        (0.044338301, -0.031707354, -0.043790001),
+        (0.045087520, -0.027878156, -0.043790001),
+        (0.044912163, 0.028121570, -0.043790001),
+        (0.044138979, 0.031946003, -0.043790001),
+        (0.041961100, 0.035183430, -0.043790001),
+        (0.038710099, 0.037340991, -0.043790001),
+        (0.034880899, 0.038090207, -0.043790001),
+        (-0.093118481, 0.037689392, -0.043790001),
+        (-0.096942909, 0.036916208, -0.043790001),
+        (-0.100180335, 0.034738332, -0.043790001),
+        (-0.102337897, 0.031487327, -0.043790001),
     ),
 )
 
@@ -362,14 +366,10 @@ class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
         update_period=0.0,
         debug_vis=False,
 
-        # A stationary physical accelerometer normally reads approximately
-        # +9.81 m/s^2 upward. Keep this consistent with the real IMU pipeline.
-        gravity_bias=(0.0, 0.0, 9.81),
-
         # Replace these with the real IMU mounting pose relative to base_link.
         offset=ImuCfg.OffsetCfg(
             pos=(0.0, 0.0, 0.0),
-            rot=(1.0, 0.0, 0.0, 0.0),  # quaternion: w, x, y, z
+            rot=(0.0, 0.0, 0.0, 1.0),  # this Isaac Lab version uses x, y, z, w
         ),
     )
 
@@ -499,8 +499,8 @@ class ObservationsCfg:
         )
 
         projected_gravity = ObsTerm(
-            func=mdp.imu_projected_gravity,
-            params={"asset_cfg": SceneEntityCfg("imu")},
+            func=mdp.projected_gravity,
+            params={"asset_cfg": SceneEntityCfg("robot")},
             noise=Unoise(n_min=-0.05, n_max=0.05),
         )
 
@@ -723,13 +723,20 @@ class RewardsCfg:
 
     # Stronger and sharper than your current version.
     # Your old std=0.5 was too forgiving, so standing still could still get reward.
+    stop_stability = RewTerm(
+        func=mdp.stop_stability_reward, weight=2.0,
+        params={"sensor_cfg": _ordered_feet_sensor_cfg()},
+    )
+    # Isaac Lab multiplies rewards by dt: 25 * 0.02 gives a 0.5 one-off bonus.
+    stop_completion = RewTerm(func=mdp.stop_completion_reward, weight=25.0)
+
     track_lin_vel_xy_exp = RewTerm(
         func=mdp.track_lin_vel_xy_yaw_frame_quadratic_relative,
         weight=4.0,
         params={
             "command_name": "base_velocity",
             "moving_command_threshold": 0.05,
-            "standing_std": 0.20,
+            "standing_std": 0.05,
             "asset_cfg": SceneEntityCfg("robot"),
         },
     )
@@ -867,7 +874,7 @@ class RewardsCfg:
         func=mdp.is_any_terminated_term,
         weight=-200.0,
         params={
-            "term_keys": ["bad_orientation", "low_base_height"]
+            "term_keys": ["bad_orientation", "low_base_height", "stop_failed"]
             # + (
             #     ["wooden_bar_moved"]
             #     if WOODEN_BAR_TRAINING_PHASE == 4
@@ -1065,6 +1072,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
+    stop_failed = DoneTerm(func=mdp.stop_before_crossing_timeout)
 
     bad_orientation = DoneTerm(
         func=mdp.bad_orientation,
@@ -1186,6 +1194,9 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
     #
     # Set this to 0 when training a new policy from scratch.  For another
     # model_N checkpoint, set it to N * num_steps_per_env.
+    stop_before_crossing: bool = STOP_BEFORE_CROSSING
+    stop_hold_s: float = 0.5
+    stop_timeout_s: float = 3.0
     curriculum_start_step: int = 0
 
 
@@ -1211,7 +1222,7 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
 
         # General settings.
         self.decimation = 4
-        self.episode_length_s = 5.0
+        self.episode_length_s = 8.0
 
         # Simulation settings.
         self.sim.dt = 0.005
@@ -1241,7 +1252,7 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
 
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
-        self.episode_length_s = 5.0
+        self.episode_length_s = 8.0
 
         # Keyboard controls the base_velocity command.
         # self.commands.base_velocity.class_type = (

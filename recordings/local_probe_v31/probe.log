@@ -1,0 +1,2261 @@
+The '--headless' CLI argument is deprecated. Omit '--viz' for default headless. If config visualizers are enabled and you want to force headless, use '--viz none'.
+Loading user config located at: 'f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/kit/data/Kit/IsaacLab/3.0/user.config.json'
+2026-09-28T05:11:13Z [2,275ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.UsdMdl from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.usd.mdl-1.1.9+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+2026-09-28T05:11:11Z [Info] [carb] Logging to file: f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/kit/logs/Kit/IsaacLab/3.0/kit_20260928_131111.log
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.usd.mdl-1.1.9+f9bf0dda.wx64.r.cp312/omni/UsdMdl/__init__.py", line 1, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:13Z [2,276ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.UsdMdl' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.usd.mdl-1.1.9+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:13Z [2,277ms] [Error] [omni.ext.plugin] [ext: omni.kit.usd.mdl-1.1.9] Failed to startup python extension.
+2026-09-28T05:11:14Z [2,884ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.MetricsAssembler from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.metrics.assembler-110.1.0+110.1.0.wx64.r.cp312.u7f4. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+
+|---------------------------------------------------------------------------------------------|
+| Driver Version: 610.74        | Graphics API: Vulkan
+|=============================================================================================|
+| GPU | Name                             | Active | LDA | GPU Memory | Vendor-ID | LUID       |
+|     |                                  |        |     |            | Device-ID | UUID       |
+|     |                                  |        |     |            | Bus-ID    |            |
+|---------------------------------------------------------------------------------------------|
+| 0   | NVIDIA GeForce RTX 3050 Laptop.. | Yes: 0 |     | 3962    MB | 10de      | a6f20000.. |
+Traceback (most recent call last):
+|     |                                  |        |     |            | 25e2      | 97d0ef24.. |
+|     |                                  |        |     |            | 1         |            |
+|=============================================================================================|
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+| OS: Windows 11 Home China, Version: 10.0 (25H2), Build: 26200, Kernel: 10.0.26100.9457
+| Processor: AMD Ryzen 5 5600H with Radeon Graphics         
+| Cores: 6 | Logical Cores: 12
+|---------------------------------------------------------------------------------------------|
+| Total Memory (MB): 16236 | Free Memory: 1858
+| Total Page/Swap (MB): 34668 | Free Page/Swap: 5885
+|---------------------------------------------------------------------------------------------|
+2026-09-28T05:11:14Z [2,739ms] [Warning] [omni.rtx] PCIe link width current (8) and maximum (16) for device 0 don't match.
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.metrics.assembler-110.1.0+110.1.0.wx64.r.cp312.u7f4/omni/MetricsAssembler/__init__.py", line 11, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:14Z [2,885ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.MetricsAssembler' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.metrics.assembler-110.1.0+110.1.0.wx64.r.cp312.u7f4' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:14Z [2,887ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.metrics.assembler-110.1.0] Failed to startup python extension.
+2026-09-28T05:11:14Z [3,313ms] [Error] [omni.ext._impl._internal] Failed to import python module AnimationSchema from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.anim-0.0.1+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.anim-0.0.1+f9bf0dda.wx64.r.cp312/AnimationSchema/__init__.py", line 1, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:14Z [3,314ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'AnimationSchema' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.anim-0.0.1+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:14Z [3,314ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.anim-0.0.1] Failed to startup python extension.
+2026-09-28T05:11:15Z [3,585ms] [Error] [omni.ext._impl._internal] Failed to import python module OmniAudioSchema from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.audio-0.0.1+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.audio-0.0.1+f9bf0dda.wx64.r.cp312/OmniAudioSchema/__init__.py", line 1, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:15Z [3,585ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'OmniAudioSchema' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.audio-0.0.1+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:15Z [3,586ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.audio-0.0.1] Failed to startup python extension.
+2026-09-28T05:11:15Z [3,874ms] [Error] [omni.ext._impl._internal] Failed to import python module OmniGeospatial from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.geospatial-0.0.1+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.geospatial-0.0.1+f9bf0dda.wx64.r.cp312/OmniGeospatial/__init__.py", line 1, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:15Z [3,875ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'OmniGeospatial' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.geospatial-0.0.1+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:15Z [3,875ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.geospatial-0.0.1] Failed to startup python extension.
+2026-09-28T05:11:15Z [4,164ms] [Error] [omni.ext._impl._internal] Failed to import python module usd.schema.mujoco from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\exts\omni.usd.schema.mujoco. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/omni.usd.schema.mujoco/usd/schema/mujoco/__init__.py", line 20, in <module>
+    from pxr import Plug
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Plug/__init__.py", line 11, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:15Z [4,165ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'usd.schema.mujoco' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\exts\omni.usd.schema.mujoco' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:15Z [4,165ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.mujoco-1.1.1] Failed to startup python extension.
+2026-09-28T05:11:15Z [4,423ms] [Error] [omni.ext._impl._internal] Failed to import python module usd.schema.newton from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\exts\omni.usd.schema.newton. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/omni.usd.schema.newton/usd/schema/newton/__init__.py", line 17, in <module>
+    from .newton_usd_schemas import *  # noqa: F401, F403
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/omni.usd.schema.newton/usd/schema/newton/newton_usd_schemas/__init__.py", line 11, in <module>
+    from pxr import Plug
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Plug/__init__.py", line 11, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:15Z [4,423ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'usd.schema.newton' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\exts\omni.usd.schema.newton' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:15Z [4,424ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.newton-1.2.1] Failed to startup python extension.
+2026-09-28T05:11:16Z [4,715ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.spectree from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd_resolver-1.0.0+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd_resolver-1.0.0+f9bf0dda.wx64.r.cp312/omni/spectree/__init__.py", line 4, in <module>
+    from pxr import Plug
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Plug/__init__.py", line 11, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:16Z [4,716ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.spectree' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd_resolver-1.0.0+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:16Z [4,717ms] [Error] [omni.ext.plugin] [ext: omni.usd_resolver-1.0.0] Failed to startup python extension.
+2026-09-28T05:11:16Z [4,997ms] [Error] [omni.ext._impl._internal] Failed to import python module usd.schema.omni_projectors from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.omni_projectors-1.0.0+f9bf0dda. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.omni_projectors-1.0.0+f9bf0dda/usd/schema/omni_projectors/__init__.py", line 15, in <module>
+    from pxr import Plug
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Plug/__init__.py", line 11, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:16Z [4,998ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'usd.schema.omni_projectors' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.omni_projectors-1.0.0+f9bf0dda' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:16Z [4,999ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.omni_projectors-1.0.0] Failed to startup python extension.
+2026-09-28T05:11:16Z [5,251ms] [Error] [omni.ext._impl._internal] Failed to import python module usd.schema.omni_sensors from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.omni_sensors-0.0.0+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.omni_sensors-0.0.0+f9bf0dda.wx64.r.cp312/usd/schema/omni_sensors/__init__.py", line 10, in <module>
+    from pxr import Plug
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Plug/__init__.py", line 11, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:16Z [5,252ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'usd.schema.omni_sensors' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.omni_sensors-0.0.0+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:16Z [5,252ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.omni_sensors-0.0.0] Failed to startup python extension.
+2026-09-28T05:11:16Z [5,513ms] [Error] [omni.ext._impl._internal] Failed to import python module OmniGraphSchema from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.omnigraph-1.0.1+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.omnigraph-1.0.1+f9bf0dda.wx64.r.cp312/OmniGraphSchema/__init__.py", line 1, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:16Z [5,513ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'OmniGraphSchema' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.omnigraph-1.0.1+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:16Z [5,514ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.omnigraph-1.0.1] Failed to startup python extension.
+2026-09-28T05:11:17Z [5,766ms] [Error] [omni.ext._impl._internal] Failed to import python module usd.schema.physical_lighting from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.physical_lighting-0.1.0+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.physical_lighting-0.1.0+f9bf0dda.wx64.r.cp312/usd/schema/physical_lighting/__init__.py", line 2, in <module>
+    from pxr import Plug
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Plug/__init__.py", line 11, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:17Z [5,767ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'usd.schema.physical_lighting' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.physical_lighting-0.1.0+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:17Z [5,768ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.physical_lighting-0.1.0] Failed to startup python extension.
+2026-09-28T05:11:17Z [6,034ms] [Error] [omni.ext._impl._internal] Failed to import python module pxr.PhysxSchema from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.physx-110.1.13+110.1.2.wx64.r.cp312.u7f4. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.physx-110.1.13+110.1.2.wx64.r.cp312.u7f4/pxr/PhysxSchema/__init__.py", line 4, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:17Z [6,035ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'pxr.PhysxSchema' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.physx-110.1.13+110.1.2.wx64.r.cp312.u7f4' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:17Z [6,036ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.physx-110.1.13] Failed to startup python extension.
+2026-09-28T05:11:17Z [6,308ms] [Error] [omni.ext._impl._internal] Failed to import python module usd.schema.render_settings.rtx from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.render_settings.rtx-1.0.2+f9bf0dda. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.render_settings.rtx-1.0.2+f9bf0dda/usd/schema/render_settings/rtx/__init__.py", line 15, in <module>
+    from pxr import Plug, Sdf, Usd, UsdGeom, UsdRender
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Plug/__init__.py", line 11, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:17Z [6,309ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'usd.schema.render_settings.rtx' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.render_settings.rtx-1.0.2+f9bf0dda' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:17Z [6,310ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.render_settings.rtx-1.0.2] Failed to startup python extension.
+2026-09-28T05:11:18Z [6,571ms] [Error] [omni.ext._impl._internal] Failed to import python module Semantics from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.semantics-0.0.0+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.semantics-0.0.0+f9bf0dda.wx64.r.cp312/Semantics/__init__.py", line 1, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:18Z [6,571ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'Semantics' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.semantics-0.0.0+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:18Z [6,572ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.semantics-0.0.0] Failed to startup python extension.
+2026-09-28T05:11:18Z [6,821ms] [Error] [omni.ext._impl._internal] Failed to import python module usd.schema.usd_particle_field from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.usd_particle_field-1.0.0+f9bf0dda. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.usd_particle_field-1.0.0+f9bf0dda/usd/schema/usd_particle_field/__init__.py", line 15, in <module>
+    from pxr import Plug
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Plug/__init__.py", line 11, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:18Z [6,822ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'usd.schema.usd_particle_field' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.usd_particle_field-1.0.0+f9bf0dda' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:18Z [6,823ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.usd_particle_field-1.0.0] Failed to startup python extension.
+2026-09-28T05:11:19Z [7,526ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.kit.usd_undo from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.usd_undo-0.1.8+f9bf0dda. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.usd_undo-0.1.8+f9bf0dda/omni/kit/usd_undo/__init__.py", line 3, in <module>
+    from .layer_undo import UsdLayerUndo, UsdEditTargetUndo
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.usd_undo-0.1.8+f9bf0dda/omni/kit/usd_undo/layer_undo.py", line 3, in <module>
+    from pxr import Sdf, Usd
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Sdf/__init__.py", line 7, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:19Z [7,527ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.kit.usd_undo' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.usd_undo-0.1.8+f9bf0dda' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:19Z [7,528ms] [Error] [omni.ext.plugin] [ext: omni.kit.usd_undo-0.1.8] Failed to startup python extension.
+2026-09-28T05:11:19Z [7,828ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.usd from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd-1.16.0+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd-1.16.0+f9bf0dda.wx64.r.cp312/omni/usd/__init__.py", line 44, in <module>
+    from ._impl import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd-1.16.0+f9bf0dda.wx64.r.cp312/omni/usd/_impl/__init__.py", line 10, in <module>
+    from .api import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd-1.16.0+f9bf0dda.wx64.r.cp312/omni/usd/_impl/api.py", line 15, in <module>
+    from pxr import Usd, UsdUtils
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Usd/__init__.py", line 7, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:19Z [7,829ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.usd' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd-1.16.0+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:19Z [7,830ms] [Error] [omni.ext.plugin] [ext: omni.usd-1.16.0] Failed to startup python extension.
+2026-09-28T05:11:19Z [8,091ms] [Error] [carb.scripting-python.plugin] AttributeError: module 'omni.usd' has no attribute 'get_context'
+
+At:
+  f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.deprecation_manager/isaacsim/core/deprecation_manager/extension.py(72): on_startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(187): _startup_ext
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(251): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:19Z [8,092ms] [Error] [omni.ext.plugin] [ext: isaacsim.core.deprecation_manager-0.4.2] Failed to startup python extension.
+2026-09-28T05:11:19Z [8,451ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.kit.usd.layers from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.usd.layers-2.6.1+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.usd.layers-2.6.1+f9bf0dda.wx64.r.cp312/omni/kit/usd/layers/__init__.py", line 9, in <module>
+    from ._impl import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.usd.layers-2.6.1+f9bf0dda.wx64.r.cp312/omni/kit/usd/layers/_impl/__init__.py", line 9, in <module>
+    from .extension import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.usd.layers-2.6.1+f9bf0dda.wx64.r.cp312/omni/kit/usd/layers/_impl/extension.py", line 21, in <module>
+    from .layers_interface import Layers, LiveSyncing, LayersState, AutoAuthoring
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.usd.layers-2.6.1+f9bf0dda.wx64.r.cp312/omni/kit/usd/layers/_impl/layers_interface.py", line 17, in <module>
+    from .layers_state import LayersState
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.usd.layers-2.6.1+f9bf0dda.wx64.r.cp312/omni/kit/usd/layers/_impl/layers_state.py", line 21, in <module>
+    from pxr import Sdf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Sdf/__init__.py", line 7, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:19Z [8,452ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.kit.usd.layers' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.usd.layers-2.6.1+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:19Z [8,452ms] [Error] [omni.ext.plugin] [ext: omni.kit.usd.layers-2.6.1] Failed to startup python extension.
+2026-09-28T05:11:20Z [8,772ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.kit.primitive.mesh from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.primitive.mesh-1.1.0+f9bf0dda. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.primitive.mesh-1.1.0+f9bf0dda/omni/kit/primitive/mesh/__init__.py", line 3, in <module>
+    from .evaluators import get_geometry_mesh_prim_list, AbstractShapeEvaluator
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.primitive.mesh-1.1.0+f9bf0dda/omni/kit/primitive/mesh/evaluators/__init__.py", line 5, in <module>
+    from .abstract_shape_evaluator import AbstractShapeEvaluator
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.primitive.mesh-1.1.0+f9bf0dda/omni/kit/primitive/mesh/evaluators/abstract_shape_evaluator.py", line 2, in <module>
+    from pxr import Gf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Gf/__init__.py", line 12, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:20Z [8,773ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.kit.primitive.mesh' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.primitive.mesh-1.1.0+f9bf0dda' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:20Z [8,773ms] [Error] [omni.ext.plugin] [ext: omni.kit.primitive.mesh-1.1.0] Failed to startup python extension.
+2026-09-28T05:11:20Z [9,043ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.kit.stage_template.core from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.stage_template.core-1.1.22+f9bf0dda. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.stage_template.core-1.1.22+f9bf0dda/omni/kit/stage_template/core/__init__.py", line 15, in <module>
+    from .stage_core import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.stage_template.core-1.1.22+f9bf0dda/omni/kit/stage_template/core/stage_core.py", line 13, in <module>
+    from pxr import Sdf, UsdGeom, Usd, Gf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Sdf/__init__.py", line 7, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:20Z [9,044ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.kit.stage_template.core' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.stage_template.core-1.1.22+f9bf0dda' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:20Z [9,045ms] [Error] [omni.ext.plugin] [ext: omni.kit.stage_template.core-1.1.22] Failed to startup python extension.
+2026-09-28T05:11:20Z [9,311ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.kit.stage_templates from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.stage_templates-2.0.2+f9bf0dda. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.stage_templates-2.0.2+f9bf0dda/omni/kit/stage_templates/__init__.py", line 21, in <module>
+    from .new_stage import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.stage_templates-2.0.2+f9bf0dda/omni/kit/stage_templates/new_stage.py", line 13, in <module>
+    import pxr.UsdGeom
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/UsdGeom/__init__.py", line 7, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:20Z [9,312ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.kit.stage_templates' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.stage_templates-2.0.2+f9bf0dda' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:20Z [9,313ms] [Error] [omni.ext.plugin] [ext: omni.kit.stage_templates-2.0.2] Failed to startup python extension.
+2026-09-28T05:11:21Z [9,759ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.physx from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.physx-110.1.13+110.1.2.wx64.r.cp312.u7f4. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.physx-110.1.13+110.1.2.wx64.r.cp312.u7f4/omni/physx/__init__.py", line 7, in <module>
+    from .scripts.ifaces import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.physx-110.1.13+110.1.2.wx64.r.cp312.u7f4/omni/physx/scripts/__init__.py", line 5, in <module>
+    from .utils import safe_import_tests
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.physx-110.1.13+110.1.2.wx64.r.cp312.u7f4/omni/physx/scripts/utils.py", line 7, in <module>
+    from pxr import Usd, UsdGeom, UsdShade, Sdf, Tf, Gf, UsdPhysics, PhysxSchema, UsdUtils
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Usd/__init__.py", line 7, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:21Z [9,760ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.physx' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.physx-110.1.13+110.1.2.wx64.r.cp312.u7f4' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:21Z [9,760ms] [Error] [omni.ext.plugin] [ext: omni.physx-110.1.13] Failed to startup python extension.
+2026-09-28T05:11:21Z [10,130ms] [Error] [omni.ext._impl._internal] Failed to import python module usdex.core from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usdex.libs-2.2.2+110.0.0.wx64.r.cp312.u7f4\python. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usdex.libs-2.2.2+110.0.0.wx64.r.cp312.u7f4/python/usdex/core/__init__.py", line 144, in <module>
+    __import__("pxr.Gf")
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Gf/__init__.py", line 12, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:21Z [10,131ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'usdex.core' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usdex.libs-2.2.2+110.0.0.wx64.r.cp312.u7f4\python' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:21Z [10,132ms] [Error] [omni.ext.plugin] [ext: omni.usdex.libs-2.2.2] Failed to startup python extension.
+2026-09-28T05:11:21Z [10,433ms] [Error] [omni.ext._impl._internal] Failed to import python module isaacsim.core.simulation_manager from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\exts\isaacsim.core.simulation_manager. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.simulation_manager/isaacsim/core/simulation_manager/__init__.py", line 17, in <module>
+    from .impl import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.simulation_manager/isaacsim/core/simulation_manager/impl/__init__.py", line 16, in <module>
+    from .extension import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.simulation_manager/isaacsim/core/simulation_manager/impl/extension.py", line 37, in <module>
+    from .physics_scene import PhysicsScene
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.simulation_manager/isaacsim/core/simulation_manager/impl/physics_scene.py", line 20, in <module>
+    import isaacsim.core.experimental.utils.prim as prim_utils
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.experimental.utils/isaacsim/core/experimental/utils/prim.py", line 18, in <module>
+    from .impl.prim import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.experimental.utils/isaacsim/core/experimental/utils/impl/prim.py", line 25, in <module>
+    from pxr import Sdf, Usd, UsdPhysics
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Sdf/__init__.py", line 7, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:21Z [10,434ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'isaacsim.core.simulation_manager' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\exts\isaacsim.core.simulation_manager' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:21Z [10,434ms] [Error] [omni.ext.plugin] [ext: isaacsim.core.simulation_manager-1.15.6] Failed to startup python extension.
+2026-09-28T05:11:22Z [10,771ms] [Error] [omni.ext._impl._internal] Failed to import python module usd.schema.playback from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.playback-1.0.0+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.schema.playback-1.0.0+f9bf0dda.wx64.r.cp312/usd/schema/playback/__init__.py", line 12, in <module>
+    from pxr import Plug
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Plug/__init__.py", line 11, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:22Z [10,772ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'usd.schema.playback' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.schema.playback-1.0.0+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:22Z [10,773ms] [Error] [omni.ext.plugin] [ext: omni.usd.schema.playback-1.0.0] Failed to startup python extension.
+2026-09-28T05:11:22Z [11,400ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.kit.material.library from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.material.library-3.1.2+f9bf0dda. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.material.library-3.1.2+f9bf0dda/omni/kit/material/library/__init__.py", line 15, in <module>
+    from .material_library import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.material.library-3.1.2+f9bf0dda/omni/kit/material/library/material_library.py", line 58, in <module>
+    from pxr import Tf, Sdf, Usd, UsdShade
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:22Z [11,401ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.kit.material.library' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.material.library-3.1.2+f9bf0dda' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:22Z [11,402ms] [Error] [omni.ext.plugin] [ext: omni.kit.material.library-3.1.2] Failed to startup python extension.
+2026-09-28T05:11:23Z [11,674ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.kit.widget.viewport from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.widget.viewport-109.2.0+f9bf0dda. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.widget.viewport-109.2.0+f9bf0dda/omni/kit/widget/viewport/__init__.py", line 6, in <module>
+    from .widget import ViewportWidget
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.widget.viewport-109.2.0+f9bf0dda/omni/kit/widget/viewport/widget.py", line 23, in <module>
+    from pxr import Usd, UsdGeom, Sdf, Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Usd/__init__.py", line 7, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:23Z [11,675ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.kit.widget.viewport' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.widget.viewport-109.2.0+f9bf0dda' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:23Z [11,676ms] [Error] [omni.ext.plugin] [ext: omni.kit.widget.viewport-109.2.0] Failed to startup python extension.
+2026-09-28T05:11:23Z [11,989ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.kit.viewport.window from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.viewport.window-109.0.2+f9bf0dda. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.viewport.window-109.0.2+f9bf0dda/omni/kit/viewport/window/__init__.py", line 1, in <module>
+    from .extension import ViewportWindowExtension
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.viewport.window-109.0.2+f9bf0dda/omni/kit/viewport/window/extension.py", line 18, in <module>
+    from .dragdrop.usd_file_drop_delegate import UsdFileDropDelegate
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.viewport.window-109.0.2+f9bf0dda/omni/kit/viewport/window/dragdrop/usd_file_drop_delegate.py", line 13, in <module>
+    from pxr import Gf, Sdf, Usd, UsdGeom
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Gf/__init__.py", line 12, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:23Z [11,990ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.kit.viewport.window' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.viewport.window-109.0.2+f9bf0dda' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:23Z [11,991ms] [Error] [omni.ext.plugin] [ext: omni.kit.viewport.window-109.0.2] Failed to startup python extension.
+2026-09-28T05:11:23Z [12,261ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.kit.viewport.utility from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.viewport.utility-2.0.1+f9bf0dda. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.kit.viewport.utility-2.0.1+f9bf0dda/omni/kit/viewport/utility/__init__.py", line 40, in <module>
+    from pxr import Gf, Sdf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Gf/__init__.py", line 12, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:23Z [12,261ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.kit.viewport.utility' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.kit.viewport.utility-2.0.1+f9bf0dda' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:23Z [12,262ms] [Error] [omni.ext.plugin] [ext: omni.kit.viewport.utility-2.0.1] Failed to startup python extension.
+2026-09-28T05:11:24Z [12,558ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.metrics.assembler.ui from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.metrics.assembler.ui-110.1.1+110.1.0.cp312.u7f4. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.metrics.assembler.ui-110.1.1+110.1.0.cp312.u7f4/omni/metrics/assembler/ui/__init__.py", line 11, in <module>
+    from .extension import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.metrics.assembler.ui-110.1.1+110.1.0.cp312.u7f4/omni/metrics/assembler/ui/extension.py", line 17, in <module>
+    from .metricsAssemblerManager import MetricsAssemblerManager
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.metrics.assembler.ui-110.1.1+110.1.0.cp312.u7f4/omni/metrics/assembler/ui/metricsAssemblerManager.py", line 20, in <module>
+    from pxr import Ar, Sdf, Tf, Usd, UsdUtils
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Ar/__init__.py", line 7, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:24Z [12,559ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.metrics.assembler.ui' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.usd.metrics.assembler.ui-110.1.1+110.1.0.cp312.u7f4' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:24Z [12,560ms] [Error] [omni.ext.plugin] [ext: omni.usd.metrics.assembler.ui-110.1.1] Failed to startup python extension.
+2026-09-28T05:11:25Z [13,553ms] [Error] [carb.scripting-python.plugin] RuntimeError: Unable to run git asset repository command: git clone --depth 1 https://github.com/newton-physics/newton-assets.git C:\Users\kiki\AppData\Local\Temp\asset_cache\newton-assets
+
+At:
+  f:/isaaclab/source/isaaclab/isaaclab/utils/assets.py(219): _run_git_command
+  f:/isaaclab/source/isaaclab/isaaclab/utils/assets.py(148): _get_git_asset_dir
+  f:/isaaclab/source/isaaclab/isaaclab/utils/assets.py(109): retrieve_git_asset_path
+  f:/isaaclab/source/isaaclab_assets/isaaclab_assets/robots/fourbar_pole.py(13): <module>
+  <frozen importlib._bootstrap>(488): _call_with_frames_removed
+  <frozen importlib._bootstrap_external>(999): exec_module
+  <frozen importlib._bootstrap>(950): _load_unlocked
+  <frozen importlib._bootstrap>(1334): _find_and_load_unlocked
+  <frozen importlib._bootstrap>(1360): _find_and_load
+  <frozen importlib._bootstrap>(1387): _gcd_import
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py(90): import_module
+  F:\isaacsim\env_isaacsim\Lib\site-packages\lazy_loader\__init__.py(78): __getattr__
+  F:\isaacsim\env_isaacsim\Lib\site-packages\lazy_loader\__init__.py(79): __getattr__
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(247): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:25Z [13,554ms] [Error] [omni.ext.plugin] [ext: isaaclab_assets-0.4.2] Failed to startup python extension.
+2026-09-28T05:11:25Z [13,868ms] [Error] [omni.ext._impl._internal] Failed to import python module isaacsim.core.rendering_manager from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\exts\isaacsim.core.rendering_manager. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.rendering_manager/isaacsim/core/rendering_manager/__init__.py", line 16, in <module>
+    from .impl import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.rendering_manager/isaacsim/core/rendering_manager/impl/__init__.py", line 18, in <module>
+    from .extension import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.rendering_manager/isaacsim/core/rendering_manager/impl/extension.py", line 20, in <module>
+    from .rendering_manager import RenderingManager
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.rendering_manager/isaacsim/core/rendering_manager/impl/rendering_manager.py", line 24, in <module>
+    import isaacsim.core.experimental.utils.prim as prim_utils
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.experimental.utils/isaacsim/core/experimental/utils/prim.py", line 18, in <module>
+    from .impl.prim import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/exts/isaacsim.core.experimental.utils/isaacsim/core/experimental/utils/impl/prim.py", line 25, in <module>
+    from pxr import Sdf, Usd, UsdPhysics
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Sdf/__init__.py", line 7, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:25Z [13,868ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'isaacsim.core.rendering_manager' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\exts\isaacsim.core.rendering_manager' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:25Z [13,869ms] [Error] [omni.ext.plugin] [ext: isaacsim.core.rendering_manager-0.4.3] Failed to startup python extension.
+2026-09-28T05:11:25Z [14,259ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.graph.tools from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.graph.tools-1.81.0+f9bf0dda. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.graph.tools-1.81.0+f9bf0dda/omni/graph/tools/__init__.py", line 18, in <module>
+    from . import ogn
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.graph.tools-1.81.0+f9bf0dda/omni/graph/tools/ogn.py", line 208, in <module>
+    from ._impl.deprecated.ogn_sdf import ogn_to_sdf, sdf_to_ogn  # noqa: E402,F401 - want deprecated imports together
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.graph.tools-1.81.0+f9bf0dda/omni/graph/tools/_impl/deprecated/ogn_sdf.py", line 3, in <module>
+    from pxr import Sdf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Sdf/__init__.py", line 7, in <module>
+    from pxr import Tf
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:25Z [14,260ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.graph.tools' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.graph.tools-1.81.0+f9bf0dda' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:25Z [14,260ms] [Error] [omni.ext.plugin] [ext: omni.graph.tools-1.81.0] Failed to startup python extension.
+2026-09-28T05:11:25Z [14,518ms] [Error] [omni.ext._impl.custom_importer] Failed to import python module omni.graph.core. Error: cannot import name 'deprecated_constant_object' from 'omni.graph.tools' (unknown location). Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.graph-1.142.5+f9bf0dda.wx64.r.cp312/omni/graph/core/__init__.py", line 16, in <module>
+    from omni.graph.tools import deprecated_constant_object as _deprecated_type  # For internal use
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ImportError: cannot import name 'deprecated_constant_object' from 'omni.graph.tools' (unknown location)
+
+2026-09-28T05:11:25Z [14,519ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.graph.core' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.graph-1.142.5+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:25Z [14,520ms] [Error] [omni.ext.plugin] [ext: omni.graph-1.142.5] Failed to startup python extension.
+2026-09-28T05:11:26Z [14,986ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.graph.scriptnode from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.graph.scriptnode-2.10.2+110.0.0. Error: module 'omni.graph.core' has no attribute 'Node'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.graph.scriptnode-2.10.2+110.0.0/omni/graph/scriptnode/__init__.py", line 5, in <module>
+    from ._impl.extension import _PublicExtension  # noqa: F401
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.graph.scriptnode-2.10.2+110.0.0/omni/graph/scriptnode/_impl/extension.py", line 55, in <module>
+    def verify_scriptnode_load(script_nodes: List[og.Node]):
+                                                  ^^^^^^^
+AttributeError: module 'omni.graph.core' has no attribute 'Node'
+
+2026-09-28T05:11:26Z [14,987ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.graph.scriptnode' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.graph.scriptnode-2.10.2+110.0.0' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:26Z [14,987ms] [Error] [omni.ext.plugin] [ext: omni.graph.scriptnode-2.10.2] Failed to startup python extension.
+2026-09-28T05:11:26Z [15,283ms] [Error] [omni.ext._impl._internal] Failed to import python module omni.syntheticdata from f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.syntheticdata-0.6.15+f9bf0dda.wx64.r.cp312. Error: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'. Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 212, in _custom_importer
+    return _import_public(ext_module.path, ext_module.name, reload_enabled)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py", line 111, in _import_public
+    module = import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.syntheticdata-0.6.15+f9bf0dda.wx64.r.cp312/omni/syntheticdata/__init__.py", line 2, in <module>
+    from .scripts.extension import *
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.syntheticdata-0.6.15+f9bf0dda.wx64.r.cp312/omni/syntheticdata/scripts/extension.py", line 1, in <module>
+    from pxr import Tf, Trace, Usd
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 163, in <module>
+    PreparePythonModule()
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 85, in PreparePythonModule
+    with WindowsImportWrapper():
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.usd.libs-1.0.3+f9bf0dda.wx64.r.cp312/pxr/Tf/__init__.py", line 45, in WindowsImportWrapper
+    dirs.append(os.add_dll_directory(abs_path))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1154, in add_dll_directory
+PermissionError: [WinError 5] 拒绝访问。: 'C:\\Users\\kiki\\AppData\\Local\\Microsoft\\WindowsApps'
+
+2026-09-28T05:11:26Z [15,283ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.syntheticdata' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.syntheticdata-0.6.15+f9bf0dda.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:26Z [15,284ms] [Error] [omni.ext.plugin] [ext: omni.syntheticdata-0.6.15] Failed to startup python extension.
+2026-09-28T05:11:27Z [15,605ms] [Error] [omni.ext._impl.custom_importer] Failed to import python module omni.replicator.core. Error: cannot import name 'SyntheticData' from 'omni.syntheticdata' (unknown location). Traceback:
+Traceback (most recent call last):
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\custom_importer.py", line 107, in import_module
+    return importlib.import_module(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\importlib\__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.replicator.core-1.13.27+110.1.1.wx64.r.cp312/omni/replicator/core/__init__.py", line 18, in <module>
+    from .scripts import (
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.replicator.core-1.13.27+110.1.1.wx64.r.cp312/omni/replicator/core/scripts/__init__.py", line 18, in <module>
+    from . import (
+  File "f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/extscache/omni.replicator.core-1.13.27+110.1.1.wx64.r.cp312/omni/replicator/core/scripts/annotators.py", line 39, in <module>
+    from omni.syntheticdata import SyntheticData, SyntheticDataException, SyntheticDataStage
+ImportError: cannot import name 'SyntheticData' from 'omni.syntheticdata' (unknown location). Did you mean: 'syntheticdata'?
+
+2026-09-28T05:11:27Z [15,605ms] [Error] [carb.scripting-python.plugin] Exception: Extension python module: 'omni.replicator.core' in 'f:\isaacsim\env_isaacsim\lib\site-packages\isaacsim\extscache\omni.replicator.core-1.13.27+110.1.1.wx64.r.cp312' failed to load.
+
+At:
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(240): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(105): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(215): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(219): <module>
+
+2026-09-28T05:11:27Z [15,606ms] [Error] [omni.ext.plugin] [ext: omni.replicator.core-1.13.27] Failed to startup python extension.
+2026-09-28T05:11:27Z [15,893ms] [Error] [omni.kit.app.plugin] failed to open file 'f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/kit/data/Kit/IsaacLab/3.0/user.config.json' - unable to save the dictionary
+Traceback (most recent call last):
+  File "F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py", line 219, in <module>
+    main()
+  File "F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py", line 215, in main
+    run()
+  File "F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py", line 504, in wrapper
+    _run_hydra(task, env_cfg, agent_cfg, hydra_args, lambda e, a: func(e, a, *args, **kwargs))
+  File "F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py", line 445, in _run_hydra
+    callback(env_cfg, agent_cfg)
+  File "F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py", line 504, in <lambda>
+    _run_hydra(task, env_cfg, agent_cfg, hydra_args, lambda e, a: func(e, a, *args, **kwargs))
+                                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py", line 105, in run
+    with launch_simulation(env_cfg, args_cli):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kiki\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py", line 458, in launch_simulation
+    app_launcher = AppLauncher(launcher_args)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py", line 307, in __init__
+    self._create_app()
+  File "F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py", line 1235, in _create_app
+    self._app = SimulationApp(self._sim_app_config, experience=self._sim_experience_file)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py", line 324, in __init__
+    create_new_stage()
+  File "F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\utils.py", line 78, in create_new_stage
+    return omni.usd.get_context().new_stage()
+           ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'omni.usd' has no attribute 'get_context'
+2026-09-28T05:11:27Z [16,032ms] [Warning] [carb] Recursive unloadAllPlugins() detected!

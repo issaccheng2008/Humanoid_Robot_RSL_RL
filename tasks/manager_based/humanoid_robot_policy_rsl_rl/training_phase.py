@@ -14,6 +14,10 @@
 # Set this manually before starting the corresponding independently resumed run.
 WOODEN_BAR_TRAINING_PHASE = 5
 
+# Keep Phase 5 obstacle/mixed-episode mechanics, with an independent fine-tune identity.
+STOP_BEFORE_CROSSING = True
+TRAINING_STAGE = "walk_stop_cross_v32"
+
 if WOODEN_BAR_TRAINING_PHASE not in (1, 2, 3, 4, 5):
     raise ValueError(
         "WOODEN_BAR_TRAINING_PHASE must be 1, 2, 3, 4, or 5, but received "

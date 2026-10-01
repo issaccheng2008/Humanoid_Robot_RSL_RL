@@ -1,0 +1,288 @@
+[INFO]: Parsing configuration from: tasks.manager_based.humanoid_robot_policy_rsl_rl.humanoid_robot_policy_rsl_rl_env_cfg:HumanoidRobotPolicyEnvCfg_PLAY
+[INFO]: Parsing configuration from: tasks.manager_based.humanoid_robot_policy_rsl_rl.agents.rsl_rl_ppo_cfg:HumanoidRobotRoughPPORunnerCfg
+The '--headless' CLI argument is deprecated. Omit '--viz' for default headless. If config visualizers are enabled and you want to force headless, use '--viz none'.
+Loading user config located at: 'f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/kit/data/Kit/IsaacLab/3.0/user.config.json'
+2026-09-28T05:46:35Z [Info] [carb] Logging to file: f:/isaacsim/env_isaacsim/lib/site-packages/isaacsim/kit/logs/Kit/IsaacLab/3.0/kit_20260928_134635.log
+
+|---------------------------------------------------------------------------------------------|
+| Driver Version: 610.74        | Graphics API: Vulkan
+|=============================================================================================|
+| GPU | Name                             | Active | LDA | GPU Memory | Vendor-ID | LUID       |
+|     |                                  |        |     |            | Device-ID | UUID       |
+|     |                                  |        |     |            | Bus-ID    |            |
+|---------------------------------------------------------------------------------------------|
+| 0   | NVIDIA GeForce RTX 3050 Laptop.. | Yes: 0 |     | 3962    MB | 10de      | a6f20000.. |
+|     |                                  |        |     |            | 25e2      | 97d0ef24.. |
+|     |                                  |        |     |            | 1         |            |
+|=============================================================================================|
+| OS: Windows 11 Home China, Version: 10.0 (25H2), Build: 26200, Kernel: 10.0.26100.9457
+| Processor: AMD Ryzen 5 5600H with Radeon Graphics         
+| Cores: 6 | Logical Cores: 12
+|---------------------------------------------------------------------------------------------|
+| Total Memory (MB): 16236 | Free Memory: 5460
+| Total Page/Swap (MB): 34668 | Free Page/Swap: 7380
+|---------------------------------------------------------------------------------------------|
+2026-09-28T05:46:38Z [2,969ms] [Warning] [omni.rtx] PCIe link width current (8) and maximum (16) for device 0 don't match.
+2026-09-28T05:46:42Z [7,331ms] [Error] [carb.scripting-python.plugin] FileNotFoundError: Unable to find git asset: C:\Users\kiki\AppData\Local\Temp\asset_cache\newton-assets\fourbar_pole\usd\fourbar_pole.usda
+
+At:
+  f:/isaaclab/source/isaaclab/isaaclab/utils/assets.py(112): retrieve_git_asset_path
+  f:/isaaclab/source/isaaclab_assets/isaaclab_assets/robots/fourbar_pole.py(13): <module>
+  <frozen importlib._bootstrap>(488): _call_with_frames_removed
+  <frozen importlib._bootstrap_external>(999): exec_module
+  <frozen importlib._bootstrap>(950): _load_unlocked
+  <frozen importlib._bootstrap>(1334): _find_and_load_unlocked
+  <frozen importlib._bootstrap>(1360): _find_and_load
+  <frozen importlib._bootstrap>(1387): _gcd_import
+  C:\Users\kiki\AppData\Local\Programs\Python\Python312\Lib\importlib\__init__.py(90): import_module
+  F:\isaacsim\env_isaacsim\Lib\site-packages\lazy_loader\__init__.py(78): __getattr__
+  F:\isaacsim\env_isaacsim\Lib\site-packages\lazy_loader\__init__.py(79): __getattr__
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(247): startup
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\kit\kernel\py\omni\ext\_impl\_internal.py(366): startup_extension
+  PythonExtension.cpp::startup()(2): <module>
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(576): _start_app
+  F:\isaacsim\env_isaacsim\Lib\site-packages\isaacsim\exts\isaacsim.simulation_app\isaacsim\simulation_app\simulation_app.py(289): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(1235): _create_app
+  F:\IsaacLab\source\isaaclab\isaaclab\app\app_launcher.py(307): __init__
+  F:\IsaacLab\source\isaaclab\isaaclab\app\sim_launcher.py(458): launch_simulation
+  C:\Users\kiki\AppData\Local\Programs\Python\Python312\Lib\contextlib.py(137): __enter__
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(133): run
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): <lambda>
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(445): _run_hydra
+  F:\IsaacLab\source\isaaclab_tasks\isaaclab_tasks\utils\hydra.py(504): wrapper
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(275): main
+  F:\RobotProject\Humanoid_Robot_RSL_RL\hpc\play_obstacle_v31.py(279): <module>
+
+2026-09-28T05:46:42Z [7,331ms] [Error] [omni.ext.plugin] [ext: isaaclab_assets-0.4.2] Failed to startup python extension.
+2026-09-28T05:46:44Z [8,694ms] [Warning] [pxr.Semantics] pxr.Semantics is deprecated - please use Semantics instead
+2026-09-28T05:46:44Z [8,872ms] [Warning] [omni.replicator.core.scripts.extension] No material configuration file, adding configuration to material settings directly.
+2026-09-28T05:46:51Z [15,958ms] [Warning] [rtx.hydra] RenderDelegate : Warning /rtx/hydra/readTransformsFromFabricInRenderDelegate and geometry streaming are enabled together but this can cause issues with dynamic objects not streaming correctly due to problems in the transform update.
+[ISAACLAB] AppLauncher initialization complete
+[ISAACLAB] Kit version: 110.1.2+production.326809.f9bf0dda.gl
+[ISAACLAB] Kit kernel:  210.1.11+release.13746.80f6dc72.gl
+[ISAACLAB] Kit hash:    f9bf0dda
+[WARNING]: The `policy` configuration is deprecated for rsl-rl >= 4.0.0. Please use, e.g., `actor` and `critic` model configurations instead.
+[WARNING]: The `policy` configuration is used to infer the `actor` model configuration.
+[WARNING]: The `policy` configuration is used to infer the `critic` model configuration.
+[WARNING]: The `distribution_cfg` configuration is now used to specify the output distribution for stochastic policies. Consider updating the configuration to use `distribution_cfg` instead of `stochastic`, `init_noise_std`, `noise_std_type`, and `state_dependent_std` parameters.
+2026-09-28T05:46:53Z [18,034ms] [Warning] [isaaclab_physx.physics.physx_manager] TGS solver with enable_external_forces_every_iteration=False may cause noisy velocities.
+[INFO]: Base environment:
+	Environment device    : cuda:0
+	Environment seed      : 42
+	Physics step-size     : 0.005
+	Rendering step-size   : 0.08
+	Environment step-size : 0.02
+[INFO]: libcarb.so unavailable �� Fabric notice suspension disabled (Linux x86_64 only)
+[INFO]: Registered backend 'physx' for factory Articulation.
+[INFO] Generating terrains randomly took Last: 5.128645 s
+[INFO]: Registered backend 'physx' for factory RigidObject.
+[INFO]: Registered backend 'physx' for factory FrameView.
+[INFO]: Registered backend 'physx' for factory Imu.
+[INFO]: Registered backend 'physx' for factory ContactSensor.
+[INFO]: Physics scene prim path: /physicsScene
+[INFO]: Time taken for scene creation Last: 14.141628 s, Mean: 14.141628 s, Std: 0.000000 s, N: 1
+[INFO]: Scene manager:  <class InteractiveScene>
+	Number of environments: 1
+	Environment spacing   : 2.5
+	Source prim name      : /World/envs/env_0
+	Global prim paths     : ['/World/ground']
+	Replicate physics     : True
+2026-09-28T05:47:15Z [39,758ms] [Warning] [omni.usd] Encountered USD Warnings but USD Diagnostics are currently muted. To view USD Warnings, please set the '/persistent/app/usd/muteUsdDiagnostics' setting to false in Preferences page.
+[INFO]: Simulation parameters for joints in /World/envs/env_.*/Robot:
++--------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                    Simulation Joint Information (Prim path: /World/envs/env_.*/Robot)                                                    |
++-------+---------------------+-----------+---------+----------+-----------------+------------------+------------------+-----------------+-----------------+---------------+
+| Index | Name                | Stiffness | Damping | Armature | Static Friction | Dynamic Friction | Viscous Friction | Position Limits | Velocity Limits | Effort Limits |
++-------+---------------------+-----------+---------+----------+-----------------+------------------+------------------+-----------------+-----------------+---------------+
+|   0   | l_leg_pitch_joint   |   35.000  |  1.500  |  0.010   |      0.000      |      0.000       |      0.000       | [-0.785, 0.785] |      10.000     |     5.000     |
+|   1   | r_leg_pitch_joint   |   35.000  |  1.500  |  0.010   |      0.000      |      0.000       |      0.000       | [-0.785, 0.785] |      10.000     |     5.000     |
+|   2   | l_leg_roll_joint    |   30.000  |  1.200  |  0.010   |      0.000      |      0.000       |      0.000       | [-0.349, 0.785] |      10.000     |     5.000     |
+|   3   | r_leg_roll_joint    |   30.000  |  1.200  |  0.010   |      0.000      |      0.000       |      0.000       | [-0.785, 0.349] |      10.000     |     5.000     |
+|   4   | l_leg_yaw_joint     |   20.000  |  1.000  |  0.010   |      0.000      |      0.000       |      0.000       | [-0.785, 0.785] |      10.000     |     5.000     |
+|   5   | r_leg_yaw_joint     |   20.000  |  1.000  |  0.010   |      0.000      |      0.000       |      0.000       | [-0.785, 0.785] |      10.000     |     5.000     |
+|   6   | l_knee_pitch_joint  |   35.000  |  1.500  |  0.010   |      0.000      |      0.000       |      0.000       | [-0.785, 0.785] |      10.000     |     5.000     |
+|   7   | r_knee_pitch_joint  |   35.000  |  1.500  |  0.010   |      0.000      |      0.000       |      0.000       | [-0.785, 0.785] |      10.000     |     5.000     |
+|   8   | l_ankle_pitch_joint |   15.000  |  0.800  |  0.005   |      0.000      |      0.000       |      0.000       | [-0.349, 0.349] |      10.000     |     5.000     |
+|   9   | r_ankle_pitch_joint |   15.000  |  0.800  |  0.005   |      0.000      |      0.000       |      0.000       | [-0.349, 0.349] |      10.000     |     5.000     |
+|   10  | l_ankle_roll_joint  |   12.000  |  0.700  |  0.005   |      0.000      |      0.000       |      0.000       | [-0.524, 0.524] |      10.000     |     5.000     |
+|   11  | r_ankle_roll_joint  |   12.000  |  0.700  |  0.005   |      0.000      |      0.000       |      0.000       | [-0.524, 0.524] |      10.000     |     5.000     |
++-------+---------------------+-----------+---------+----------+-----------------+------------------+------------------+-----------------+-----------------+---------------+
+[INFO]: Time taken for simulation start Last: 28.889818 s, Mean: 28.889818 s, Std: 0.000000 s, N: 1
+[INFO] Command Manager:  <CommandManager> contains 1 active terms.
++------------------------------------------------------+
+|                 Active Command Terms                 |
++-------+---------------+------------------------------+
+| Index | Name          |             Type             |
++-------+---------------+------------------------------+
+|   0   | base_velocity | ObstacleAwareVelocityCommand |
++-------+---------------+------------------------------+
+
+[INFO] Event Manager:  <EventManager> contains 3 active terms.
++-------------------------------------+
+| Active Event Terms in Mode: 'reset' |
++--------+----------------------------+
+| Index  | Name                       |
++--------+----------------------------+
+|   0    | reset_base                 |
+|   1    | reset_robot_joints         |
+|   2    | reset_crossing_state       |
++--------+----------------------------+
++---------------------------------------------------------+
+|          Active Event Terms in Mode: 'interval'         |
++-------+-----------------------+-------------------------+
+| Index | Name                  | Interval time range (s) |
++-------+-----------------------+-------------------------+
+|   0   | update_crossing_state |       (0.02, 0.02)      |
++-------+-----------------------+-------------------------+
++---------------------------------------+
+| Active Event Terms in Mode: 'startup' |
++-------+-------------------------------+
+| Index | Name                          |
++-------+-------------------------------+
+|   0   | randomize_foot_material       |
+|   1   | randomize_actuator_gains      |
+|   2   | randomize_joint_friction      |
++-------+-------------------------------+
+
+[INFO] Recorder Manager:  <RecorderManager> contains 0 active terms.
++-----------------------+
+| Active Recorder Terms |
++------------+----------+
+|   Index    | Name     |
++------------+----------+
++------------+----------+
+
+[INFO]: Resolved joint names for the action term JointPositionAction: ['r_leg_pitch_joint', 'r_leg_roll_joint', 'r_leg_yaw_joint', 'r_knee_pitch_joint', 'r_ankle_pitch_joint', 'r_ankle_roll_joint', 'l_leg_pitch_joint', 'l_leg_roll_joint', 'l_leg_yaw_joint', 'l_knee_pitch_joint', 'l_ankle_pitch_joint', 'l_ankle_roll_joint'] [[1, 3, 5, 7, 9, 11, 0, 2, 4, 6, 8, 10]]
+[INFO] Action Manager:  <ActionManager> contains 1 active terms.
++---------------------------------+
+| Active Action Terms (shape: 12) |
++-------+-----------+-------------+
+| Index | Name      |   Dimension |
++-------+-----------+-------------+
+|   0   | joint_pos |          12 |
++-------+-----------+-------------+
+
+[INFO] Observation Manager: <ObservationManager> contains 1 groups.
++------------------------------------------------------------+
+| Active Observation Terms in Group: 'policy' (shape: (49,)) |
++-----------+----------------------------------+-------------+
+|   Index   | Name                             |    Shape    |
++-----------+----------------------------------+-------------+
+|     0     | base_lin_acc                     |     (3,)    |
+|     1     | base_ang_vel                     |     (3,)    |
+|     2     | projected_gravity                |     (3,)    |
+|     3     | velocity_commands                |     (2,)    |
+|     4     | step_distance                    |     (1,)    |
+|     5     | crossing_command                 |     (1,)    |
+|     6     | joint_pos                        |    (12,)    |
+|     7     | joint_vel                        |    (12,)    |
+|     8     | actions                          |    (12,)    |
++-----------+----------------------------------+-------------+
+
+[INFO] Termination Manager:  <TerminationManager> contains 4 active terms.
++-------------------------------------+
+|       Active Termination Terms      |
++-------+------------------+----------+
+| Index | Name             | Time Out |
++-------+------------------+----------+
+|   0   | time_out         |   True   |
+|   1   | bad_orientation  |  False   |
+|   2   | low_base_height  |  False   |
+|   3   | wooden_bar_moved |  False   |
++-------+------------------+----------+
+
+[INFO] Reward Manager:  <RewardManager> contains 24 active terms.
++----------------------------------------------------------+
+|                   Active Reward Terms                    |
++-------+-----------------------------------------+--------+
+| Index | Name                                    | Weight |
++-------+-----------------------------------------+--------+
+|   0   | track_lin_vel_xy_exp                    |    4.0 |
+|   1   | track_ang_vel_z_exp                     |    4.0 |
+|   2   | feet_air_time                           |    1.5 |
+|   3   | feet_slide                              |     -3 |
+|   4   | ground_contact_flatness                 |      1 |
+|   5   | swing_foot_clearance                    |    1.5 |
+|   6   | step_distance_tracking_reward           |   50.0 |
+|   7   | physical_bar_crossing_completion_reward |  100.0 |
+|   8   | termination_penalty                     | -200.0 |
+|   9   | wooden_bar_moved_penalty                |  -50.0 |
+|   10  | flat_orientation_l2                     |     -3 |
+|   11  | base_acc_y_l2                           | -0.005 |
+|   12  | base_acc_z_l2                           | -0.005 |
+|   13  | ang_vel_xy_l2                           |   -0.2 |
+|   14  | dof_torques_l2                          | -2e-07 |
+|   15  | dof_torque_over_nominal                 |   -0.1 |
+|   16  | dof_acc_l2                              | -2e-07 |
+|   17  | action_rate_l2                          | -0.002 |
+|   18  | dof_pos_limits                          |   -1.0 |
+|   19  | joint_deviation_yaw_roll                |   -0.2 |
+|   20  | both_feet_airborne                      |  -10.0 |
+|   21  | stepping_wooden_bar_step_reward         |    0.0 |
+|   22  | following_wooden_bar_step_reward        |    0.0 |
+|   23  | feet_height_entering_band_reward        |    0.0 |
++-------+-----------------------------------------+--------+
+
+[INFO] Curriculum Manager:  <CurriculumManager> contains 3 active terms.
++----------------------------------+
+|     Active Curriculum Terms      |
++-------+--------------------------+
+| Index | Name                     |
++-------+--------------------------+
+|   0   | policy_observation_shape |
+|   1   | step_distance_gaussian   |
+|   2   | phase_5_ang_vel_z        |
++-------+--------------------------+
+
+[INFO]: Completed setting up the environment...
+[INFO] Curriculum global step starts at 0.
+[RECORD] initial camera eye=(-11.9, -75.1, 0.7570000002160668) target=(-11.9, -76.0, 0.25700000021606684)
+F:\isaacsim\env_isaacsim\Lib\site-packages\rsl_rl\utils\utils.py:220: UserWarning: The observation configuration dictionary 'obs_groups' is empty and thus likely not configured. Consider configuring the 'obs_groups' dictionary explicitly
+  warnings.warn(
+F:\isaacsim\env_isaacsim\Lib\site-packages\rsl_rl\utils\utils.py:251: UserWarning: The observation configuration dictionary 'obs_groups' does not contain the 'actor' key. As an observation group with the name 'policy' was found, this is assumed to be the appropriate observation. Consider adding the 'actor' key to the 'obs_groups' dictionary for clarity. This behavior will be removed in a future version.
+  warnings.warn(
+F:\isaacsim\env_isaacsim\Lib\site-packages\rsl_rl\utils\utils.py:251: UserWarning: The observation configuration dictionary 'obs_groups' does not contain the 'critic' key. As an observation group with the name 'policy' was found, this is assumed to be the appropriate observation. Consider adding the 'critic' key to the 'obs_groups' dictionary for clarity. This behavior will be removed in a future version.
+  warnings.warn(
+--------------------------------------------------------------------------------
+Resolved observation sets: 
+	 actor :  ['policy']
+	 critic :  ['policy']
+--------------------------------------------------------------------------------
+Actor Model: MLPModel(
+  (obs_normalizer): Identity()
+  (distribution): GaussianDistribution()
+  (mlp): MLP(
+    (0): Linear(in_features=49, out_features=512, bias=True)
+    (1): ELU(alpha=1.0)
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): ELU(alpha=1.0)
+    (4): Linear(in_features=256, out_features=128, bias=True)
+    (5): ELU(alpha=1.0)
+    (6): Linear(in_features=128, out_features=12, bias=True)
+  )
+)
+Critic Model: MLPModel(
+  (obs_normalizer): Identity()
+  (mlp): MLP(
+    (0): Linear(in_features=49, out_features=512, bias=True)
+    (1): ELU(alpha=1.0)
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): ELU(alpha=1.0)
+    (4): Linear(in_features=256, out_features=256, bias=True)
+    (5): ELU(alpha=1.0)
+    (6): Linear(in_features=256, out_features=1, bias=True)
+  )
+)
+[RECORD] USD: F:\RobotProject\Humanoid_Robot_RSL_RL\v3.1\v3.1.usd
+[RECORD] joints: ['l_leg_pitch_joint', 'r_leg_pitch_joint', 'l_leg_roll_joint', 'r_leg_roll_joint', 'l_leg_yaw_joint', 'r_leg_yaw_joint', 'l_knee_pitch_joint', 'r_knee_pitch_joint', 'l_ankle_pitch_joint', 'r_ankle_pitch_joint', 'l_ankle_roll_joint', 'r_ankle_roll_joint']
+[RECORD] root position: [-12.172691345214844, -75.9354476928711, 0.3269999921321869]
+[RECORD] 3-D recording every 4 control steps
+[RECORD] 3-D frame step=1 visible=False
+[RECORD] step=1 crossed=False done=False
+2026-09-28T05:47:48Z [72,687ms] [Warning] [omni.rtx] DLSS increasing input dimensions: Render resolution of (320, 180) is below minimal input resolution of 300.
+2026-09-28T05:47:48Z [72,846ms] [Warning] [omni.syntheticdata.plugin] OgnSdPostRenderVarToHost : rendervar copy from texture directly to host buffer is counter-performant. Please use copy from texture to device buffer first.
+2026-09-28T05:47:51Z [76,590ms] [Warning] [omni.kit.material.library.material_extensions] Could not initialize context menu integration: No module named 'omni.kit.context_menu'
+[RECORD] joint angles: F:\RobotProject\Humanoid_Robot_RSL_RL\recordings\local_sparse_probe\joint_angles_deg.csv
+[RECORD] crossing completed: False
+[RECORD] 3-D frames: 2
+[INFO]: SimulationContext cleared

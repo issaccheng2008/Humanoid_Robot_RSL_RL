@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-from isaaclab.utils import configclass
+from isaaclab.utils.configclass import configclass
 
 from isaaclab_rl.rsl_rl import (
     RslRlOnPolicyRunnerCfg,
@@ -13,7 +13,7 @@ from isaaclab_rl.rsl_rl import (
 )
 
 from ..mdp.symmetry import compute_symmetric_states
-from ..training_phase import WOODEN_BAR_TRAINING_PHASE
+from ..training_phase import WOODEN_BAR_TRAINING_PHASE, TRAINING_STAGE
 
 
 # Each entry is (phase-local PPO iteration, entropy_coef). Iteration 0 is
@@ -30,9 +30,7 @@ ENTROPY_COEF_SCHEDULES: dict[int, tuple[tuple[int, float], ...]] = {
     4: ((0, 0.002),),
     5: ((0, 0.002),(5000, 0.0005)),
 }
-ENTROPY_COEF_SCHEDULE = ENTROPY_COEF_SCHEDULES[
-    WOODEN_BAR_TRAINING_PHASE
-]
+ENTROPY_COEF_SCHEDULE = ((0, 0.0005),)
 
 
 @configclass
@@ -43,6 +41,7 @@ class EntropyScheduledPpoAlgorithmCfg(RslRlPpoAlgorithmCfg):
         f"{__package__}.entropy_schedule:EntropyScheduledPPO"
     )
     training_phase: int = WOODEN_BAR_TRAINING_PHASE
+    training_stage: str = TRAINING_STAGE
     entropy_schedule: tuple[tuple[int, float], ...] = ENTROPY_COEF_SCHEDULE
 
 
@@ -66,10 +65,10 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     if WOODEN_BAR_TRAINING_PHASE == 4:
         max_iterations = 5000
     if WOODEN_BAR_TRAINING_PHASE == 5:
-        max_iterations = 10000
+        max_iterations = 3000
 
     save_interval = 50
-    experiment_name = "humanoid_robot_rsl_rl_rough"
+    experiment_name = "cross_stick_walk_stop_cross_v32"
 
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
@@ -87,12 +86,12 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     algorithm = EntropyScheduledPpoAlgorithmCfg(
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
-        clip_param=0.2,
+        clip_param=0.1,
         entropy_coef=ENTROPY_COEF_SCHEDULE[0][1],
         num_learning_epochs=5,
         num_mini_batches=4,
-        learning_rate=1.0e-3,
-        schedule="adaptive",
+        learning_rate=5.0e-5,
+        schedule="fixed",
         gamma=0.99,
         lam=0.95,
         desired_kl=0.01,

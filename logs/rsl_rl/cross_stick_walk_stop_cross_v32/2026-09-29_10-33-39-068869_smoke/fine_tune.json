@@ -1,0 +1,26 @@
+{
+  "checkpoint": "F:\\RobotProject\\cross_stick\\model_33999.pt",
+  "usd": "F:\\RobotProject\\cross_stick\\v3.2\\v3.2.usd",
+  "resume": false,
+  "learning_rate": 5e-05,
+  "optimizer_lrs": [
+    5e-05
+  ],
+  "stage": "walk_stop_cross_v32",
+  "start_iteration": 0,
+  "additional_iterations": 2,
+  "joint_names": [
+    "l_leg_pitch_joint",
+    "r_leg_pitch_joint",
+    "l_leg_roll_joint",
+    "r_leg_roll_joint",
+    "l_leg_yaw_joint",
+    "r_leg_yaw_joint",
+    "l_knee_pitch_joint",
+    "r_knee_pitch_joint",
+    "l_ankle_pitch_joint",
+    "r_ankle_pitch_joint",
+    "l_ankle_roll_joint",
+    "r_ankle_roll_joint"
+  ]
+}

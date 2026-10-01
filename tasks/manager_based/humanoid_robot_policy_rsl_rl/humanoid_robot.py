@@ -2,23 +2,17 @@
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
-"""Articulation configuration for the custom humanoid robot.
+"""Articulation configuration using this checkout's v3.2 USD asset."""
 
-Place this file next to your environment configuration file, for example:
-    source/Humanoid_Robot_Policy/Humanoid_Robot_Policy/tasks/manager_based/<your_task>/humanoid_robot.py
-
-Then replace HUMANOID_USD_PATH with the absolute path to your converted USD file.
-This file is only the robot ArticulationCfg step; the locomotion environment cfg will import it later.
-"""
+from pathlib import Path
 
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 
 
-# TODO: Replace this with the USD generated from your URDF, not the URDF itself.
-# Example: "/home/tt/Humanoid_Robot_Policy/assets/humanoid.usd"
-HUMANOID_USD_PATH = f"/home/tt/Desktop/v3.1/urdf/v3.1/v3.1.usd"
+# Resolve from the project so Windows and HPC copies use the same asset.
+HUMANOID_USD_PATH = str(Path(__file__).resolve().parents[3] / "v3.2" / "v3.2.usd")
 
 
 HUMANOID_ROBOT_CFG = ArticulationCfg(

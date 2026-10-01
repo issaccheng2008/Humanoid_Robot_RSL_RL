@@ -14,12 +14,14 @@ from typing import TYPE_CHECKING
 
 import torch
 
+from .stop_gate import StopGate
+
 import isaaclab.sim as sim_utils
 from isaaclab.envs.mdp import UniformVelocityCommand, UniformVelocityCommandCfg
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.sensors import ContactSensor
-from isaaclab.utils import configclass
+from isaaclab.utils.configclass import configclass
 from isaaclab.utils.math import quat_apply, quat_apply_inverse, yaw_quat
 
 if TYPE_CHECKING:
@@ -105,6 +107,15 @@ class _CrossingState:
             (env.num_envs,), value, dtype=torch.long, device=env.device
         )
 
+        self.stop = StopGate(
+            env.num_envs, env.device, env.step_dt,
+            hold_s=getattr(env.cfg, "stop_hold_s", 0.5),
+            timeout_s=getattr(env.cfg, "stop_timeout_s", 3.0),
+        )
+        self.stop_enabled = getattr(env.cfg, "stop_before_crossing", False)
+        self.task_success = bools()
+        self.task_success_event = bools()
+        self.success_support_steps = longs()
         self.initialized = bools()
         self.training_phase = longs(NORMAL_WALKING_PHASE)
         self.step_distance = torch.zeros(env.num_envs, device=env.device)
@@ -252,7 +263,7 @@ def _base_forward_and_sole_front(
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Return yaw-only base forward, yaw quaternion, and both sole fronts."""
     robot = env.scene[feet_cfg.name]
-    robot_yaw_quat_w = yaw_quat(robot.data.root_quat_w)
+    robot_yaw_quat_w = yaw_quat(robot.data.root_quat_w.torch)
     local_forward = torch.zeros(env.num_envs, 3, device=env.device)
     local_forward[:, 0] = 1.0
     forward_w = quat_apply(robot_yaw_quat_w, local_forward)
@@ -472,6 +483,10 @@ def reset_crossing_state(
         env, env_ids, physical_bar_name, hidden_depth
     )
 
+    state.stop.reset(env_ids)
+    state.task_success[env_ids] = False
+    state.task_success_event[env_ids] = False
+    state.success_support_steps[env_ids] = 0
     state.initialized[env_ids] = True
     if training_phase == MIXED_COMMAND_PHASE:
         bar_episode = (
@@ -737,6 +752,7 @@ def _update_crossing_state_once(
     if not torch.any(update_envs):
         return state
 
+    state.task_success_event[update_envs] = False
     state.following_foot_touchdown_event[update_envs] = False
     state.collisionless_bar_contact_event[update_envs] = False
 
@@ -962,6 +978,25 @@ def _update_crossing_state_once(
         & (state.touchdown_count >= state.trigger_touchdown_index)
         & completed_swing
     )
+    if state.stop_enabled:
+        robot = env.scene[feet_cfg.name]
+        # Ready is independent of touchdown: a stationary robot has no new swing event.
+        trigger_candidate = state.stop.update(
+            trigger_candidate, update_envs, in_contact,
+            robot.data.root_lin_vel_w.torch, robot.data.root_ang_vel_w.torch[:, 2],
+        ) & update_envs
+        # Require actual geometry clearance and two consecutive double-support samples.
+        relative = sole_vertices_w[..., :2] - state.spawn_pose_w[:, None, None, :2]
+        longitudinal_now = (relative * state.forward_w[:, None, None, :]).sum(dim=3)
+        still_clear = (longitudinal_now.amin(dim=2) > state.crossing_half_width[:, None]).all(dim=1)
+        supported = update_envs & state.crossed & still_clear & in_contact.all(dim=1)
+        state.success_support_steps[update_envs & ~supported] = 0
+        state.success_support_steps[supported] += 1
+        state.task_success_event = (
+            update_envs & state.stop.completed & ~state.task_success
+            & (state.success_support_steps >= 2)
+        )
+        state.task_success |= state.task_success_event
     if torch.any(trigger_candidate):
         trigger_env_ids = torch.nonzero(
             trigger_candidate, as_tuple=False
@@ -970,6 +1005,9 @@ def _update_crossing_state_once(
             touchdown_event[trigger_env_ids].long(),
             dim=1,
         )
+        if state.stop_enabled:
+            # At rest the forward foot supports the first crossing step; use current geometry.
+            landing_foot = torch.argmax(sole_front_x[trigger_env_ids], dim=1)
         _spawn_crossing(
             env,
             trigger_env_ids,
@@ -998,6 +1036,7 @@ def _update_crossing_state_once(
         & ~finish_following_step
         & ~completed
         & ~trigger_candidate
+        & ~(state.stop.active | state.stop.failed)
     )
     if torch.any(normal_touchdown):
         normal_env_ids = torch.nonzero(
@@ -1018,6 +1057,10 @@ def _update_crossing_state_once(
     state.step_distance[phase_5_no_bar] = default_step_distance
 
     state.last_control_update_step[update_envs] = step
+    if state.stop_enabled:
+        # Terminations/rewards run before CommandManager.compute in Isaac Lab.
+        # Synchronize here so the same sample uses the same command in rewards/observations.
+        env.command_manager.get_term("base_velocity")._update_command()
     return state
 
 
@@ -1143,6 +1186,13 @@ class ObstacleAwareVelocityCommand(UniformVelocityCommand):
         self.vel_command_b[active, 0] = self.cfg.ranges.lin_vel_x[0]
         self.vel_command_b[active, 1] = 0.0
         self.vel_command_b[active, 2] = 0.0
+
+        # Stop has final priority over Phase 5's forced forward command.
+        if state.stop_enabled:
+            stopping = state.stop.active | state.stop.failed
+            self.is_standing_env[stopping] = True
+            self.vel_command_b[stopping] = 0.0
+            state.step_distance[stopping] = 0.0
 
     def _set_debug_vis_impl(self, debug_vis: bool):
         """Create and toggle the additional playback markers."""
@@ -1400,6 +1450,11 @@ def physical_bar_crossing_completion_reward(
         normal_step_default_probability,
         random_step_distance_range,
     )
+    if state.stop_enabled:
+        # The termination manager has evaluated falls and bar motion before rewards.
+        failed_now = state.task_success_event & env.termination_manager.terminated
+        state.task_success[failed_now] = False
+        return (state.task_success_event & ~failed_now).float()
     bar_phase = (state.training_phase == COLLISIONLESS_BAR_PHASE) | (
         state.training_phase == PHYSICAL_BAR_PHASE
     )
@@ -1490,6 +1545,7 @@ def step_distance_tracking_reward(
     )
     eligible = (
         state.touchdown_reward_eligible
+        & ~(state.stop.active | state.stop.failed | state.stop.ready).unsqueeze(1)
         & ~state.crossing_command.unsqueeze(1)
         & (
             state.step_distance_reward_paid_step != _control_step(env)
@@ -2094,3 +2150,23 @@ def policy_observation_shape_check(
         )
     return {"policy_observation_dim": float(actual_dim)}
 
+
+
+def stop_before_crossing_timeout(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Update before all rewards, and fail a stop that never settles."""
+    _update_crossing_state_once(env, **env.event_manager.get_term_cfg("update_crossing_state").params)
+    return _get_state(env).stop.failed
+
+
+def stop_stability_reward(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+    state = _get_state(env)
+    robot = env.scene["robot"]
+    velocity = robot.data.root_lin_vel_w.torch
+    yaw_rate = robot.data.root_ang_vel_w.torch[:, 2]
+    contact = env.scene.sensors[sensor_cfg.name].data.current_contact_time[:, sensor_cfg.body_ids] > 0
+    score = torch.exp(-velocity[:, :2].square().sum(dim=1) / 0.05**2 - yaw_rate.square() / 0.10**2)
+    return state.stop.active.float() * contact.all(dim=1).float() * score
+
+
+def stop_completion_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    return _get_state(env).stop.ready.float()

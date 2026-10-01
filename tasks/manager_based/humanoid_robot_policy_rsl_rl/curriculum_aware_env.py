@@ -38,3 +38,19 @@ class CurriculumAwareManagerBasedRLEnv(ManagerBasedRLEnv):
             "[INFO] Curriculum global step starts at "
             f"{self.common_step_counter:,}."
         )
+
+    def _reset_idx(self, env_ids):
+        # Capture completed episodes before the reset event clears crossing state.
+        metrics = {}
+        if hasattr(self, "_wooden_bar_state"):
+            state = self._wooden_bar_state
+            bar_ids = env_ids[~state.phase_5_no_bar_episode[env_ids] & state.initialized[env_ids]]
+            if len(bar_ids):
+                metrics = {
+                    "Task/stop_success_rate": state.stop.completed[bar_ids].float().mean(),
+                    "Task/stop_timeout_rate": state.stop.failed[bar_ids].float().mean(),
+                    "Task/full_sequence_success_rate": state.task_success[bar_ids].float().mean(),
+                    "Task/geometric_crossing_rate": state.crossed[bar_ids].float().mean(),
+                }
+        super()._reset_idx(env_ids)
+        self.extras["log"].update(metrics)

@@ -249,7 +249,7 @@ def base_acceleration_l2(
     if axis == "y":
         # Rotate into the gravity-aligned robot heading frame.
         base_acc_yaw = quat_apply_inverse(
-            yaw_quat(asset.data.root_quat_w),
+            yaw_quat(asset.data.root_quat_w.torch),
             base_acc_w,
         )
         return torch.square(base_acc_yaw[:, 1])
@@ -287,8 +287,8 @@ def track_lin_vel_xy_yaw_frame_quadratic_relative(
 
     # World velocity expressed in the gravity-aligned robot yaw frame.
     base_lin_vel_yaw = quat_apply_inverse(
-        yaw_quat(robot.data.root_quat_w),
-        robot.data.root_lin_vel_w,
+        yaw_quat(robot.data.root_quat_w.torch),
+        robot.data.root_lin_vel_w.torch,
     )
 
     command_xy = env.command_manager.get_command(command_name)[:, :2]
