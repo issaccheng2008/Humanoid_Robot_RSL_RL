@@ -1,41 +1,111 @@
-# 行走—停稳—跨越（v3.2）
+# p3：固定8 cm单棍，行走中跨越（v3.2）
 
-本项目基于 v3.2 机器人和 `model_33999.pt` 进行微调。Phase 5 的障碍物回合先行走，再将速度指令设为零。双脚保持接地、水平速度低于 0.05 m/s、偏航角速度低于 0.10 rad/s，并连续满足 0.5 秒后，才会在当前脚底几何前方生成实体木棍并开始跨越。若 3 秒内未能停稳，该回合会失败。策略接口保持不变：49 维观测、12 维动作。成功跨越要求双脚仍处于木棍远侧，并连续两个控制步保持双脚支撑；若同一控制步触发跌倒或木棍移动终止，不会获得成功奖励。
+当前默认Stage 1无实体碰撞，Stage 2恢复实体碰撞；完整方案、奖励与阶段切换命令见[两阶段训练说明](fixed_stick_two_stages_zh.md)。本次以用户最后确认的“行走中跨越”为准，取消停稳和恢复姿态阶段。默认任务仍叫 `Humanoid-Robot-RSLRL-v0`，配置改为 `fixed_stick_env_cfg.py`。历史十棍任务文件保留，默认训练不再使用它们。
 
-v3.2 的脚尖和脚跟各缩短约 1 cm，因此足底轮廓已依据项目内 USD 碰撞网格重新生成。PPO 使用固定学习率 `5e-5`、熵系数 `5e-4`、裁剪参数 `0.1`、8 秒回合，障碍物回合占 80%。首次微调会加载 `model_33999.pt` 的 actor、critic 和策略噪声参数，并重新初始化优化器和微调计数。`--resume` 仅接受本微调阶段生成的检查点，并恢复优化器状态和训练迭代。
+## 距离与动作的定义
 
-## 在 HPC 上训练
+机器人从原微屈膝姿态开始：基座高度0.32 m，右髋/膝/踝俯仰为0.15/0.30/-0.15 rad，左侧为-0.15/-0.30/0.15 rad，其余关节为0。复位位置、朝向、关节角及速度不随机，地面为平地；摩擦、执行器增益和关节摩擦仍按原任务随机化。
 
-将更新后的 `cross_stick` 文件夹复制到 HPC 的 `$HOME/cross_stick`，并确保其中包含 `model_33999.pt` 和 `v3.2/`。Slurm 脚本默认使用此前项目脚本采用的 `biped-sandbox.sif` 容器和 `IsaacLab/source` 目录结构。进入项目目录后提交：
+木棍长80 cm、宽3 cm、高3 cm。**初始最前脚尖至木棍近侧边缘的净间隙为8 cm**，不是基座中心到棍中心8 cm。本次真实Isaac冒烟测得木棍中心相对环境原点x约0.18760 m、z=0.015 m。每回合只在初始放置一次，随后世界坐标固定；Stage 1关闭碰撞，Stage 2启用碰撞。几何在复位FK更新后读取，避免使用上一回合的脚位置。
 
-```bash
-sbatch hpc/train_walk_stop_cross.sh
+10 cm是原策略接口中的**落地脚尖相对另一脚尖的纵向步长**，不是基座必须移动10 cm，也不是双脚并齐后整体移动10 cm。流程如下：
+
+| 阶段 | 前进速度 | 步长输入 | 跨棍输入 | 切换条件 |
+|---|---:|---:|---:|---|
+| 普通走一步 | 0.20 m/s | 0.10 m | 0 | 第一次有效摆动脚落地立即切换，实际步长/前移距离不阻塞命令 |
+| 第一只脚跨棍 | 0.20 m/s | 0.23 m | 1 | 指定跨棍脚完整足底在木棍远侧，摆动后落地 |
+| 另一只脚跟进 | 0.20 m/s | 0.00 m | 1 | 两脚完整足底超过木棍远侧5 mm，并连续两个控制帧双脚支撑 |
+
+0 cm是原跟进动作接口中的“相对另一只脚并齐”目标；**速度指令始终非零，不是停车命令**。左右脚均可先走，跨棍脚为第一步落地脚的另一侧。行走的支撑腿可以直接切换，不要求中间出现双脚同时接地的控制采样帧。
+
+普通步长输入仍为10 cm，首次落地实际步长是否达到10 cm由奖励训练，不阻塞跨棍指令。第一只有效摆动脚落地时，另一脚收到跨棍标志1和23 cm跨步输入。当前8 cm初始间隙下，普通步可能已与棍投影重叠；Stage 1允许穿透继续动作，Stage 2保持实体碰棍失败。
+
+## 策略输入和真机对应
+
+保留旧检查点的49维观测、12维动作、无观测归一化及镜像增强。没有木棍实时距离、世界位置、轨迹目标位置或地形扫描输入。木棍几何只用于训练奖励、终止和离线记录。因为初始距离固定，单次8 cm提示没有变化信息，当前省去它；如果以后要泛化到不同初始距离，应另行设计带记忆的策略或可部署的里程估计。
+
+| Python切片 | 观测 |
+|---|---|
+| `0:3` | IMU线加速度，乘0.1 |
+| `3:6` | IMU角速度，rad/s |
+| `6:9` | 基座坐标系投影重力单位向量 |
+| `9:11` | 前进速度与偏航速度指令 |
+| `11:12` | 上表的固定步长指令 |
+| `12:13` | 跨棍标志0/1 |
+| `13:25` | 关节角减默认微屈膝关节角，rad |
+| `25:37` | 关节速度，rad/s |
+| `37:49` | 上一次原始策略动作，回合初始为0 |
+
+关节和动作顺序严格为：右腿pitch、roll、yaw、knee pitch、ankle pitch、ankle roll，然后左腿同顺序。它不同于USD输出的左右交错顺序。关节目标为 `默认关节角 + 0.25 * 策略动作`。策略频率50 Hz，仿真物理和IMU频率200 Hz。真机须沿用关节符号、IMU坐标/单位、动作顺序、默认姿态和控制增益；不能把原始RSL训练检查点直接当作电机控制代码。
+
+训练环境用足底几何和接地事件切换命令；真机可由现有控制器根据关节运动学与接地估计切换，或由操作者下发对应阶段命令。切换过程中不读取木棍距离。脚尖步长或接地估计仍需按硬件标定。
+
+## 奖励与成功判定
+
+沿用速度、足部时间、滑移、接地平整、躯干稳定、关节限制及动作平滑奖励。步长落地奖励权重50，普通步完成25，第一只脚完整跨越30，纯净完整成功100，前进进度6，首次入障净空75，高度与脚前进速度/进度乘积15，Stage 1穿透软惩罚−100；原静态足底净空15被替换。移除十棍课程、间隙中心、实时目标位置和停车奖励。
+
+Stage 1碰棍被记录且软罚，但允许继续完整动作；Stage 2碰棍立即失败。穿透完成、跌倒、足底横向越出木棍跨度或8秒超时均不能获得最终100分。Stage 1每5 ms物理子步检查足底几何穿透并锁存，Stage 2物理接触检查覆盖13个实际机器人刚体，传感器保留4个子步历史。足底几何检查只计算实际与木棍投影相交部分的高度，避免将杆后接地的脚跟误判为碰棍。
+
+两脚完整足底都越过木棍远侧并满足双脚支撑才算完成。一脚越过、仅脚尖越过、从侧面绕过、跌倒不能算完成；Stage 1穿透落地仅算完整动作，不算纯净成功，Stage 2碰棍不能算成功。终止前结果保存在`fixed_stick_outcome`，防止Isaac自动复位后丢失成功标志。
+
+普通步、前腿、纯净完整成功事件分别实际发放25/30/100分，已抵消Isaac按dt积分的缩放，避免成功100被缩成2分、拖延完成反而占优。8秒期限属于有限回合的任务失败，不作为可继续估值的时间截断。
+
+## 本地训练与回放
+
+在项目根目录运行：
+
+```powershell
+.\hpc\train_walk_stop_cross.ps1 -Stage 1 -NumEnvs 1024 -Iterations 3000
 ```
 
-可通过环境变量 `PROJECT` 和 `CONTAINER` 指定项目目录与容器路径。也可用 `NUM_ENVS`（默认 512）和 `ITERATIONS`（默认 3000）调整并行环境数和新增 PPO 更新次数。续训时，检查点路径须使用容器内路径：
+默认从`model_33999.pt`暖启动，继承actor、critic和策略噪声，重置优化器及阶段计数，学习率固定`5e-5`。同阶段续训必须使用对应新阶段检查点（Stage 1为`fixed_stick_stage1_v32`，Stage 2为`fixed_stick_stage2_v32`），跨阶段省略Resume：
+
+```powershell
+.\hpc\train_walk_stop_cross.ps1 -Stage 1 -Resume -Checkpoint '日志中的model_N.pt绝对路径' -Iterations 1000
+```
+
+回放新模型：
+
+```powershell
+& 'F:\isaacsim\env_isaacsim\Scripts\python.exe' -B hpc/play_walk_stop_cross.py --checkpoint '日志中的model_N.pt绝对路径' --headless
+```
+
+回放默认自动按新检查点选择阶段；旧检查点默认Stage 1，显式`--stage 2`可观察实体木棍。视频使用Kit的3D机械模型，输出`obstacle-3d.mp4`、`summary.json`和`trajectory.csv`；`--no-video`可仅检查数值。CSV关节角单位rad，summary包含初始净间隙、碰撞模式、hit和clean_success。
+
+## HPC
+
+复制整个`cross_stick_p3`到`$HOME/cross_stick_p3`，保留`v3.2/`全部USD依赖、`model_33999.pt`、`tasks/`和`hpc/`。版本参照`cross_stick`现有代码格式：Python3.12.x、Isaac Sim6.0.x、IsaacLab框架3.0.x、RSL-RL5.4.x。启动入口会核实版本/API并记录实际版本；HPC容器未在本地验证，若版本不符应使用匹配的容器与IsaacLab检出，不能只改导入名。
 
 ```bash
-sbatch hpc/train_walk_stop_cross.sh --resume \
-  --checkpoint /workspace/cross_stick/logs/rsl_rl/cross_stick_walk_stop_cross_v32/RUN/model_N.pt \
+cd "$HOME/cross_stick_p3"
+sbatch hpc/train_walk_stop_cross.sh --stage 1
+```
+
+环境变量`PROJECT`、`CONTAINER`、`ISAACLAB_ROOT`覆盖项目、镜像、IsaacLab目录。默认仍使用参考项目的`$HOME/biped-sandbox.sif`；`NUM_ENVS=1024`、`ITERATIONS=3000`为默认训练规模。整个IsaacLab目录挂载为`/opt/isaaclab`，Python路径使用容器内source目录。
+
+```bash
+sbatch hpc/train_walk_stop_cross.sh --stage 1 --resume \
+  --checkpoint /workspace/cross_stick_p3/logs/rsl_rl/fixed_stick_stage1_v32/RUN/model_N.pt \
   --max-iterations 1000
 ```
 
-`--max-iterations` 表示本次新增的 PPO 更新次数。训练结果保存在 `logs/rsl_rl/cross_stick_walk_stop_cross_v32/`，其中包含 `fine_tune.json`、环境和算法 YAML 配置、TensorBoard 数据及 `model_N.pt` 检查点。请重点查看障碍物回合的以下指标：
+获得GPU作业资源后回放：
 
-- `Task/stop_success_rate`：成功停稳比例
-- `Task/stop_timeout_rate`：停车超时比例
-- `Task/geometric_crossing_rate`：双脚在几何上越过木棍的比例
-- `Task/full_sequence_success_rate`：完成“行走—停稳—跨越”全过程的比例
+```bash
+bash hpc/play_fixed_stick.sh \
+  --checkpoint /workspace/cross_stick_p3/logs/rsl_rl/fixed_stick_stage1_v32/RUN/model_N.pt
+```
 
-首轮训练应结合原行走能力和录制视频一并评估。90% 的全过程成功率是预期目标，目前尚未通过训练验证。
+`--max-iterations`指本次新增更新次数。日志位于`logs/rsl_rl/fixed_stick_stage1_v32/`，`fine_tune.json`记录运行时版本、资产路径、阶段、初始距离、动作关节顺序和初始角度。Stage 2日志使用`fixed_stick_stage2_v32/`。准出重点看`Task/clean_crossing_success_rate_window`和`Task/stage2_ready`；完整动作完成率与纯净成功率分开记录。Stage 2从Stage 1检查点以`--stage 2 --checkpoint ...`暖启动。
 
-在 HPC 上录制单个回合，可运行 `hpc/play_walk_stop_cross.py --checkpoint <微调检查点路径> --steps 400 --headless`。该脚本默认使用 v3.2 USD 和软件视频渲染。旧版 `play_obstacle_v31.py` 及其 Slurm 脚本仍是 v3.1 的回放入口。
+## 验证记录与当前模型状态
 
-## 已完成的本地验证
+以下仿真和模型记录对应调整前的23 cm初始距离、20 cm普通步长配置；当前初始净间隙为8 cm、普通步长为10 cm，两阶段最新验证记录见[两阶段训练说明](fixed_stick_two_stages_zh.md)。以下旧98项与23/20 cm验证是历史记录。
 
-- 19 项新增单元与集成测试通过，覆盖连续停稳、木棍仅生成一次、越杆后退回时拒绝判成功、停车超时惩罚、检查点冷启动与续训、v3.2 足底尺寸等情况。更新足底轮廓后，还完成了单环境 20 个控制步的 v3.2 推理检查，确认策略观测为 49 维且包含全部 12 个关节。
-- 8 项原有视频与录制测试通过；Python 语法编译检查通过。
-- 完成 8 环境、2 次更新的 Isaac Sim 冒烟训练：成功加载 `model_33999.pt` 和 v3.2，优化器实际学习率为 `5e-5`。
-- 完成 32 环境、25 次更新的短程训练，未发生任务崩溃。但这段短训练尚未学会完整的新动作，当时测得的全过程成功率为 0。后续训练应在 HPC 上进行。
+修改前78项任务测试通过；修改后`tests/`目录全部98项通过，其中20项新增测试覆盖固定距离、动态切换、支撑腿无双支撑帧切换、足底倾斜、物理子步短暂碰撞、失败优先、里程碑奖励积分和部分环境复位。最终Isaac冒烟训练使用4环境、2次PPO更新，成功加载v3.2和旧检查点，输入/输出为49/12维。
 
-不要把 Isaac Lab 通用指标 `Metrics/success_rate` 当作跨越成功率。请使用 `Task/full_sequence_success_rate` 评估障碍物回合的完整任务成功率。
+额外运行的旧录像脚本测试为6项通过、2项失败：测试仍断言原来的相机偏移，而现有旧录像脚本已经有更宽视角的相机参数修改。本次保留这些已有修改，只将旧录像入口显式指向Legacy任务；这两项不属于新任务测试。
+
+旧检查点确定性回放初始净间隙为0.23000002 m，但在第32步碰棍，未完成20 cm目标步。短程冒烟训练完整成功率为0。**当前交付是修改后的可训练任务，尚未得到或验证真机可用的成功模型**。应在HPC充分微调，用多种摩擦/执行器设置评估完整成功率，再按上面的策略接口进行硬件验证。
+
+本机Isaac启动时另有`isaaclab_assets`的Newton fourbar缓存缺失日志；它未阻止本任务USD加载和PPO更新，未修改全局Isaac安装。

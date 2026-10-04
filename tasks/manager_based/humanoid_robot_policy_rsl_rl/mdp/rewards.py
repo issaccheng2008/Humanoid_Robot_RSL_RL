@@ -214,16 +214,23 @@ def joint_torque_over_nominal(
     env: ManagerBasedRLEnv,
     nominal_torque: float,
     asset_cfg: SceneEntityCfg,
+    upper_torque_threshold: float | None = None,
+    upper_torque_slope: float = 10.0,
 ) -> torch.Tensor:
-    """Penalize only applied joint torque above the nominal actuator torque."""
-    if nominal_torque <= 0.0:
-        raise ValueError("nominal_torque must be positive.")
-
+    """Sum continuous piecewise-linear excess applied torque across joints."""
+    if not math.isfinite(nominal_torque) or nominal_torque <= 0:
+        raise ValueError("nominal_torque must be finite and positive")
+    if upper_torque_threshold is not None:
+        if not math.isfinite(upper_torque_threshold) or upper_torque_threshold <= nominal_torque:
+            raise ValueError("upper_torque_threshold must exceed nominal_torque")
+        if not math.isfinite(upper_torque_slope) or upper_torque_slope < 1:
+            raise ValueError("upper_torque_slope must be finite and at least one")
     asset: Articulation = env.scene[asset_cfg.name]
-    applied_torque = torch.abs(
-        asset.data.applied_torque[:, asset_cfg.joint_ids]
-    )
-    excess_torque = torch.clamp(applied_torque - nominal_torque, min=0.0)
+    applied_torque = torch.abs(asset.data.applied_torque[:, asset_cfg.joint_ids])
+    excess_torque = torch.clamp(applied_torque - nominal_torque, min=0)
+    if upper_torque_threshold is not None:
+        excess_torque = excess_torque + (upper_torque_slope - 1) * torch.clamp(
+            applied_torque - upper_torque_threshold, min=0)
     return torch.sum(excess_torque, dim=1)
 
 
@@ -273,8 +280,8 @@ def track_lin_vel_xy_yaw_frame_quadratic_relative(
     For moving commands:
         perfect tracking       -> +1
         stationary robot       ->  0
-        opposite-direction     -> -1
-        excessive overspeed    -> negative, bounded at -1
+        opposite-direction     -> -3 for the opposite command velocity
+        excessive overspeed    -> negative, with its full quadratic cost
 
     For standing commands, use an exponential penalty on planar velocity.
     """
@@ -303,14 +310,16 @@ def track_lin_vel_xy_yaw_frame_quadratic_relative(
     # Normalizing by command speed makes:
     # actual = 0          -> 0
     # actual = command    -> 1
-    # actual = -command   -> -1 after clipping
+    # actual = -command   -> -3
     denominator = torch.clamp(
         command_speed_sq,
         min=moving_command_threshold**2,
     )
 
     moving_score = 1.0 - tracking_error_sq / denominator
-    moving_score = torch.clamp(moving_score, min=-1.0, max=1.0)
+    # Preserve the quadratic backward/overspeed cost; clipping it below
+    # allows long forward excursions to be cancelled by short fast reversals.
+    moving_score = torch.clamp(moving_score, max=1.0)
 
     # Standing environments should minimize all planar motion.
     standing_score = torch.exp(
@@ -326,3 +335,21 @@ def track_lin_vel_xy_yaw_frame_quadratic_relative(
         moving_score,
         standing_score,
     )
+
+
+def hurdle_body_heading_reward(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    std: float = 0.20,
+) -> torch.Tensor:
+    """Reward body/torso heading aligned with the +X forward track direction."""
+    robot: Articulation = env.scene[asset_cfg.name]
+    quat = getattr(robot.data.root_quat_w, "torch", robot.data.root_quat_w)
+    x = quat[:, 0]
+    y = quat[:, 1]
+    z = quat[:, 2]
+    w = quat[:, 3]
+    fwd_x = 1.0 - 2.0 * (y * y + z * z)
+    fwd_y = 2.0 * (x * y + w * z)
+    yaw = torch.atan2(fwd_y, fwd_x)
+    return torch.exp(-torch.square(yaw / std))

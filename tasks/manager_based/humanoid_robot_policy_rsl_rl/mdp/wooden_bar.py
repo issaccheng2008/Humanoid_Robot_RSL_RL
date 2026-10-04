@@ -34,6 +34,16 @@ COLLISIONLESS_BAR_PHASE = 3
 PHYSICAL_BAR_PHASE = 4
 MIXED_COMMAND_PHASE = 5
 
+NUM_STICKS = 10
+FIRST_STICK_X = 0.50
+STICK_CLEAR_GAP = 0.20
+WOODEN_BAR_WIDTH = 0.03
+WOODEN_BAR_LENGTH = 0.80
+WOODEN_BAR_HEIGHT = 0.03
+STICK_SPACING = STICK_CLEAR_GAP + WOODEN_BAR_WIDTH  # 0.23m pitch
+STICK_HALF_WIDTH = 0.5 * WOODEN_BAR_WIDTH
+STICK_HALF_LENGTH = 0.5 * WOODEN_BAR_LENGTH  # 0.40m
+
 
 def _control_step(env: ManagerBasedRLEnv) -> int:
     """Return the shared environment/control-step counter."""
@@ -113,6 +123,38 @@ class _CrossingState:
             timeout_s=getattr(env.cfg, "stop_timeout_s", 3.0),
         )
         self.stop_enabled = getattr(env.cfg, "stop_before_crossing", False)
+        self.num_sticks = NUM_STICKS
+        initial_gap = getattr(env.cfg, "hurdle_initial_gap", STICK_CLEAR_GAP)
+        self.course_spacing = torch.full((env.num_envs,), initial_gap + WOODEN_BAR_WIDTH, device=env.device)
+        self.course_level = longs()
+        gap_levels = getattr(env.cfg, "hurdle_gap_levels", (initial_gap,))
+        if initial_gap not in gap_levels or any(a <= b for a, b in zip(gap_levels, gap_levels[1:])):
+            raise ValueError("Initial gap must be a curriculum level; levels must strictly decrease.")
+        self.curriculum_level = gap_levels.index(initial_gap)
+        self.course_level[:] = self.curriculum_level
+        self.curriculum_episodes = self.curriculum_completed = 0
+        self.curriculum_attempts = self.curriculum_correct = 0
+        self.landing_attempts = longs()
+        self.correct_landings = longs()
+        self.wrong_landing_reward_val = torch.zeros(env.num_envs, device=env.device)
+        self.target_approach_reward_val = torch.zeros(env.num_envs, device=env.device)
+        self.target_error_previous = torch.zeros((env.num_envs, 2), device=env.device)
+        self.target_error_valid = torch.zeros((env.num_envs, 2), dtype=torch.bool, device=env.device)
+        self.current_stick_index = longs(0)
+        self.sticks_cleared_count = longs(0)
+        self.stick_cleared_event = bools()
+        self.stick_failed_event = bools()
+        self.stick_collision_event = bools()
+        self.stick_collision_reward_val = torch.zeros(env.num_envs, device=env.device)
+        self.stick_hit_flags = torch.zeros(
+            (env.num_envs, NUM_STICKS), dtype=torch.bool, device=env.device
+        )
+        self.stick_landing_reward_paid = torch.zeros(
+            (env.num_envs, NUM_STICKS, 2), dtype=torch.bool, device=env.device
+        )
+        self.forward_progress_reward_val = torch.zeros(env.num_envs, device=env.device)
+        self.stick_over_clearance_reward_val = torch.zeros(env.num_envs, device=env.device)
+        self.stick_landing_center_reward_val = torch.zeros(env.num_envs, device=env.device)
         self.task_success = bools()
         self.task_success_event = bools()
         self.success_support_steps = longs()
@@ -299,6 +341,228 @@ def _crossing_foot_geometry(
     return sole_vertices_w, state.forward_w, footprint_min, footprint_max
 
 
+def _sole_min_z_over_rectangle(
+    vertices: torch.Tensor, half_width: float, half_length: float
+) -> torch.Tensor:
+    """Minimum height of the planar convex sole over a stick's XY footprint.
+
+    The minimum of a linear height function over the intersection occurs at
+    a sole vertex, a sole/rectangle edge intersection, or a rectangle corner.
+    All candidates are evaluated in parallel; disjoint footprints return inf.
+    """
+    xy = vertices[..., :2]
+    inside = (
+        (xy[..., 0].abs() <= half_width + 1e-7)
+        & (xy[..., 1].abs() <= half_length + 1e-7)
+    )
+    minimum = torch.where(inside, vertices[..., 2], float("inf")).amin(dim=-1)
+    edges = torch.roll(vertices, shifts=-1, dims=-2) - vertices
+    axes = [0, 0, 1, 1]
+    bounds = vertices.new_tensor([-half_width, half_width, -half_length, half_length])
+    delta = edges[..., axes]
+    nonparallel = delta.abs() > 1e-9
+    fraction = (bounds - vertices[..., axes]) / torch.where(
+        nonparallel, delta, torch.ones_like(delta)
+    )
+    intersections = vertices.unsqueeze(-2) + fraction.unsqueeze(-1) * edges.unsqueeze(-2)
+    valid = (
+        nonparallel & (fraction >= 0.0) & (fraction <= 1.0)
+        & (intersections[..., 0].abs() <= half_width + 1e-7)
+        & (intersections[..., 1].abs() <= half_length + 1e-7)
+    )
+    edge_minimum = torch.where(valid, intersections[..., 2], float("inf")).amin(dim=(-2, -1))
+    minimum = torch.minimum(minimum, edge_minimum)
+
+    corners = vertices.new_tensor(
+        [
+            [-half_width, -half_length], [-half_width, half_length],
+            [half_width, half_length], [half_width, -half_length],
+        ]
+    )
+    relative = corners - xy.unsqueeze(-2)
+    cross = (
+        edges[..., 0].unsqueeze(-1) * relative[..., 1]
+        - edges[..., 1].unsqueeze(-1) * relative[..., 0]
+    )
+    corner_inside = (cross >= -1e-8).all(dim=-2) | (cross <= 1e-8).all(dim=-2)
+    origin = vertices[..., 0, :]
+    fan = vertices[..., 1:, :] - origin.unsqueeze(-2)
+    normals = torch.linalg.cross(fan[..., :-1, :], fan[..., 1:, :], dim=-1)
+    normal_index = normals[..., 2].abs().argmax(dim=-1)
+    normal = normals.gather(
+        -2, normal_index[..., None, None].expand(*normal_index.shape, 1, 3)
+    ).squeeze(-2)
+    planar = normal[..., 2].abs() > 1e-9
+    nz = torch.where(planar, normal[..., 2], torch.ones_like(normal[..., 2]))
+    corner_z = origin[..., 2, None] - (
+        (normal[..., :2].unsqueeze(-2) * (corners - origin[..., :2].unsqueeze(-2))).sum(dim=-1)
+    ) / nz.unsqueeze(-1)
+    corner_minimum = torch.where(
+        corner_inside & planar.unsqueeze(-1), corner_z, float("inf")
+    ).amin(dim=-1)
+    return torch.minimum(minimum, corner_minimum)
+
+
+
+def _course_inside(
+    sole_vertices_w: torch.Tensor,
+    root_pos_w: torch.Tensor,
+    env_origins: torch.Tensor,
+    half_length: float,
+    course_end_x: float | torch.Tensor,
+) -> torch.Tensor:
+    """Keep the base and the entire soles inside the world-aligned course."""
+    root = root_pos_w - env_origins
+    soles = sole_vertices_w - env_origins[:, None, None, :]
+    return (
+        (root[:, 0] >= -0.1) & (root[:, 0] <= course_end_x)
+        & (root[:, 1].abs() <= half_length)
+        & (soles[..., 1].amin(dim=(1, 2)) >= -half_length)
+        & (soles[..., 1].amax(dim=(1, 2)) <= half_length)
+        & (soles[..., 0].amax(dim=(1, 2)) <= course_end_x)
+    )
+
+
+def hurdle_out_of_bounds(
+    env: ManagerBasedRLEnv,
+    feet_cfg: SceneEntityCfg,
+    sole_vertices: tuple[tuple[tuple[float, float, float], ...], ...],
+    half_length: float,
+    course_end_x: float | torch.Tensor,
+) -> torch.Tensor:
+    """Terminate sideways escapes and premature runs past the final gap."""
+    inside = _course_inside(
+        _sole_geometry_w(env, feet_cfg, sole_vertices),
+        env.scene[feet_cfg.name].data.root_pos_w,
+        env.scene.env_origins, half_length,
+        FIRST_STICK_X + NUM_STICKS * _get_state(env).course_spacing - STICK_HALF_WIDTH,
+    )
+    if bool((~inside)[0]):
+        root = env.scene[feet_cfg.name].data.root_pos_w[0] - env.scene.env_origins[0]
+        soles = _sole_geometry_w(env, feet_cfg, sole_vertices)[0] - env.scene.env_origins[0, None, None, :]
+        print(f"[OOB TRIGGERED] root_x={root[0]:.4f}, root_y={root[1]:.4f}, sole_y_min={soles[..., 1].amin():.4f}, sole_y_max={soles[..., 1].amax():.4f}, sole_x_max={soles[..., 0].amax():.4f}, limit={half_length}", flush=True)
+    return ~inside
+
+
+def _course_failure_mask(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Separate genuine failures from the successful course termination."""
+    manager = getattr(env, "termination_manager", None)
+    if manager is None or manager.terminated is None:
+        return torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
+    active = getattr(manager, "active_terms", [])
+    if "hurdle_course_completed" not in active:
+        return manager.terminated
+    failed = torch.zeros_like(manager.terminated)
+    for name in active:
+        if name != "hurdle_course_completed" and not manager.get_term_cfg(name).time_out:
+            failed |= manager.get_term(name)
+    return failed
+
+
+def hurdle_course_completed(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """End clean and grazed completed runs, without treating success as failure.
+
+    This term must follow the failure terms so the state updater observes the
+    current sample's failure buffers before rewards consume its cached events.
+    """
+    state = _reward_crossing_state(env)
+    return (state.current_stick_index >= NUM_STICKS) & ~_course_failure_mask(env)
+
+
+def _course_gap_mask(
+    sole_vertices_w: torch.Tensor,
+    stick_x: torch.Tensor,
+    env_origins: torch.Tensor,
+    half_width: float,
+    half_length: float,
+    spacing: torch.Tensor | float = STICK_SPACING,
+) -> torch.Tensor:
+    """Require the whole sole to fit the gap and the course's lateral bounds."""
+    minimum = sole_vertices_w.amin(dim=2)
+    maximum = sole_vertices_w.amax(dim=2)
+    pitch = spacing[:, None] if isinstance(spacing, torch.Tensor) else spacing
+    return (
+        (minimum[..., 0] >= stick_x[:, None] + half_width)
+        & (maximum[..., 0] <= stick_x[:, None] + pitch - half_width)
+        & (minimum[..., 1] >= env_origins[:, 1, None] - half_length)
+        & (maximum[..., 1] <= env_origins[:, 1, None] + half_length)
+    )
+
+
+def _course_step_targets(sole_vertices_w, gap_center_x, forward_w):
+    """Convert a world gap center into the inherited inter-foot toe distance."""
+    projection = (sole_vertices_w[..., :2] * forward_w[:, None, None, :]).sum(dim=-1)
+    minimum, maximum = projection.amin(dim=2), projection.amax(dim=2)
+    center_y = .5 * (sole_vertices_w[..., 1].amin(dim=2) + sole_vertices_w[..., 1].amax(dim=2))
+    target_front = (gap_center_x[:, None] * forward_w[:, 0, None]
+                    + center_y * forward_w[:, 1, None] + .5 * (maximum - minimum))
+    return target_front - maximum.flip(dims=(1,))
+
+
+def hurdle_skipped_gap(env, feet_cfg, sensor_cfg, sole_vertices):
+    """A grounded foot beyond the next stick cannot count as this gap's landing."""
+    state = _get_state(env)
+    sole = _sole_geometry_w(env, feet_cfg, sole_vertices)
+    contact = env.scene.sensors[sensor_cfg.name].data.current_contact_time[:, sensor_cfg.body_ids] > 0
+    next_edge = (env.scene.env_origins[:, 0] + FIRST_STICK_X
+                 + (state.current_stick_index + 1) * state.course_spacing + STICK_HALF_WIDTH)
+    beyond = sole[..., 0].amin(dim=2) > next_edge[:, None]
+    return (state.initialized & (state.current_stick_index < NUM_STICKS)
+            & (beyond & contact).any(dim=1))
+
+
+def hurdle_target_approach_reward(env):
+    return _reward_crossing_state(env).target_approach_reward_val
+
+
+def hurdle_wrong_landing_penalty(env):
+    return _reward_crossing_state(env).wrong_landing_reward_val
+
+
+def record_hurdle_curriculum(env, env_ids):
+    """Accumulate only finished episodes from the current difficulty level."""
+    state = _get_state(env)
+    ids = env_ids[state.initialized[env_ids] & (state.course_level[env_ids] == state.curriculum_level)]
+    if len(ids):
+        state.curriculum_episodes += len(ids)
+        state.curriculum_completed += int(((state.current_stick_index[ids] >= NUM_STICKS)
+                                          & ~_course_failure_mask(env)[ids]).sum().item())
+        state.curriculum_attempts += int(state.landing_attempts[ids].sum().item())
+        state.curriculum_correct += int(state.correct_landings[ids].sum().item())
+    accuracy = state.curriculum_correct / max(1, state.curriculum_attempts)
+    completion = state.curriculum_completed / max(1, state.curriculum_episodes)
+    metrics = {"Task/landing_accuracy": accuracy, "Task/paired_course_completion_rate": completion}
+    gaps = getattr(env.cfg, "hurdle_gap_levels", (.25, .225, .20))
+    if (getattr(env.cfg, "hurdle_gap_curriculum", False)
+            and state.curriculum_level < len(gaps) - 1
+            and state.curriculum_episodes >= getattr(env.cfg, "hurdle_curriculum_min_episodes", 200)
+            and state.curriculum_attempts >= 50
+            and accuracy >= getattr(env.cfg, "hurdle_curriculum_landing_accuracy", .90)
+            and completion >= getattr(env.cfg, "hurdle_curriculum_completion_rate", .80)):
+        state.curriculum_level += 1
+        state.curriculum_episodes = state.curriculum_completed = 0
+        state.curriculum_attempts = state.curriculum_correct = 0
+    metrics["Task/curriculum_gap_cm"] = 100 * gaps[state.curriculum_level]
+    return metrics
+
+
+def reset_hurdle_layout(env, env_ids):
+    """Move simulator rigid bodies and reward geometry together on reset only."""
+    state = _get_state(env)
+    gaps = getattr(env.cfg, "hurdle_gap_levels", (getattr(env.cfg, "hurdle_initial_gap", STICK_CLEAR_GAP),))
+    state.course_level[env_ids] = state.curriculum_level
+    state.course_spacing[env_ids] = gaps[state.curriculum_level] + WOODEN_BAR_WIDTH
+    for j in range(NUM_STICKS):
+        pose = torch.zeros((len(env_ids), 7), device=env.device)
+        pose[:, :3] = env.scene.env_origins[env_ids]
+        pose[:, 0] += FIRST_STICK_X + j * state.course_spacing[env_ids]
+        pose[:, 2] += .5 * WOODEN_BAR_HEIGHT
+        pose[:, 6] = 1.0  # Isaac Lab in this project uses xyzw.
+        bar = env.scene[f"course_stick_{j}"]
+        bar.write_root_pose_to_sim(pose, env_ids=env_ids)
+        bar.write_root_velocity_to_sim(torch.zeros((len(env_ids), 6), device=env.device), env_ids=env_ids)
+
+
 def _sole_overlaps_bar(
     sole_vertices_w: torch.Tensor,
     bar_pose_w: torch.Tensor,
@@ -483,6 +747,13 @@ def reset_crossing_state(
         env, env_ids, physical_bar_name, hidden_depth
     )
 
+    state.landing_attempts[env_ids] = 0
+    state.correct_landings[env_ids] = 0
+    state.target_error_valid[env_ids] = False
+    state.target_approach_reward_val[env_ids] = 0
+    state.wrong_landing_reward_val[env_ids] = 0
+    if "course_stick_0" in env.scene.keys():
+        reset_hurdle_layout(env, env_ids)
     state.stop.reset(env_ids)
     state.task_success[env_ids] = False
     state.task_success_event[env_ids] = False
@@ -543,7 +814,22 @@ def reset_crossing_state(
     state.step_distance_reward_paid_step[env_ids] = -1
     state.last_control_update_step[env_ids] = -1
 
-    state.spawned[env_ids] = False
+    state.num_sticks = NUM_STICKS
+    state.current_stick_index[env_ids] = 0
+    state.sticks_cleared_count[env_ids] = 0
+    state.stick_cleared_event[env_ids] = False
+    state.stick_failed_event[env_ids] = False
+    state.stick_collision_event[env_ids] = False
+    state.stick_collision_reward_val[env_ids] = 0.0
+    state.stick_hit_flags[env_ids, :] = False
+    state.stick_landing_reward_paid[env_ids] = False
+    state.forward_progress_reward_val[env_ids] = 0.0
+    state.stick_over_clearance_reward_val[env_ids] = 0.0
+    state.stick_landing_center_reward_val[env_ids] = 0.0
+    state.task_success[env_ids] = False
+    state.task_success_event[env_ids] = False
+
+    state.spawned[env_ids] = True
     state.crossed[env_ids] = False
     state.crossing_completed[env_ids] = False
     state.spawn_time_s[env_ids] = 0.0
@@ -721,13 +1007,14 @@ def _update_crossing_state_once(
         crossing_step_distance,
         phase_2_post_crossing_step_distance,
         phase_3_post_crossing_step_distance,
-        phase_4_post_crossing_step_distance,
         bar_height,
         physical_bar_half_width,
         physical_bar_half_length,
         virtual_band_half_width,
     ) <= 0.0:
         raise ValueError("Configured distances, widths, and height must be positive.")
+    if phase_4_post_crossing_step_distance < 0:
+        raise ValueError("Post-crossing step distance must be non-negative.")
     if virtual_band_near_edge_offset < 0.0:
         raise ValueError("virtual_band_near_edge_offset must be non-negative.")
     if physical_bar_center_distance < 0.0:
@@ -812,6 +1099,11 @@ def _update_crossing_state_once(
         valid_reward_touchdown, actual_step, state.touchdown_actual_step
     )
     current_targets = state.step_distance.unsqueeze(1).expand(-1, 2)
+    if not state.stop_enabled:
+        gap_center_x = (env.scene.env_origins[:, 0] + FIRST_STICK_X
+                        + (state.current_stick_index.float() + .5) * state.course_spacing)
+        course_targets = _course_step_targets(sole_vertices_w, gap_center_x, forward_w)
+        current_targets = torch.where(crossing_before_update[:, None], course_targets, current_targets)
     state.touchdown_target_step = torch.where(
         valid_reward_touchdown,
         current_targets,
@@ -873,183 +1165,433 @@ def _update_crossing_state_once(
     state.touchdown_event[update_envs] = False
     state.touchdown_event |= touchdown_event
     state.touchdown_count += torch.sum(touchdown_event, dim=1).long()
+    state.following_foot_touchdown_event[update_envs] = False
+    state.stick_cleared_event[update_envs] = False
+    state.stick_failed_event[update_envs] = False
+    state.task_success_event[update_envs] = False
+    state.forward_progress_reward_val[update_envs] = 0.0
+    state.stick_over_clearance_reward_val[update_envs] = 0.0
+    state.stick_landing_center_reward_val[update_envs] = 0.0
 
-    # Give the post-crossing distance to exactly one step: the cached
-    # following foot.
-    stage_0_active = (
-        update_envs
-        & state.spawned
-        & (state.following_step_command_stage == 0)
-    )
-    state.step_distance[stage_0_active] = crossing_step_distance
-    start_following_step = stage_0_active & crossing_foot_touchdown
-    if torch.any(start_following_step):
-        phase_2_start = start_following_step & (
+    if not state.stop_enabled:
+        curr_k = state.current_stick_index.clone()
+        has_active_stick = curr_k < NUM_STICKS
+        active_stick_x = env.scene.env_origins[:, 0] + FIRST_STICK_X + curr_k.float() * state.course_spacing
+        state.spawn_pose_w[update_envs, 0] = active_stick_x[update_envs]
+        state.spawn_pose_w[update_envs, 1] = env.scene.env_origins[update_envs, 1]
+        state.spawn_pose_w[update_envs, 2] = env.scene.env_origins[update_envs, 2] + 0.5 * bar_height
+        state.spawn_pose_w[update_envs, 3:6] = 0.0
+        state.spawn_pose_w[update_envs, 6] = 1.0
+        state.forward_w[update_envs, 0] = 1.0
+        state.forward_w[update_envs, 1] = 0.0
+        state.crossing_half_width[update_envs] = physical_bar_half_width
+        state.spawned[update_envs] = True
+
+        in_gap = _course_gap_mask(
+            sole_vertices_w, active_stick_x, env.scene.env_origins,
+            physical_bar_half_width, physical_bar_half_length, state.course_spacing,
+        )
+        both_feet_in_gap = in_gap.all(dim=1) & in_contact.all(dim=1)
+        expected_foot = torch.where(state.following_step_command_stage == 0,
+                                   state.crossing_foot_index, state.following_foot_index)
+        expected_mask = foot_indices == expected_foot[:, None]
+        course_active = has_active_stick & state.crossing_command & update_envs
+        support_valid = other_in_contact & torch.where(
+            (state.following_step_command_stage == 1)[:, None], in_gap.flip(dims=(1,)),
+            torch.ones_like(in_gap))
+        target_touchdown = touchdown_event & expected_mask & in_gap & support_valid & course_active[:, None]
+        # Keep inherited airborne/first-contact constraints, but allow valid course steps.
+        state.touchdown_reward_eligible |= valid_reward_touchdown & target_touchdown
+        state.landing_attempts += (touchdown_event & course_active[:, None]).sum(dim=1)
+        state.correct_landings += target_touchdown.sum(dim=1)
+        state.wrong_landing_reward_val[update_envs] = (
+            touchdown_event & ~target_touchdown & course_active[:, None]
+        ).sum(dim=1)[update_envs].float()
+        gap_center_x = active_stick_x + .5 * state.course_spacing
+        foot_center_x = .5 * (sole_vertices_w[..., 0].amin(dim=2) + sole_vertices_w[..., 0].amax(dim=2))
+        target_error = (foot_center_x - gap_center_x[:, None]).abs()
+        approach = (state.target_error_previous - target_error) / env.step_dt
+        guided = course_active[:, None] & expected_mask & state.target_error_valid
+        state.target_approach_reward_val[update_envs] = (
+            approach.clamp(max=.40) * guided.float()
+        ).sum(dim=1)[update_envs] / .40
+        state.target_error_previous[update_envs] = target_error[update_envs]
+        state.target_error_valid[update_envs] = course_active[update_envs, None] & expected_mask[update_envs]
+
+        # 1. Forward progress reward (Layer 1)
+        robot = env.scene["robot"]
+        vx_tensor = getattr(robot.data.root_lin_vel_w, "torch", robot.data.root_lin_vel_w)
+        vx = vx_tensor[:, 0]
+        in_course = _course_inside(
+            sole_vertices_w, robot.data.root_pos_w, env.scene.env_origins,
+            physical_bar_half_length,
+            FIRST_STICK_X + NUM_STICKS * state.course_spacing - physical_bar_half_width,
+        ) & has_active_stick
+        # Keep backward motion signed so returning to the same position cannot
+        # collect positive progress. Only the forward contribution saturates.
+        fwd_score = torch.clamp(vx / .20, max=1.0)
+        state.forward_progress_reward_val[update_envs] = torch.where(
+            in_course[update_envs], fwd_score[update_envs],
+            torch.zeros_like(fwd_score[update_envs]),
+        )
+
+        # 2. Collision detection with all 10 sticks (strictly once per stick!)
+        new_collision_step = torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
+        new_collision_count = torch.zeros(env.num_envs, device=env.device)
+        for j in range(NUM_STICKS):
+            sj_x = env.scene.env_origins[:, 0] + FIRST_STICK_X + j * state.course_spacing
+            stick_origin = torch.stack(
+                (sj_x, env.scene.env_origins[:, 1], env.scene.env_origins[:, 2]), dim=-1
+            )
+            relative_sole = sole_vertices_w - stick_origin[:, None, None, :]
+            overlap_min_z = _sole_min_z_over_rectangle(
+                relative_sole, physical_bar_half_width, physical_bar_half_length
+            )
+            hit_j = (overlap_min_z <= bar_height + 0.002).any(dim=1)
+            # Only trigger on FIRST contact per stick per environment!
+            new_hit_j = update_envs & hit_j & ~state.stick_hit_flags[:, j]
+            state.stick_hit_flags[:, j] |= new_hit_j
+            new_collision_step |= new_hit_j
+            new_collision_count += new_hit_j.float()
+        state.stick_collision_event[update_envs] = new_collision_step[update_envs]
+        state.stick_collision_reward_val[update_envs] = new_collision_count[update_envs]
+
+        # 3. Over-Stick Clearance Shaping (Layer 2)
+        clearance_scores = torch.zeros(env.num_envs, device=env.device)
+        if torch.any(has_active_stick & update_envs):
+            dx_active = sole_vertices_w[..., 0] - active_stick_x[:, None, None]
+            dx_max = torch.amax(dx_active, dim=2)
+            dx_min = torch.amin(dx_active, dim=2)
+            in_band = (dx_max >= -0.05) & (dx_min <= 0.05)
+            dy_active = sole_vertices_w[..., 1] - env.scene.env_origins[:, 1, None, None]
+            in_lat = (torch.amax(dy_active, dim=2) >= -physical_bar_half_length - 0.05) & (torch.amin(dy_active, dim=2) <= physical_bar_half_length + 0.05)
+            is_swing = ~in_contact
+            sole_min_z_active = torch.amin(sole_vertices_w[..., 2], dim=2) - env.scene.env_origins[:, 2, None]
+            height_score = torch.clamp((sole_min_z_active - bar_height) / 0.035, min=0.0, max=1.0)
+            if hasattr(robot.data, "body_lin_vel_w"):
+                foot_vel_x = robot.data.body_lin_vel_w[:, feet_cfg.body_ids, 0]
+            else:
+                foot_vel_x = vx_tensor[:, 0, None].expand(-1, len(feet_cfg.body_ids))
+            # Reward feet being safely above the stick without penalizing slow apex crossing
+            fwd_not_backward = (foot_vel_x >= -0.05).float()
+            foot_score = height_score * fwd_not_backward * (is_swing & in_band & in_lat & (expected_mask | ~state.crossing_command[:, None])).float()
+            clearance_scores = torch.sum(foot_score, dim=1)
+        state.stick_over_clearance_reward_val[update_envs] = torch.where(
+            (has_active_stick & in_course)[update_envs], clearance_scores[update_envs],
+            torch.zeros_like(clearance_scores[update_envs]),
+        )
+
+        # 4. Landing Centering Reward (Layer 3)
+        centering_scores = torch.zeros(env.num_envs, device=env.device)
+        has_touchdown = torch.any(touchdown_event, dim=1)
+        if torch.any(has_touchdown & has_active_stick & update_envs):
+            gap_k_center = active_stick_x + 0.5 * state.course_spacing
+            foot_center_x = 0.5 * (torch.amin(sole_vertices_w[..., 0], dim=2) + torch.amax(sole_vertices_w[..., 0], dim=2))
+            dx_center = foot_center_x - gap_k_center[:, None]
+            gaussian_score = torch.exp(-0.5 * torch.square(dx_center / 0.03))
+            active_index = curr_k.clamp(max=NUM_STICKS - 1)
+            env_index = torch.arange(env.num_envs, device=env.device)
+            paid = state.stick_landing_reward_paid[env_index, active_index]
+            eligible = (
+                target_touchdown & ~paid
+                & (has_active_stick & update_envs & in_course).unsqueeze(1)
+            )
+            td_score = gaussian_score * eligible.float()
+            centering_scores = torch.sum(td_score, dim=1)
+            state.stick_landing_reward_paid[env_index, active_index] |= eligible
+        state.stick_landing_center_reward_val[update_envs] = centering_scores[update_envs]
+
+        # Stage 0: crossing foot in flight
+        stage_0_active = (
+            update_envs
+            & has_active_stick
+            & state.crossing_command
+            & (state.following_step_command_stage == 0)
+        )
+        state.step_distance[stage_0_active] = crossing_step_distance
+        start_following_step = stage_0_active & (target_touchdown.any(dim=1))
+        if torch.any(start_following_step):
+            state.step_distance[start_following_step] = phase_4_post_crossing_step_distance
+            state.following_step_command_stage[start_following_step] = 1
+
+        # Stage 1: following foot in flight
+        stage_1_active = (
+            update_envs
+            & has_active_stick
+            & state.crossing_command
+            & (state.following_step_command_stage == 1)
+            & ~start_following_step
+        )
+        state.step_distance[stage_1_active] = phase_4_post_crossing_step_distance
+
+        cleared = torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
+        finish_following_step = stage_1_active & target_touchdown.any(dim=1)
+        if torch.any(finish_following_step):
+            state.following_foot_touchdown_event[finish_following_step] = True
+            cleared = finish_following_step & both_feet_in_gap
+            not_cleared = finish_following_step & ~both_feet_in_gap
+
+            if torch.any(cleared):
+                # Rule 1 & 2: Check whether active stick curr_k was hit
+                hit_curr_k = torch.gather(state.stick_hit_flags, 1, curr_k.clamp(max=NUM_STICKS - 1).unsqueeze(1)).squeeze(1)
+                clean_clear = cleared & ~hit_curr_k
+                # Rule 1: Clean Clear (+20.0 reward triggered once for 1 step)
+                state.stick_cleared_event[clean_clear] = True
+                # Rule 2: Grazed Clear (0.0 reward, no event triggered)
+
+                # Both clean and grazed advance the progression
+                state.sticks_cleared_count[cleared] += 1
+                state.current_stick_index[cleared] += 1
+
+                all_done = cleared & (state.current_stick_index >= NUM_STICKS)
+                more_to_go = cleared & (state.current_stick_index < NUM_STICKS)
+
+                if torch.any(all_done):
+                    # Grand Prize: 10 sticks cleared with ZERO hits across the whole course!
+                    clean_all_done = all_done & (~torch.any(state.stick_hit_flags, dim=1))
+                    state.task_success[clean_all_done] = True
+                    state.task_success_event[clean_all_done] = True
+                    state.crossed[all_done] = True
+                    state.crossing_completed[all_done] = True
+                    state.crossing_command[all_done] = False
+                    state.step_distance[all_done] = default_step_distance
+                    state.following_step_command_stage[all_done] = 2
+
+                if torch.any(more_to_go):
+                    prev_c = state.crossing_foot_index[more_to_go].clone()
+                    state.crossing_foot_index[more_to_go] = state.following_foot_index[more_to_go]
+                    state.following_foot_index[more_to_go] = prev_c
+                    state.crossing_command[more_to_go] = True
+                    state.following_step_command_stage[more_to_go] = 0
+                    state.step_distance[more_to_go] = crossing_step_distance
+
+            if torch.any(not_cleared):
+                state.step_distance[not_cleared] = phase_4_post_crossing_step_distance
+
+        # Rule 3: Hit stick and failed to pass (terminated on active stick)
+        if hasattr(env, "termination_manager") and env.termination_manager.terminated is not None:
+            term = env.termination_manager.terminated
+            time_outs = getattr(env.termination_manager, "time_outs", torch.zeros_like(term))
+            done_envs = term | time_outs
+            hit_active_k = torch.gather(state.stick_hit_flags, 1, curr_k.clamp(max=NUM_STICKS - 1).unsqueeze(1)).squeeze(1)
+            failed_hit = update_envs & done_envs & has_active_stick & hit_active_k & ~cleared
+            state.stick_failed_event[failed_hit] = True
+
+        # Triggering crossing for Stick 0
+        approaching = (
+            update_envs
+            & (state.current_stick_index == 0)
+            & ~state.crossing_command
+        )
+        touchdown_any = torch.any(touchdown_event, dim=1)
+        front_x_w = sole_vertices_w[..., 0].amax(dim=(1, 2))
+        dist_to_stick0 = active_stick_x - front_x_w - physical_bar_half_width
+        trigger_first = approaching & touchdown_any & (dist_to_stick0 <= 0.14) & (dist_to_stick0 >= -0.05)
+        if torch.any(trigger_first):
+            landing_foot = torch.argmax(touchdown_event[trigger_first].long(), dim=1)
+            state.following_foot_index[trigger_first] = landing_foot
+            state.crossing_foot_index[trigger_first] = 1 - landing_foot
+            state.crossing_command[trigger_first] = True
+            state.following_step_command_stage[trigger_first] = 0
+            state.step_distance[trigger_first] = crossing_step_distance
+
+        # Normal walking steps before stick 0 or after all sticks
+        normal_walk = (
+            update_envs
+            & ~state.crossing_command
+            & touchdown_any
+            & ~trigger_first
+        )
+        if torch.any(normal_walk):
+            state.step_distance[normal_walk] = default_step_distance
+            state.following_step_command_stage[normal_walk] = 2
+
+        current_center = (env.scene.env_origins[:, 0] + FIRST_STICK_X
+                          + (state.current_stick_index.float() + .5) * state.course_spacing)
+        targets = _course_step_targets(sole_vertices_w, current_center, forward_w)
+        next_foot = torch.where(state.following_step_command_stage == 0,
+                               state.crossing_foot_index, state.following_foot_index)
+        selected = targets.gather(1, next_foot.clamp(min=0)[:, None]).squeeze(1)
+        commanded = update_envs & state.crossing_command
+        state.step_distance[commanded] = selected[commanded]
+        changed_target = start_following_step | cleared | trigger_first
+        state.target_error_valid[changed_target] = False
+        state.target_approach_reward_val[~in_course & update_envs] = 0
+
+    else:
+        # Give the post-crossing distance to exactly one step: the cached
+        # following foot.
+        stage_0_active = (
+            update_envs
+            & state.spawned
+            & (state.following_step_command_stage == 0)
+        )
+        state.step_distance[stage_0_active] = crossing_step_distance
+        start_following_step = stage_0_active & crossing_foot_touchdown
+        if torch.any(start_following_step):
+            phase_2_start = start_following_step & (
+                state.training_phase == VIRTUAL_BAND_PHASE
+            )
+            phase_3_start = start_following_step & (
+                state.training_phase == COLLISIONLESS_BAR_PHASE
+            )
+            phase_4_start = start_following_step & (
+                state.training_phase == PHYSICAL_BAR_PHASE
+            )
+            state.step_distance[phase_2_start] = (
+                phase_2_post_crossing_step_distance
+            )
+            state.step_distance[phase_3_start] = (
+                phase_3_post_crossing_step_distance
+            )
+            state.step_distance[phase_4_start] = (
+                phase_4_post_crossing_step_distance
+            )
+            state.following_step_command_stage[start_following_step] = 1
+
+        stage_1_active = (
+            update_envs
+            & state.spawned
+            & (state.following_step_command_stage == 1)
+            & ~start_following_step
+        )
+        phase_2_stage_1 = stage_1_active & (
             state.training_phase == VIRTUAL_BAND_PHASE
         )
-        phase_3_start = start_following_step & (
+        phase_3_stage_1 = stage_1_active & (
             state.training_phase == COLLISIONLESS_BAR_PHASE
         )
-        phase_4_start = start_following_step & (
+        phase_4_stage_1 = stage_1_active & (
             state.training_phase == PHYSICAL_BAR_PHASE
         )
-        state.step_distance[phase_2_start] = (
+        state.step_distance[phase_2_stage_1] = (
             phase_2_post_crossing_step_distance
         )
-        state.step_distance[phase_3_start] = (
+        state.step_distance[phase_3_stage_1] = (
             phase_3_post_crossing_step_distance
         )
-        state.step_distance[phase_4_start] = (
+        state.step_distance[phase_4_stage_1] = (
             phase_4_post_crossing_step_distance
         )
-        state.following_step_command_stage[start_following_step] = 1
 
-    stage_1_active = (
-        update_envs
-        & state.spawned
-        & (state.following_step_command_stage == 1)
-        & ~start_following_step
-    )
-    phase_2_stage_1 = stage_1_active & (
-        state.training_phase == VIRTUAL_BAND_PHASE
-    )
-    phase_3_stage_1 = stage_1_active & (
-        state.training_phase == COLLISIONLESS_BAR_PHASE
-    )
-    phase_4_stage_1 = stage_1_active & (
-        state.training_phase == PHYSICAL_BAR_PHASE
-    )
-    state.step_distance[phase_2_stage_1] = (
-        phase_2_post_crossing_step_distance
-    )
-    state.step_distance[phase_3_stage_1] = (
-        phase_3_post_crossing_step_distance
-    )
-    state.step_distance[phase_4_stage_1] = (
-        phase_4_post_crossing_step_distance
-    )
+        finish_following_step = stage_1_active & following_foot_touchdown
+        if torch.any(finish_following_step):
+            state.following_foot_touchdown_event[finish_following_step] = True
+            finish_env_ids = torch.nonzero(
+                finish_following_step, as_tuple=False
+            ).squeeze(1)
+            state.step_distance[finish_env_ids] = _normal_step_sample(
+                env,
+                len(finish_env_ids),
+                default_step_distance,
+                normal_step_default_probability,
+                random_step_distance_range,
+            )
+            state.crossing_command[finish_env_ids] = False
+            state.following_step_command_stage[finish_env_ids] = 2
 
-    finish_following_step = stage_1_active & following_foot_touchdown
-    if torch.any(finish_following_step):
-        state.following_foot_touchdown_event[finish_following_step] = True
-        finish_env_ids = torch.nonzero(
-            finish_following_step, as_tuple=False
-        ).squeeze(1)
-        state.step_distance[finish_env_ids] = _normal_step_sample(
-            env,
-            len(finish_env_ids),
-            default_step_distance,
-            normal_step_default_probability,
-            random_step_distance_range,
-        )
-        state.crossing_command[finish_env_ids] = False
-        state.following_step_command_stage[finish_env_ids] = 2
+        active = update_envs & state.spawned & ~state.crossed
+        if torch.any(active):
+            relative_xy = (
+                sole_vertices_w[..., :2]
+                - state.spawn_pose_w[:, None, None, :2]
+            )
+            longitudinal = torch.sum(
+                relative_xy * state.forward_w[:, None, None, :], dim=3
+            )
+            foot_past_far_edge = (
+                torch.amin(longitudinal, dim=2)
+                > state.crossing_half_width.unsqueeze(1)
+            )
+            both_feet_past_far_edge = torch.all(foot_past_far_edge, dim=1)
+            completed = active & both_feet_past_far_edge
+        else:
+            completed = torch.zeros_like(active)
 
-    active = update_envs & state.spawned & ~state.crossed
-    if torch.any(active):
-        relative_xy = (
-            sole_vertices_w[..., :2]
-            - state.spawn_pose_w[:, None, None, :2]
-        )
-        longitudinal = torch.sum(
-            relative_xy * state.forward_w[:, None, None, :], dim=3
-        )
-        foot_past_far_edge = (
-            torch.amin(longitudinal, dim=2)
-            > state.crossing_half_width.unsqueeze(1)
-        )
-        both_feet_past_far_edge = torch.all(foot_past_far_edge, dim=1)
-        completed = active & both_feet_past_far_edge
-    else:
-        completed = torch.zeros_like(active)
+        if torch.any(completed):
+            state.crossed[completed] = True
+            state.crossing_completed[completed] = True
+            state.crossing_command[completed] = False
+            state.bar_reward_foot_active[completed] = False
 
-    if torch.any(completed):
-        state.crossed[completed] = True
-        state.crossing_completed[completed] = True
-        state.crossing_command[completed] = False
-        state.bar_reward_foot_active[completed] = False
-
-    completed_swing = torch.any(touchdown_event, dim=1)
-    trigger_candidate = (
-        update_envs
-        & (state.training_phase != NORMAL_WALKING_PHASE)
-        & ~state.spawned
-        & ~state.crossing_completed
-        & (state.touchdown_count >= state.trigger_touchdown_index)
-        & completed_swing
-    )
-    if state.stop_enabled:
-        robot = env.scene[feet_cfg.name]
-        # Ready is independent of touchdown: a stationary robot has no new swing event.
-        trigger_candidate = state.stop.update(
-            trigger_candidate, update_envs, in_contact,
-            robot.data.root_lin_vel_w.torch, robot.data.root_ang_vel_w.torch[:, 2],
-        ) & update_envs
-        # Require actual geometry clearance and two consecutive double-support samples.
-        relative = sole_vertices_w[..., :2] - state.spawn_pose_w[:, None, None, :2]
-        longitudinal_now = (relative * state.forward_w[:, None, None, :]).sum(dim=3)
-        still_clear = (longitudinal_now.amin(dim=2) > state.crossing_half_width[:, None]).all(dim=1)
-        supported = update_envs & state.crossed & still_clear & in_contact.all(dim=1)
-        state.success_support_steps[update_envs & ~supported] = 0
-        state.success_support_steps[supported] += 1
-        state.task_success_event = (
-            update_envs & state.stop.completed & ~state.task_success
-            & (state.success_support_steps >= 2)
-        )
-        state.task_success |= state.task_success_event
-    if torch.any(trigger_candidate):
-        trigger_env_ids = torch.nonzero(
-            trigger_candidate, as_tuple=False
-        ).squeeze(1)
-        landing_foot = torch.argmax(
-            touchdown_event[trigger_env_ids].long(),
-            dim=1,
+        completed_swing = torch.any(touchdown_event, dim=1)
+        trigger_candidate = (
+            update_envs
+            & (state.training_phase != NORMAL_WALKING_PHASE)
+            & ~state.spawned
+            & ~state.crossing_completed
+            & (state.touchdown_count >= state.trigger_touchdown_index)
+            & completed_swing
         )
         if state.stop_enabled:
-            # At rest the forward foot supports the first crossing step; use current geometry.
-            landing_foot = torch.argmax(sole_front_x[trigger_env_ids], dim=1)
-        _spawn_crossing(
-            env,
-            trigger_env_ids,
-            landing_foot,
-            feet_cfg,
-            sole_front_x,
-            forward_w,
-            robot_yaw_quat_w,
-            collisionless_bar_name,
-            physical_bar_name,
-            bar_height,
-            physical_bar_half_width,
-            virtual_band_half_width,
-            virtual_band_near_edge_offset,
-            physical_bar_center_distance,
-            physical_bar_position_error_range,
-            physical_bar_drop_clearance,
-            crossing_step_distance,
-        )
+            robot = env.scene[feet_cfg.name]
+            trigger_candidate = state.stop.update(
+                trigger_candidate, update_envs, in_contact,
+                robot.data.root_lin_vel_w.torch, robot.data.root_ang_vel_w.torch[:, 2],
+            ) & update_envs
+            relative = sole_vertices_w[..., :2] - state.spawn_pose_w[:, None, None, :2]
+            longitudinal_now = (relative * state.forward_w[:, None, None, :]).sum(dim=3)
+            still_clear = (longitudinal_now.amin(dim=2) > state.crossing_half_width[:, None]).all(dim=1)
+            supported = update_envs & state.crossed & still_clear & in_contact.all(dim=1)
+            state.success_support_steps[update_envs & ~supported] = 0
+            state.success_support_steps[supported] += 1
+            state.task_success_event = (
+                update_envs & state.stop.completed & ~state.task_success
+                & (state.success_support_steps >= 2)
+            )
+            state.task_success |= state.task_success_event
+        if torch.any(trigger_candidate):
+            trigger_env_ids = torch.nonzero(
+                trigger_candidate, as_tuple=False
+            ).squeeze(1)
+            landing_foot = torch.argmax(
+                touchdown_event[trigger_env_ids].long(),
+                dim=1,
+            )
+            if state.stop_enabled:
+                landing_foot = torch.argmax(sole_front_x[trigger_env_ids], dim=1)
+            _spawn_crossing(
+                env,
+                trigger_env_ids,
+                landing_foot,
+                feet_cfg,
+                sole_front_x,
+                forward_w,
+                robot_yaw_quat_w,
+                collisionless_bar_name,
+                physical_bar_name,
+                bar_height,
+                physical_bar_half_width,
+                virtual_band_half_width,
+                virtual_band_near_edge_offset,
+                physical_bar_center_distance,
+                physical_bar_position_error_range,
+                physical_bar_drop_clearance,
+                crossing_step_distance,
+            )
 
-    normal_touchdown = (
-        update_envs
-        & torch.any(touchdown_event, dim=1)
-        & ~state.crossing_command
-        & (~state.spawned | (state.following_step_command_stage == 2))
-        & ~finish_following_step
-        & ~completed
-        & ~trigger_candidate
-        & ~(state.stop.active | state.stop.failed)
-    )
-    if torch.any(normal_touchdown):
-        normal_env_ids = torch.nonzero(
-            normal_touchdown, as_tuple=False
-        ).squeeze(1)
-        state.step_distance[normal_env_ids] = _normal_step_sample(
-            env,
-            len(normal_env_ids),
-            default_step_distance,
-            normal_step_default_probability,
-            random_step_distance_range,
+        normal_touchdown = (
+            update_envs
+            & torch.any(touchdown_event, dim=1)
+            & ~state.crossing_command
+            & (~state.spawned | (state.following_step_command_stage == 2))
+            & ~finish_following_step
+            & ~completed
+            & ~trigger_candidate
+            & ~(state.stop.active | state.stop.failed)
         )
-        state.following_step_command_stage[normal_env_ids] = 2
+        if torch.any(normal_touchdown):
+            normal_env_ids = torch.nonzero(
+                normal_touchdown, as_tuple=False
+            ).squeeze(1)
+            state.step_distance[normal_env_ids] = _normal_step_sample(
+                env,
+                len(normal_env_ids),
+                default_step_distance,
+                normal_step_default_probability,
+                random_step_distance_range,
+            )
+            state.following_step_command_stage[normal_env_ids] = 2
 
     # Phase 5 no-bar episodes use one fixed target instead of the normal
     # per-touchdown step-distance sampling.
@@ -1057,7 +1599,7 @@ def _update_crossing_state_once(
     state.step_distance[phase_5_no_bar] = default_step_distance
 
     state.last_control_update_step[update_envs] = step
-    if state.stop_enabled:
+    if state.stop_enabled or hasattr(env.cfg, "hurdle_follow_speed"):
         # Terminations/rewards run before CommandManager.compute in Isaac Lab.
         # Synchronize here so the same sample uses the same command in rewards/observations.
         env.command_manager.get_term("base_velocity")._update_command()
@@ -1184,6 +1726,9 @@ class ObstacleAwareVelocityCommand(UniformVelocityCommand):
         active = state.crossing_command
         self.is_standing_env[active] = False
         self.vel_command_b[active, 0] = self.cfg.ranges.lin_vel_x[0]
+        if not state.stop_enabled:
+            following = active & (state.following_step_command_stage == 1)
+            self.vel_command_b[following, 0] = getattr(self._env.cfg, "hurdle_follow_speed", .10)
         self.vel_command_b[active, 1] = 0.0
         self.vel_command_b[active, 2] = 0.0
 
@@ -1450,22 +1995,63 @@ def physical_bar_crossing_completion_reward(
         normal_step_default_probability,
         random_step_distance_range,
     )
-    if state.stop_enabled:
-        # The termination manager has evaluated falls and bar motion before rewards.
-        failed_now = state.task_success_event & env.termination_manager.terminated
+    if hasattr(env, "termination_manager") and env.termination_manager.terminated is not None:
+        failed_now = state.task_success_event & _course_failure_mask(env)
         state.task_success[failed_now] = False
         return (state.task_success_event & ~failed_now).float()
-    bar_phase = (state.training_phase == COLLISIONLESS_BAR_PHASE) | (
-        state.training_phase == PHYSICAL_BAR_PHASE
-    )
-    disqualified = (
-        state.training_phase == COLLISIONLESS_BAR_PHASE
-    ) & state.collisionless_bar_contacted
-    return (
-        bar_phase
-        & ~disqualified
-        & state.following_foot_touchdown_event
-    ).float()
+    return state.task_success_event.float()
+
+
+def _reward_crossing_state(env: ManagerBasedRLEnv) -> _CrossingState:
+    """Refresh this control sample before reading any cached course reward."""
+    params = env.event_manager.get_term_cfg("update_crossing_state").params
+    return _update_crossing_state_once(env, **params)
+
+
+def stick_cleared_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Reward awarded on the step each stick is cleared."""
+    state = _reward_crossing_state(env)
+    return state.stick_cleared_event.float()
+
+
+def all_sticks_completed_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Reward awarded when all 10 sticks are cleared."""
+    state = _reward_crossing_state(env)
+    if hasattr(env, "termination_manager") and env.termination_manager.terminated is not None:
+        failed_now = state.task_success_event & _course_failure_mask(env)
+        state.task_success[failed_now] = False
+        return (state.task_success_event & ~failed_now).float()
+    return state.task_success_event.float()
+
+
+def stick_collision_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalty applied strictly once per stick upon first collision."""
+    state = _reward_crossing_state(env)
+    return state.stick_collision_reward_val
+
+
+def stick_failed_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalty awarded when the robot collides with a stick and fails to clear it."""
+    state = _reward_crossing_state(env)
+    return state.stick_failed_event.float()
+
+
+def hurdle_forward_progress_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Continuous forward progress reward towards completing the 10-stick hurdle course."""
+    state = _reward_crossing_state(env)
+    return state.forward_progress_reward_val
+
+
+def stick_over_clearance_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Dense dynamic shaping: foot height * forward velocity while swinging over the active stick."""
+    state = _reward_crossing_state(env)
+    return state.stick_over_clearance_reward_val
+
+
+def stick_landing_center_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Gaussian precision reward for landing in the current curriculum gap."""
+    state = _reward_crossing_state(env)
+    return state.stick_landing_center_reward_val
 
 
 def collisionless_bar_contact_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
@@ -1546,7 +2132,7 @@ def step_distance_tracking_reward(
     eligible = (
         state.touchdown_reward_eligible
         & ~(state.stop.active | state.stop.failed | state.stop.ready).unsqueeze(1)
-        & ~state.crossing_command.unsqueeze(1)
+        & (~state.crossing_command | (not state.stop_enabled)).unsqueeze(1)
         & (
             state.step_distance_reward_paid_step != _control_step(env)
         ).unsqueeze(1)
@@ -2155,11 +2741,14 @@ def policy_observation_shape_check(
 def stop_before_crossing_timeout(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Update before all rewards, and fail a stop that never settles."""
     _update_crossing_state_once(env, **env.event_manager.get_term_cfg("update_crossing_state").params)
-    return _get_state(env).stop.failed
+    state = _get_state(env)
+    return state.stop.failed if state.stop_enabled else torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
 
 
 def stop_stability_reward(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
     state = _get_state(env)
+    if not state.stop_enabled:
+        return torch.zeros(env.num_envs, device=env.device)
     robot = env.scene["robot"]
     velocity = robot.data.root_lin_vel_w.torch
     yaw_rate = robot.data.root_ang_vel_w.torch[:, 2]
@@ -2169,4 +2758,13 @@ def stop_stability_reward(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) ->
 
 
 def stop_completion_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
-    return _get_state(env).stop.ready.float()
+    state = _get_state(env)
+    return state.stop.ready.float() if state.stop_enabled else torch.zeros(env.num_envs, device=env.device)
+
+
+def align_wooden_bars_to_env_origins(
+    env: ManagerBasedRLEnv,
+    env_ids: Sequence[int] | None = None,
+) -> None:
+    """Initialize the movable course layout at each environment's origin."""
+    reset_hurdle_layout(env, _as_env_ids(env, env_ids))

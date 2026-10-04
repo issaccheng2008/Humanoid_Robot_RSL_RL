@@ -19,8 +19,8 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": (
-            f"{__name__}.humanoid_robot_policy_rsl_rl_env_cfg:"
-            "HumanoidRobotPolicyEnvCfg"
+            f"{__name__}.fixed_stick_env_cfg:"
+            "FixedStickEnvCfg"
         ),
         "rsl_rl_cfg_entry_point": (
             f"{agents.__name__}.rsl_rl_ppo_cfg:"
@@ -39,12 +39,23 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": (
-            f"{__name__}.humanoid_robot_policy_rsl_rl_env_cfg:"
-            "HumanoidRobotPolicyEnvCfg_PLAY"
+            f"{__name__}.fixed_stick_env_cfg:"
+            "FixedStickEnvCfg_PLAY"
         ),
         "rsl_rl_cfg_entry_point": (
             f"{agents.__name__}.rsl_rl_ppo_cfg:"
             "HumanoidRobotRoughPPORunnerCfg"
         ),
+    },
+)
+
+# Historical entry point for the v3.1 recording utilities.
+gym.register(
+    id="Humanoid-Robot-RSLRL-Legacy-Play-v0",
+    entry_point=f"{__name__}.curriculum_aware_env:CurriculumAwareManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.humanoid_robot_policy_rsl_rl_env_cfg:HumanoidRobotPolicyEnvCfg_PLAY",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:HumanoidRobotRoughPPORunnerCfg",
     },
 )

@@ -15,8 +15,8 @@
 WOODEN_BAR_TRAINING_PHASE = 5
 
 # Keep Phase 5 obstacle/mixed-episode mechanics, with an independent fine-tune identity.
-STOP_BEFORE_CROSSING = True
-TRAINING_STAGE = "walk_stop_cross_v32"
+STOP_BEFORE_CROSSING = False
+TRAINING_STAGE = "fixed_stick_stage1_v32"
 
 if WOODEN_BAR_TRAINING_PHASE not in (1, 2, 3, 4, 5):
     raise ValueError(

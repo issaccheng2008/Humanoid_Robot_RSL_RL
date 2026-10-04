@@ -19,6 +19,7 @@ Self-collision note:
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg
@@ -128,11 +129,17 @@ TARGET_BASE_HEIGHT = 0.32
 MIN_BASE_HEIGHT = 0.20
 MAX_BASE_TILT = math.radians(65.0)
 
-WOODEN_BAR_LENGTH = 0.35
-WOODEN_BAR_WIDTH = 0.02
-WOODEN_BAR_HEIGHT = 0.01
+WOODEN_BAR_LENGTH = 0.80  # 80cm across lateral Y (0.40m half-width)
+WOODEN_BAR_WIDTH = 0.03   # 3cm along walking X
+WOODEN_BAR_HEIGHT = 0.03  # 3cm vertical Z
 PHYSICAL_BAR_HALF_WIDTH = 0.5 * WOODEN_BAR_WIDTH
-PHYSICAL_BAR_HALF_LENGTH = 0.5 * WOODEN_BAR_LENGTH
+PHYSICAL_BAR_HALF_LENGTH = 0.5 * WOODEN_BAR_LENGTH  # 0.40m
+NUM_STICKS = 10
+FIRST_STICK_X = 0.50
+STICK_CLEAR_GAP = 0.25    # Initial clear gap; accuracy curriculum reduces it to 20cm
+STICK_SPACING = STICK_CLEAR_GAP + WOODEN_BAR_WIDTH  # 0.28m initial pitch (center-to-center)
+TEN_STICKS_USD_PATH = str(Path(__file__).resolve().parents[3] / "v3.2" / "ten_sticks.usd")
+
 VIRTUAL_BAND_WIDTH = 0.04
 VIRTUAL_BAND_HALF_WIDTH = 0.5 * VIRTUAL_BAND_WIDTH
 VIRTUAL_BAND_NEAR_EDGE_OFFSET = 0.005
@@ -145,14 +152,14 @@ STEPPING_FOOT_DISTANCE_TO_BAND_EDGE = 0.22
 PHYSICAL_WOODEN_BAR_NAME = "wooden_bar"
 COLLISIONLESS_WOODEN_BAR_NAME = "collisionless_wooden_bar"
 
-DEFAULT_STEP_DISTANCE = 0.08
-CROSSING_STEP_DISTANCE = 0.23
-PHASE_2_POST_CROSSING_STEP_DISTANCE = 0.02
-PHASE_3_POST_CROSSING_STEP_DISTANCE = 0.02
-PHASE_4_POST_CROSSING_STEP_DISTANCE = 0.02
+DEFAULT_STEP_DISTANCE = 0.15
+CROSSING_STEP_DISTANCE = STICK_SPACING
+PHASE_2_POST_CROSSING_STEP_DISTANCE = STICK_SPACING
+PHASE_3_POST_CROSSING_STEP_DISTANCE = STICK_SPACING
+PHASE_4_POST_CROSSING_STEP_DISTANCE = 0.0  # Course computes the exact paired-foot target
 
 # Phase 5 mixes Phase 4 obstacle episodes with command-diversity episodes.
-PHASE_5_BAR_EPISODE_PROBABILITY = 0.80
+PHASE_5_BAR_EPISODE_PROBABILITY = 1.0 if NUM_STICKS > 1 else 0.80
 PHASE_5_NO_BAR_STOP_PROBABILITY = 0.10
 PHASE_5_STOP_TIME_RANGE_S = (0.0, 5.0)
 PHASE_5_INITIAL_ANG_VEL_Z_RANGE = (-1.5, 1.5)
@@ -383,8 +390,23 @@ class HumanoidRobotPolicySceneCfg(InteractiveSceneCfg):
         force_threshold=1.0,
     )
 
-    # The Phase 3 bar is dynamic and collides with everything except the four
-    # explicitly filtered robot rigid-body links.
+    # Fixed kinematic sticks can be repositioned on reset without stretching geometry.
+    for _stick_index in range(NUM_STICKS):
+        locals()[f"course_stick_{_stick_index}"] = RigidObjectCfg(
+            prim_path=f"{{ENV_REGEX_NS}}/WoodenBars/stick_{_stick_index}",
+            spawn=sim_utils.CuboidCfg(
+                size=(WOODEN_BAR_WIDTH, WOODEN_BAR_LENGTH, WOODEN_BAR_HEIGHT),
+                rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True, disable_gravity=True),
+                collision_props=sim_utils.CollisionPropertiesCfg(),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(.88, .42, .12)),
+            ),
+            init_state=RigidObjectCfg.InitialStateCfg(
+                pos=(FIRST_STICK_X + _stick_index * STICK_SPACING, 0., .5 * WOODEN_BAR_HEIGHT)
+            ),
+        )
+    del _stick_index
+
+    # Legacy/compatibility bars (hidden underground by default)
     collisionless_wooden_bar = _make_wooden_bar_cfg(
         "CollisionlessWoodenBar",
         WOODEN_BAR_HEIGHT,
@@ -416,14 +438,10 @@ class CommandsCfg:
 
     base_velocity = mdp.ObstacleAwareVelocityCommandCfg(
         asset_name="robot",
-        resampling_time_range=(10.0, 10.0),
+        resampling_time_range=(12.0, 12.0),
 
-        # Every episode starts at 0.4 m/s and keeps walking after the crossing.
+        # Lead steps use 0.20 m/s; paired following steps slow to 0.10 m/s.
         rel_standing_envs=0.0,
-
-        # Use direct yaw-rate commands for turning. ``heading_command=False`` means
-        # angular velocity is sampled from ``ang_vel_z`` instead of deriving it
-        # from an absolute heading target. Therefore, ``rel_heading_envs`` is zero.
         rel_heading_envs=0.0,
         heading_command=False,
         heading_control_stiffness=0.5,
@@ -436,15 +454,11 @@ class CommandsCfg:
         virtual_band_length=WOODEN_BAR_LENGTH,
         virtual_band_height=FOOT_HEIGHT_SATURATION,
 
-        debug_vis=True,
-        phase_5_enabled=WOODEN_BAR_TRAINING_PHASE == 5,
+        debug_vis=False,
+        phase_5_enabled=False,
         ranges=mdp.ObstacleAwareVelocityCommandCfg.Ranges(
-            lin_vel_x=(0.4, 0.4),
-            ang_vel_z=(
-                PHASE_5_INITIAL_ANG_VEL_Z_RANGE
-                if WOODEN_BAR_TRAINING_PHASE == 5
-                else (0.0, 0.0)
-            ),
+            lin_vel_x=(0.20, 0.20),
+            ang_vel_z=(0.0, 0.0),
             heading=(-math.pi, math.pi),
         ),
     )
@@ -588,9 +602,9 @@ class EventCfg:
         mode="reset",
         params={
             "pose_range": {
-                "x": (-0.5, 0.5),
-                "y": (-0.5, 0.5),
-                "yaw": (-3.14, 3.14),
+                "x": (0.08, 0.12),
+                "y": (-0.02, 0.02),
+                "yaw": (-0.05, 0.05),
             },
             "velocity_range": {
                 "x": (0.0, 0.0),
@@ -707,6 +721,12 @@ class EventCfg:
         },
     )
 
+    align_wooden_bars = EventTerm(
+        func=mdp.align_wooden_bars_to_env_origins,
+        mode="startup",
+    )
+
+
 
 @configclass
 class RewardsCfg:
@@ -721,18 +741,56 @@ class RewardsCfg:
     # Main task rewards
     # -------------------------------------------------------------------------
 
-    # Stronger and sharper than your current version.
-    # Your old std=0.5 was too forgiving, so standing still could still get reward.
-    stop_stability = RewTerm(
-        func=mdp.stop_stability_reward, weight=2.0,
-        params={"sensor_cfg": _ordered_feet_sensor_cfg()},
+    # 10-stick hurdle course rewards (4-Layer System)
+    # Layer 1: Continuous forward progress throughout the hurdle course
+    hurdle_forward_progress = RewTerm(
+        func=mdp.hurdle_forward_progress_reward,
+        weight=6.0,
     )
-    # Isaac Lab multiplies rewards by dt: 25 * 0.02 gives a 0.5 one-off bonus.
-    stop_completion = RewTerm(func=mdp.stop_completion_reward, weight=25.0)
+
+    # Layer 2: Dynamic foot clearance shaping (reward feet safely above stick)
+    stick_over_clearance = RewTerm(
+        func=mdp.stick_over_clearance_reward,
+        weight=15.0,
+    )
+
+    # Layer 3: Precision landing in 20cm gap center on touchdown
+    stick_landing_center = RewTerm(
+        func=mdp.stick_landing_center_reward,
+        weight=25.0,
+    )
+
+    # Layer 4: Milestone per stick cleared & completion of all 10 sticks
+    # Rule 1: Clean pass without touching the stick -> +30.0
+    stick_cleared = RewTerm(
+        func=mdp.stick_cleared_reward,
+        weight=30.0,
+    )
+
+    # Rule 3: Collided with stick and failed/fell -> -15.0 penalty
+    stick_failed = RewTerm(
+        func=mdp.stick_failed_penalty,
+        weight=-15.0,
+    )
+
+    # Grand Prize: All 10 sticks cleared with zero touches across entire course -> +100.0
+    all_sticks_completed = RewTerm(
+        func=mdp.all_sticks_completed_reward,
+        weight=100.0,
+    )
+
+    # First contact with each stick has a cost, even when the robot later clears it.
+    stick_collision = RewTerm(
+        func=mdp.stick_collision_penalty,
+        weight=-5.0,
+    )
+
+    stop_stability = None
+    stop_completion = None
 
     track_lin_vel_xy_exp = RewTerm(
         func=mdp.track_lin_vel_xy_yaw_frame_quadratic_relative,
-        weight=4.0,
+        weight=3.0,
         params={
             "command_name": "base_velocity",
             "moving_command_threshold": 0.05,
@@ -834,26 +892,31 @@ class RewardsCfg:
         },
     )
 
-    # Calculated once at a valid swing-foot touchdown. The function returns
-    # zero while crossing_command is active, although the term remains present
-    # and checkpoint-compatible in all four phases.
+    # Score valid target-foot touchdowns during paired course crossing as well.
     step_distance_tracking_reward = RewTerm(
         func=mdp.step_distance_tracking_reward,
         weight=STEP_DISTANCE_TRACKING_REWARD_WEIGHT,
         params={
-            "gaussian_std": STEP_DISTANCE_GAUSSIAN_START_STD,
+            "gaussian_std": .03 if NUM_STICKS > 1 else STEP_DISTANCE_GAUSSIAN_START_STD,
             **_crossing_state_update_params(),
         },
     )
 
+    hurdle_target_approach = RewTerm(func=mdp.hurdle_target_approach_reward, weight=2.0)
+    hurdle_wrong_landing = RewTerm(func=mdp.hurdle_wrong_landing_penalty, weight=-5.0)
+
     physical_bar_crossing_completion_reward = (
-        RewTerm(
-            func=mdp.physical_bar_crossing_completion_reward,
-            weight=PHYSICAL_BAR_CROSSING_COMPLETION_REWARD_WEIGHT,
-            params=_crossing_state_update_params(),
+        None
+        if NUM_STICKS > 1
+        else (
+            RewTerm(
+                func=mdp.physical_bar_crossing_completion_reward,
+                weight=PHYSICAL_BAR_CROSSING_COMPLETION_REWARD_WEIGHT,
+                params=_crossing_state_update_params(),
+            )
+            if WOODEN_BAR_TRAINING_PHASE in (3, 4, 5)
+            else None
         )
-        if WOODEN_BAR_TRAINING_PHASE in (3, 4, 5)
-        else None
     )
 
     collisionless_bar_contact_penalty = (
@@ -874,25 +937,11 @@ class RewardsCfg:
         func=mdp.is_any_terminated_term,
         weight=-200.0,
         params={
-            "term_keys": ["bad_orientation", "low_base_height", "stop_failed"]
-            # + (
-            #     ["wooden_bar_moved"]
-            #     if WOODEN_BAR_TRAINING_PHASE == 4
-            #     else []
-            # ),
+            "term_keys": ["bad_orientation", "low_base_height", "hurdle_out_of_bounds", "hurdle_skipped_gap"]
         },
     )
 
-    # Extra penalty applied only when the wooden bar moves.
-    wooden_bar_moved_penalty = (
-        RewTerm(
-            func=mdp.is_terminated_term,
-            weight=-50.0,
-            params={"term_keys": "wooden_bar_moved"},
-        )
-        if WOODEN_BAR_TRAINING_PHASE in (4, 5)
-        else None
-    )
+    wooden_bar_moved_penalty = None
 
     # Disabled: fall is detected by root orientation and root height, not contact forces.
     illegal_non_foot_contact = None
@@ -904,6 +953,15 @@ class RewardsCfg:
     flat_orientation_l2 = RewTerm(
         func=mdp.flat_orientation_l2,
         weight=-3,
+    )
+
+    hurdle_body_heading = RewTerm(
+        func=mdp.hurdle_body_heading_reward,
+        weight=3.0,
+        params={
+            "std": 0.20,
+            "asset_cfg": SceneEntityCfg("robot"),
+        },
     )
 
     # Penalize sudden sideways base acceleration.
@@ -1072,7 +1130,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    stop_failed = DoneTerm(func=mdp.stop_before_crossing_timeout)
+    stop_failed = None
 
     bad_orientation = DoneTerm(
         func=mdp.bad_orientation,
@@ -1090,19 +1148,26 @@ class TerminationsCfg:
         },
     )
 
-    wooden_bar_moved = (
-        DoneTerm(
-            func=mdp.wooden_bar_moved,
-            params={
-                "translation_tolerance": 0.005,
-                "rotation_tolerance": math.radians(5.0),
-                "settling_time_s": 0.20,
-                **_crossing_state_update_params(),
-            },
-        )
-        if WOODEN_BAR_TRAINING_PHASE in (4, 5)
-        else None
+    hurdle_out_of_bounds = DoneTerm(
+        func=mdp.hurdle_out_of_bounds,
+        params={
+            "feet_cfg": _ordered_feet_cfg(),
+            "sole_vertices": FOOT_SOLE_VERTICES,
+            "half_length": PHYSICAL_BAR_HALF_LENGTH,
+            "course_end_x": FIRST_STICK_X + NUM_STICKS * STICK_SPACING - PHYSICAL_BAR_HALF_WIDTH,
+        },
     )
+
+    # Keep after every failure term: update the current crossing events before rewards.
+    hurdle_skipped_gap = DoneTerm(
+        func=mdp.hurdle_skipped_gap,
+        params={"feet_cfg": _ordered_feet_cfg(), "sensor_cfg": _ordered_feet_sensor_cfg(),
+                "sole_vertices": FOOT_SOLE_VERTICES},
+    )
+
+    hurdle_course_completed = DoneTerm(func=mdp.hurdle_course_completed)
+
+    wooden_bar_moved = None
 
 
 ##
@@ -1121,7 +1186,7 @@ class CurriculumCfg:
         },
     )
 
-    step_distance_gaussian = CurrTerm(
+    step_distance_gaussian = None if NUM_STICKS > 1 else CurrTerm(
         func=mdp.step_distance_gaussian_curriculum,
         params={
             "reward_term_name": "step_distance_tracking_reward",
@@ -1197,6 +1262,14 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
     stop_before_crossing: bool = STOP_BEFORE_CROSSING
     stop_hold_s: float = 0.5
     stop_timeout_s: float = 3.0
+    hurdle_initial_gap: float = .25
+    hurdle_gap_levels: tuple[float, ...] = (.25, .225, .20)
+    hurdle_gap_curriculum: bool = True
+    hurdle_curriculum_min_episodes: int = 200
+    hurdle_curriculum_landing_accuracy: float = .90
+    hurdle_curriculum_completion_rate: float = .80
+    hurdle_follow_speed: float = .20
+
     curriculum_start_step: int = 0
 
 
@@ -1222,7 +1295,7 @@ class HumanoidRobotPolicyEnvCfg(ManagerBasedRLEnvCfg):
 
         # General settings.
         self.decimation = 4
-        self.episode_length_s = 8.0
+        self.episode_length_s = 30.0
 
         # Simulation settings.
         self.sim.dt = 0.005
@@ -1252,14 +1325,14 @@ class HumanoidRobotPolicyEnvCfg_PLAY(HumanoidRobotPolicyEnvCfg):
 
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
-        self.episode_length_s = 8.0
+        self.episode_length_s = 30.0
 
         # Keyboard controls the base_velocity command.
         # self.commands.base_velocity.class_type = (
         #     mdp.KeyboardVelocityCommand
         # )
 
-        self.commands.base_velocity.ranges.lin_vel_x = (0.4, 0.4)
+        self.commands.base_velocity.ranges.lin_vel_x = (0.20, 0.20)
         self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
         self.commands.base_velocity.ranges.heading = None
 

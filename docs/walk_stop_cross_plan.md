@@ -1,4 +1,7 @@
-# Walk-stop-cross implementation plan
+# Historical walk-stop-cross implementation plan
+
+Current p3 design: `superpowers/specs/2026-10-02-fixed-stick-moving-design.md`.
+Current training and deployment instructions: `walk_stop_cross_hpc_zh.md`.
 
 Goal: fine-tune the existing 49-observation policy on v3.2, spawning the bar only after a continuous stable stop.
 

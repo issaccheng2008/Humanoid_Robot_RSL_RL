@@ -25,7 +25,7 @@ singularity exec --nv \
     --env QT_QPA_PLATFORM=offscreen \
     "$HOME/biped-sandbox.sif" \
     /isaac-sim/python.sh /workspace/Humanoid_Robot_RSL_RL/hpc/verify_checkpoint.py \
-    --task Humanoid-Robot-RSLRL-Play-v0 \
+    --task Humanoid-Robot-RSLRL-Legacy-Play-v0 \
     --checkpoint /workspace/Humanoid_Robot_RSL_RL/model_33999.pt \
     --usd /workspace/Humanoid_Robot_RSL_RL/v3.1/v3.1.usd \
     --steps 250 \

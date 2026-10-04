@@ -1,4 +1,9 @@
-# Walk → stop → cross (v3.2)
+# Historical walk → stop → cross notes
+
+The p3 default task is now **moving crossing of one fixed stick**. Use
+`walk_stop_cross_hpc_zh.md` for current training, HPC and deployment commands.
+The stop gate, dynamically spawned bar, ten-stick course and paths below describe
+older experiments. The v3.1 tools use `Humanoid-Robot-RSLRL-Legacy-Play-v0`.
 
 This checkout fine-tunes `model_33999.pt` on the v3.2 robot. The Phase 5 obstacle episode first walks, then commands zero speed. After both feet remain in contact and planar speed is below 0.05 m/s with yaw rate below 0.10 rad/s for 0.5 continuous seconds, the physical bar appears ahead of the *current* sole geometry and crossing starts. The stop fails after 3 seconds. The 49-observation, 12-action policy interface is unchanged. Completion requires both feet still past the bar and two double-support control samples; fall or bar-move termination on that frame cannot earn completion reward.
 

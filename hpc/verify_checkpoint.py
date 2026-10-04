@@ -23,7 +23,7 @@ import tasks  # noqa: E402,F401  Register Humanoid-Robot-RSLRL-Play-v0.
 
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--task", default="Humanoid-Robot-RSLRL-Play-v0")
+parser.add_argument("--task", default="Humanoid-Robot-RSLRL-Legacy-Play-v0")
 parser.add_argument("--checkpoint", required=True)
 parser.add_argument("--usd", required=True)
 parser.add_argument("--steps", type=int, default=250)

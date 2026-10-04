@@ -14,7 +14,7 @@ import numpy as np
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-TASK = "Humanoid-Robot-RSLRL-Play-v0"
+TASK = "Humanoid-Robot-RSLRL-Legacy-Play-v0"
 
 
 def configure_obstacle_episode(env_cfg, usd_path: str, seed: int, device: str | None) -> None:
@@ -26,14 +26,14 @@ def configure_obstacle_episode(env_cfg, usd_path: str, seed: int, device: str | 
     env_cfg.scene.num_envs = 1
     env_cfg.scene.robot.spawn.usd_path = os.path.abspath(usd_path)
     env_cfg.commands.base_velocity.debug_vis = False
-    # Follow the root from the side so the small robot and the bar fill the frame.
+    # Follow the root from the side with a clear view of both the robot and upcoming hurdles.
     env_cfg.viewer.origin_type = "asset_root"
     env_cfg.viewer.asset_name = "robot"
-    env_cfg.viewer.eye = (0.1, 0.9, 0.55)
-    env_cfg.viewer.lookat = (0.1, 0.0, 0.0)
+    env_cfg.viewer.eye = (0.2, 1.4, 0.6)
+    env_cfg.viewer.lookat = (0.45, 0.0, 0.0)
     # The Kit video recorder has its own world-space camera, separate from viewer.
-    env_cfg.video_recorder.eye = (0.1, 0.9, 0.75)
-    env_cfg.video_recorder.lookat = (0.1, 0.0, 0.25)
+    env_cfg.video_recorder.eye = (0.2, 1.4, 0.6)
+    env_cfg.video_recorder.lookat = (0.45, 0.0, 0.0)
     env_cfg.seed = seed
     if device is not None:
         env_cfg.sim.device = device
@@ -67,9 +67,9 @@ def frame_has_content(frame) -> bool:
 
 
 def camera_view_for_root(root_position) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
-    """World-space side camera that keeps the robot and nearby bar in view."""
+    """World-space side camera that keeps the robot and upcoming hurdles in clear view."""
     x, y, z = (float(value) for value in root_position)
-    return (x + 0.1, y + 0.9, z + 0.42), (x + 0.1, y, z - 0.08)
+    return (x + 0.2, y + 1.4, z + 0.35), (x + 0.45, y, z - 0.15)
 
 
 def move_kit_recording_camera(env, root_position) -> None:
@@ -245,6 +245,14 @@ def main() -> None:
                                 flush=True,
                             )
                         if bool(dones[0]):
+                            print(f"[RECORD] Episode terminated at step={step}:", flush=True)
+                            if hasattr(env.unwrapped, "termination_manager"):
+                                for term_name in env.unwrapped.termination_manager.active_terms:
+                                    term_val = env.unwrapped.termination_manager.get_term(term_name)[0].item()
+                                    if term_val:
+                                        print(f"  [TRIGGERED TERMINATION] {term_name}: {term_val}", flush=True)
+                                    else:
+                                        print(f"  - {term_name}: {term_val}", flush=True)
                             break
                 print(f"[RECORD] joint angles: {csv_path}", flush=True)
                 print(f"[RECORD] crossing completed: {crossed}", flush=True)

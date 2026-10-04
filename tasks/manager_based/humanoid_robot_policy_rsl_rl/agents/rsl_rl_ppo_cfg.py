@@ -68,7 +68,7 @@ class HumanoidRobotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         max_iterations = 3000
 
     save_interval = 50
-    experiment_name = "cross_stick_walk_stop_cross_v32"
+    experiment_name = "fixed_stick_stage1_v32"
 
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
