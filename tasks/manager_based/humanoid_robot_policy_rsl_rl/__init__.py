@@ -19,7 +19,7 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": (
-            f"{__name__}.humanoid_robot_policy_rsl_rl_env_cfg:"
+            f"{__name__}.humanoid_robot_policy_rsl_rl_env_cfg_phase3_collision_fix:"
             "HumanoidRobotPolicyEnvCfg"
         ),
         "rsl_rl_cfg_entry_point": (
@@ -39,7 +39,7 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": (
-            f"{__name__}.humanoid_robot_policy_rsl_rl_env_cfg:"
+            f"{__name__}.humanoid_robot_policy_rsl_rl_env_cfg_phase3_collision_fix:"
             "HumanoidRobotPolicyEnvCfg_PLAY"
         ),
         "rsl_rl_cfg_entry_point": (
